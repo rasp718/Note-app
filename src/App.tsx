@@ -1,24 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Search, X, Check, Settings } from 'lucide-react';
+import { Mic, Search, X, Check, Settings, LayoutGrid, Square } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard';
 
 // --- CONSTANTS ---
-const COLOR_OPTIONS = [
-  { id: 'violet', bg: 'bg-violet-500', class: 'border-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.3)]' },
-  { id: 'blue', bg: 'bg-blue-500', class: 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]' },
-  { id: 'emerald', bg: 'bg-emerald-500', class: 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' },
-  { id: 'rose', bg: 'bg-rose-500', class: 'border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)]' },
-  { id: 'amber', bg: 'bg-amber-500', class: 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]' },
-  { id: 'cyan', bg: 'bg-cyan-500', class: 'border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)]' },
-  { id: 'fuchsia', bg: 'bg-fuchsia-500', class: 'border-fuchsia-500 shadow-[0_0_15px_rgba(217,70,239,0.3)]' },
-];
-
 const EMOJI_LIST = [
-  '⚡', '💼', '🌱', '🔥', '💡', '🎨', '🚀', '⭐', 
-  '📝', '📅', '🛒', '🏋️', '🧘', '🎓', '✈️', '🏠', 
+  '⚡', '💼', '🔥', '💡', '🎨', '🚀', '⭐', 
+  '📝', '📅', '🛒', '🏋️', '✈️', '🏠', 
   '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧',
-  '🌳', '🌊', '🌙', '☀️', '☁️', '🎲', '🧩', '🏆'
 ];
 
 function App() {
@@ -31,7 +20,7 @@ function App() {
   
   // Refs
   const recognitionRef = useRef<any>(null);
-  const shouldListenRef = useRef(false); // CRITICAL FOR IOS: Tracks if we WANT to be listening
+  const shouldListenRef = useRef(false);
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,14 +48,12 @@ function App() {
     const savedVoice = localStorage.getItem('vibenotes_voice');
     if (savedVoice) setSelectedVoiceURI(savedVoice);
 
-    // --- SPEECH RECOGNITION SETUP ---
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
-      
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = 'en-US'; // Explicitly set language for iOS
+      recognition.lang = 'en-US';
 
       recognition.onresult = (event: any) => {
         let finalTranscript = '';
@@ -78,34 +65,19 @@ function App() {
         }
       };
 
-      // IOS FIX: Handle unexpected stops
       recognition.onend = () => {
         if (shouldListenRef.current) {
-          // If we are supposed to be listening but it stopped (iOS quirk), restart it.
-          try {
-            recognition.start();
-          } catch (e) {
-            console.log("Restart error", e);
-            setIsListening(false);
-            shouldListenRef.current = false;
+          try { recognition.start(); } catch (e) { 
+            setIsListening(false); shouldListenRef.current = false; 
           }
         } else {
           setIsListening(false);
         }
       };
 
-      recognition.onerror = (event: any) => {
-        console.error("Speech Error:", event.error);
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-           shouldListenRef.current = false;
-           setIsListening(false);
-        }
-      };
-
       recognitionRef.current = recognition;
     }
 
-    // Voice Init
     const loadVoices = () => setVoices(window.speechSynthesis.getVoices());
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
@@ -126,42 +98,30 @@ function App() {
   }, [categories]);
 
   // --- HANDLERS ---
-
   const handleCategoryEdit = (id: CategoryId, field: 'label' | 'emoji' | 'colorClass', value: string) => {
     setCategories(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
   };
 
   const toggleRecording = () => {
     if (!recognitionRef.current) {
-        alert("Speech recognition is not supported in this browser. Please try Chrome or Safari.");
+        alert("Speech recognition is not supported in this browser.");
         return;
     }
 
     if (isListening) {
-      // STOPPING
-      shouldListenRef.current = false; // Mark that we INTEND to stop
+      shouldListenRef.current = false;
       recognitionRef.current.stop();
       setIsListening(false);
-      
-      // Delay showing review slightly to ensure transcript catches up
-      setTimeout(() => {
-          if (transcript.trim() || true) setIsReviewing(true);
-      }, 200);
-
+      setTimeout(() => { if (transcript.trim() || true) setIsReviewing(true); }, 200);
     } else {
-      // STARTING
       setTranscript('');
       setSelectedCategory('idea');
-      shouldListenRef.current = true; // Mark that we INTEND to listen
-      
+      shouldListenRef.current = true;
       try {
         recognitionRef.current.start();
         setIsListening(true);
         setIsReviewing(false);
-      } catch (e) {
-        console.error("Failed to start:", e);
-        shouldListenRef.current = false;
-      }
+      } catch (e) { shouldListenRef.current = false; }
     }
   };
 
@@ -205,62 +165,55 @@ function App() {
     });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-6 pb-32">
+    <div className="min-h-screen bg-black text-zinc-100 p-6 pb-32 font-sans selection:bg-orange-500/30">
       
       {/* Header */}
-      <header className="max-w-2xl mx-auto mb-6 flex justify-between items-center relative py-2">
-         {/* Logo and Title */}
-         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 pointer-events-none">
-           <img 
-             src="/icon.png" 
-             alt="VibeNotes Logo" 
-             className="w-10 h-10 rounded-xl shadow-lg shadow-violet-500/20" 
-             onError={(e) => {
-                 (e.target as HTMLImageElement).style.display = 'none';
-             }}
-           />
-           <h1 className="text-3xl font-black tracking-tight">
-            <span className="text-white">Vibe</span>
-            <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">Notes</span>
+      <header className="max-w-2xl mx-auto mb-8 flex justify-between items-center py-2 border-b border-zinc-900">
+         <div className="flex items-center gap-3">
+           <div className="w-8 h-8 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-md">
+             <div className="w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)]"></div>
+           </div>
+           <h1 className="text-2xl font-black tracking-tight text-white">
+            Vibe<span className="text-zinc-500 font-bold">Notes</span>
            </h1>
          </div>
 
         <button 
             onClick={() => setShowSettings(true)}
-            className="ml-auto p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors z-10"
+            className="p-2 rounded-md hover:bg-zinc-900 text-zinc-500 hover:text-white transition-colors"
         >
-            <Settings size={24} />
+            <Settings size={20} />
         </button>
       </header>
 
       {/* Search */}
-      <div className="max-w-2xl mx-auto mb-4 relative group">
-          <Search className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-violet-400 transition-colors" size={20} />
+      <div className="max-w-2xl mx-auto mb-6 relative group">
+          <Search className="absolute left-4 top-3 text-zinc-600 group-focus-within:text-white transition-colors" size={18} />
           <input 
-            type="text" placeholder="Search..."
+            type="text" placeholder="SEARCH..."
             value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl py-3 pl-12 pr-4 text-slate-200 focus:outline-none focus:border-violet-500 transition-all placeholder:text-slate-600"
+            className="w-full bg-black border border-zinc-800 rounded-md py-2.5 pl-11 pr-4 text-zinc-300 focus:outline-none focus:border-white transition-all placeholder:text-zinc-700 text-sm font-bold uppercase tracking-wider"
           />
       </div>
 
       {/* Filter Chips */}
       <div className="max-w-2xl mx-auto mb-8 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        <button onClick={() => setActiveFilter('all')} className={`px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${activeFilter === 'all' ? 'bg-white text-slate-950 border-white' : 'bg-slate-900 text-slate-400 border-slate-800'}`}>All</button>
+        <button onClick={() => setActiveFilter('all')} className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider border transition-all ${activeFilter === 'all' ? 'bg-white text-black border-white' : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'}`}>All</button>
         {categories.map((cat) => (
             <button
                 key={cat.id}
                 onClick={() => setActiveFilter(cat.id)}
-                className={`px-4 py-1.5 rounded-full text-sm font-bold border transition-all whitespace-nowrap ${
-                    activeFilter === cat.id ? 'bg-white text-slate-950 border-white' : 'bg-slate-900 text-slate-400 border-slate-800'
+                className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider border transition-all whitespace-nowrap ${
+                    activeFilter === cat.id ? 'bg-white text-black border-white' : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
                 }`}
             >
-                {cat.emoji} {cat.label}
+                {cat.label}
             </button>
         ))}
       </div>
 
       {/* Grid */}
-      <div className="max-w-2xl mx-auto grid gap-4">
+      <div className="max-w-2xl mx-auto grid gap-3">
           {filteredNotes.map(note => (
             <NoteCard 
               key={note.id} 
@@ -278,85 +231,74 @@ function App() {
               }}
             />
           ))}
-          {filteredNotes.length === 0 && <p className="text-center py-10 opacity-50">No notes found.</p>}
+          {filteredNotes.length === 0 && (
+              <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg">
+                  <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
+                  <p className="text-zinc-700 text-xs font-mono uppercase">Database Empty</p>
+              </div>
+          )}
       </div>
 
       {/* SETTINGS MODAL */}
       {showSettings && (
-         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
-             <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-                <button onClick={() => { setShowSettings(false); setOpenEmojiPicker(null); }} className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-800 text-slate-500 hover:text-white">
-                   <X size={24} />
-                </button>
-                <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                    <Settings size={20} className="text-violet-500" /> Settings
-                </h2>
+         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in">
+             <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-lg p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                        Config
+                    </h2>
+                    <button onClick={() => { setShowSettings(false); setOpenEmojiPicker(null); }} className="text-zinc-500 hover:text-white">
+                        <X size={20} />
+                    </button>
+                </div>
                 
                 {/* Voice Section */}
-                <div className="mb-8 border-b border-slate-800 pb-8">
-                    <label className="text-xs uppercase text-slate-500 font-bold mb-2 block tracking-wider">Voice Preference</label>
+                <div className="mb-8 border-b border-zinc-900 pb-8">
+                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">Audio Feedback</label>
                     <select 
                         value={selectedVoiceURI}
                         onChange={(e) => { setSelectedVoiceURI(e.target.value); localStorage.setItem('vibenotes_voice', e.target.value); }}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-violet-500"
+                        className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600"
                     >
-                        <option value="">Default Voice</option>
+                        <option value="">System Default</option>
                         {voices.map(v => <option key={v.voiceURI} value={v.voiceURI}>{v.name}</option>)}
                     </select>
                 </div>
 
                 {/* Categories Section */}
                 <div>
-                    <label className="text-xs uppercase text-slate-500 font-bold mb-4 block tracking-wider">Customize Categories</label>
-                    
-                    <div className="space-y-6">
+                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-4 block tracking-widest">Tags</label>
+                    <div className="space-y-3">
                         {categories.map((cat) => (
-                            <div key={cat.id} className="bg-slate-950 rounded-2xl p-4 border border-slate-800">
-                                <div className="flex gap-3 mb-3">
-                                    {/* Custom Emoji Picker Dropdown */}
-                                    <div className="relative">
+                            <div key={cat.id} className="bg-black rounded-md p-3 border border-zinc-900 flex items-center gap-3">
+                                <div className="relative">
                                       <button 
                                         onClick={() => setOpenEmojiPicker(openEmojiPicker === cat.id ? null : cat.id)}
-                                        className="w-12 h-12 flex items-center justify-center bg-slate-900 border border-slate-700 rounded-xl hover:border-violet-500 transition-colors text-xl"
+                                        className="w-8 h-8 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-md hover:bg-zinc-800 transition-colors text-sm"
                                       >
                                         {cat.emoji}
                                       </button>
                                       
                                       {openEmojiPicker === cat.id && (
-                                        <div className="absolute top-14 left-0 w-64 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-20 p-2 grid grid-cols-6 gap-1 h-48 overflow-y-auto custom-scrollbar">
+                                        <div className="absolute top-10 left-0 w-64 bg-zinc-900 border border-zinc-700 rounded-md shadow-xl z-20 p-2 grid grid-cols-6 gap-1 h-48 overflow-y-auto">
                                             {EMOJI_LIST.map(emoji => (
                                               <button
                                                 key={emoji}
                                                 onClick={() => { handleCategoryEdit(cat.id, 'emoji', emoji); setOpenEmojiPicker(null); }}
-                                                className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-700 text-lg"
+                                                className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-zinc-800 text-sm"
                                               >
                                                 {emoji}
                                               </button>
                                             ))}
                                         </div>
                                       )}
-                                    </div>
-
-                                    {/* Label Input */}
-                                    <input 
-                                        type="text" 
-                                        value={cat.label}
-                                        onChange={(e) => handleCategoryEdit(cat.id, 'label', e.target.value)}
-                                        className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 text-white focus:outline-none focus:border-violet-500 font-bold"
-                                    />
                                 </div>
-
-                                {/* Color Picker Swatches */}
-                                <div className="flex gap-2 items-center">
-                                    <span className="text-xs text-slate-500 font-semibold mr-2">Color:</span>
-                                    {COLOR_OPTIONS.map((color) => (
-                                      <button
-                                        key={color.id}
-                                        onClick={() => handleCategoryEdit(cat.id, 'colorClass', color.class)}
-                                        className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${color.bg} ${cat.colorClass === color.class ? 'ring-2 ring-white scale-110' : 'opacity-40 hover:opacity-100'}`}
-                                      />
-                                    ))}
-                                </div>
+                                <input 
+                                    type="text" 
+                                    value={cat.label}
+                                    onChange={(e) => handleCategoryEdit(cat.id, 'label', e.target.value)}
+                                    className="flex-1 bg-transparent border-none text-zinc-300 focus:outline-none font-bold text-sm"
+                                />
                             </div>
                         ))}
                     </div>
@@ -365,46 +307,45 @@ function App() {
          </div>
       )}
 
-      {/* RECORDING MODAL */}
+      {/* RECORDING / REVIEW MODAL */}
       {(isListening || isReviewing) && (
-        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative flex flex-col items-center">
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-xl p-6 shadow-2xl relative flex flex-col items-center">
             <button 
               onClick={cancelRecording} 
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-800 text-slate-500 hover:text-white transition-colors z-10"
-              style={{ touchAction: 'manipulation' }}
+              className="absolute top-4 right-4 p-2 rounded-md hover:bg-zinc-900 text-zinc-600 hover:text-white transition-colors"
             >
-              <X size={24} />
+              <X size={20} />
             </button>
 
             {isListening && (
-              <div className="relative w-24 h-24 flex items-center justify-center mb-6 mt-2">
-                <div className="absolute inset-0 bg-violet-500 rounded-full opacity-20 animate-ping"></div>
-                <div className="relative z-10 bg-gradient-to-tr from-violet-600 to-fuchsia-600 p-4 rounded-full shadow-[0_0_20px_rgba(139,92,246,0.6)]">
+               // --- THE COOL GLOWING MIC IS BACK (BUT ORANGE) ---
+              <div className="relative w-24 h-24 flex items-center justify-center mb-6 mt-4">
+                <div className="absolute inset-0 bg-orange-500 rounded-full opacity-20 animate-ping"></div>
+                <div className="relative z-10 bg-gradient-to-tr from-orange-600 to-red-600 p-5 rounded-full shadow-[0_0_30px_rgba(234,88,12,0.4)]">
                   <Mic size={32} className="text-white animate-pulse" />
                 </div>
               </div>
             )}
 
-            <h2 className="text-xl font-bold mb-4 text-center">{isListening ? 'Listening...' : 'Review Note'}</h2>
+            <h2 className="text-sm font-bold uppercase tracking-widest mb-4 text-center text-zinc-400">{isListening ? 'Recording Input...' : 'Confirm'}</h2>
             <textarea
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
-              placeholder="Speak now..."
-              className={`w-full bg-slate-950 rounded-xl p-4 text-lg text-white resize-none focus:outline-none focus:ring-2 focus:ring-violet-500/50 mb-6 transition-all ${isListening ? 'h-32 opacity-80' : 'h-48 opacity-100'}`}
+              placeholder="..."
+              className={`w-full bg-black border border-zinc-800 rounded-md p-4 text-lg text-white resize-none focus:outline-none focus:border-white mb-6 font-light ${isListening ? 'h-32 opacity-50' : 'h-48 opacity-100'}`}
             />
 
             {isReviewing && (
               <div className="mb-6 w-full">
-                <p className="text-xs uppercase text-slate-500 font-bold mb-3 tracking-wider text-center">Select Vibe</p>
                 <div className="flex gap-2 justify-center">
                   {categories.map(cat => (
                     <button
                       key={cat.id}
                       onClick={() => setSelectedCategory(cat.id)}
-                      className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${selectedCategory === cat.id ? 'bg-white text-slate-950 border-white scale-105 shadow-lg' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                      className={`px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider border transition-all ${selectedCategory === cat.id ? 'bg-white text-black border-white' : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600'}`}
                     >
-                      {cat.emoji} {cat.label}
+                      {cat.label}
                     </button>
                   ))}
                 </div>
@@ -415,18 +356,16 @@ function App() {
               {isListening ? (
                 <button 
                   onClick={toggleRecording} 
-                  className="w-full py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-lg border border-slate-700 flex items-center justify-center gap-2"
-                  style={{ touchAction: 'manipulation' }}
+                  className="w-full py-4 rounded-md bg-zinc-900 hover:bg-zinc-800 text-red-500 font-bold text-sm uppercase tracking-widest border border-zinc-800 flex items-center justify-center gap-2"
                 >
-                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" /> Stop Listening
+                  <Square size={16} fill="currentColor" /> STOP
                 </button>
               ) : (
                 <button 
                   onClick={saveNote} 
-                  className="w-full py-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-lg shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2"
-                  style={{ touchAction: 'manipulation' }}
+                  className="w-full py-4 rounded-md bg-white hover:bg-zinc-200 text-black font-bold text-sm uppercase tracking-widest border border-white flex items-center justify-center gap-2"
                 >
-                  <Check size={20} /> Save Note
+                  <Check size={16} /> SAVE
                 </button>
               )}
             </div>
@@ -434,14 +373,14 @@ function App() {
         </div>
       )}
 
-      {/* FAB */}
+      {/* FAB - COOL GLOWING BUTTON (ORANGE) */}
       {!isListening && !isReviewing && (
         <button 
           onClick={toggleRecording} 
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 w-20 h-20 bg-gradient-to-tr from-violet-600 to-fuchsia-600 rounded-full shadow-[0_0_30px_rgba(139,92,246,0.5)] flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all z-40 group"
-          style={{ touchAction: 'manipulation' }}
+          // Restored Mic Icon + Added Pulse Animation + Gradient to make it "cool" like the original
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 bg-gradient-to-tr from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 rounded-2xl shadow-[0_0_20px_rgba(234,88,12,0.4)] flex items-center justify-center text-white transition-all z-40 group border border-orange-400 active:scale-95"
         >
-          <Mic size={32} className="group-hover:animate-pulse" />
+          <Mic size={28} className="drop-shadow-md" />
         </button>
       )}
     </div>

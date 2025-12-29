@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Search, X, Check, Settings, LayoutGrid, Square } from 'lucide-react';
+import { Mic, Search, X, Check, Settings, LayoutGrid, Square, Circle, AudioLines } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard';
 
@@ -196,14 +196,20 @@ function App() {
           />
       </div>
 
-      {/* Filter Chips */}
-      <div className="max-w-2xl mx-auto mb-8 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        <button onClick={() => setActiveFilter('all')} className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider border transition-all ${activeFilter === 'all' ? 'bg-white text-black border-white' : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'}`}>All</button>
+      {/* Filter Chips - COMPACT & WRAPPED */}
+      {/* Changed: flex-wrap, justify-center, smaller padding/text */}
+      <div className="max-w-2xl mx-auto mb-8 flex flex-wrap gap-2 justify-center">
+        <button 
+            onClick={() => setActiveFilter('all')} 
+            className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border transition-all ${activeFilter === 'all' ? 'bg-white text-black border-white' : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'}`}
+        >
+            All
+        </button>
         {categories.map((cat) => (
             <button
                 key={cat.id}
                 onClick={() => setActiveFilter(cat.id)}
-                className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider border transition-all whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border transition-all whitespace-nowrap ${
                     activeFilter === cat.id ? 'bg-white text-black border-white' : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
                 }`}
             >
@@ -319,7 +325,6 @@ function App() {
             </button>
 
             {isListening && (
-               // --- THE COOL GLOWING MIC IS BACK (BUT ORANGE) ---
               <div className="relative w-24 h-24 flex items-center justify-center mb-6 mt-4">
                 <div className="absolute inset-0 bg-orange-500 rounded-full opacity-20 animate-ping"></div>
                 <div className="relative z-10 bg-gradient-to-tr from-orange-600 to-red-600 p-5 rounded-full shadow-[0_0_30px_rgba(234,88,12,0.4)]">
@@ -338,7 +343,7 @@ function App() {
 
             {isReviewing && (
               <div className="mb-6 w-full">
-                <div className="flex gap-2 justify-center">
+                <div className="flex flex-wrap gap-2 justify-center">
                   {categories.map(cat => (
                     <button
                       key={cat.id}
@@ -377,7 +382,6 @@ function App() {
       {!isListening && !isReviewing && (
         <button 
           onClick={toggleRecording} 
-          // Restored Mic Icon + Added Pulse Animation + Gradient to make it "cool" like the original
           className="fixed bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 bg-gradient-to-tr from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 rounded-2xl shadow-[0_0_20px_rgba(234,88,12,0.4)] flex items-center justify-center text-white transition-all z-40 group border border-orange-400 active:scale-95"
         >
           <Mic size={28} className="drop-shadow-md" />

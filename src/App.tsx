@@ -48,9 +48,11 @@ function App() {
     const savedVoice = localStorage.getItem('vibenotes_voice');
     if (savedVoice) setSelectedVoiceURI(savedVoice);
 
+    let recognition: any = null;
+
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
+      recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
@@ -65,10 +67,24 @@ function App() {
         }
       };
 
+      // ADDED: Error handling is crucial to know why it stops
+      recognition.onerror = (event: any) => {
+        console.error("Speech Recognition Error:", event.error);
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            shouldListenRef.current = false;
+            setIsListening(false);
+        }
+      };
+
       recognition.onend = () => {
+        // Only restart if we are SUPPOSED to be listening
         if (shouldListenRef.current) {
-          try { recognition.start(); } catch (e) { 
-            setIsListening(false); shouldListenRef.current = false; 
+          try { 
+            recognition.start(); 
+          } catch (e) { 
+            console.log("Restart failed", e);
+            setIsListening(false); 
+            shouldListenRef.current = false; 
           }
         } else {
           setIsListening(false);
@@ -81,6 +97,15 @@ function App() {
     const loadVoices = () => setVoices(window.speechSynthesis.getVoices());
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    // ADDED: CLEANUP FUNCTION
+    // This runs when the component unmounts or re-renders
+    return () => {
+        if (recognition) {
+            recognition.abort(); // Kill the microphone stream
+            recognitionRef.current = null;
+        }
+    };
   }, []);
 
   useEffect(() => {

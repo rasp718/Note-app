@@ -39,6 +39,7 @@ function App() {
 
   // --- INITIALIZATION ---
   useEffect(() => {
+    // Load saved data
     const savedNotes = localStorage.getItem('vibenotes_data');
     if (savedNotes) setNotes(JSON.parse(savedNotes));
 
@@ -50,10 +51,13 @@ function App() {
 
     let recognition: any = null;
 
+    // --- VOICE RECOGNITION SETUP ---
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognition = new SpeechRecognition();
-      recognition.continuous = true;
+      
+      // FIX FOR IPHONE: Continuous must be FALSE for best iOS support
+      recognition.continuous = false; 
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
@@ -67,25 +71,27 @@ function App() {
         }
       };
 
-      // ADDED: Error handling is crucial to know why it stops
       recognition.onerror = (event: any) => {
         console.error("Speech Recognition Error:", event.error);
         if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
             shouldListenRef.current = false;
             setIsListening(false);
+            alert("Please allow microphone access in your browser settings.");
         }
       };
 
       recognition.onend = () => {
-        // Only restart if we are SUPPOSED to be listening
+        // FIX FOR IPHONE: Manual restart loop
         if (shouldListenRef.current) {
-          try { 
-            recognition.start(); 
-          } catch (e) { 
-            console.log("Restart failed", e);
-            setIsListening(false); 
-            shouldListenRef.current = false; 
-          }
+          setTimeout(() => {
+             try { 
+               // Only restart if the user hasn't cancelled
+               if (shouldListenRef.current) recognition.start(); 
+             } catch (e) { 
+               // Ignore errors if already started
+               console.log("Restart attempt", e);
+             }
+          }, 100); // Small delay prevents iOS crash
         } else {
           setIsListening(false);
         }
@@ -98,13 +104,10 @@ function App() {
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
 
-    // ADDED: CLEANUP FUNCTION
-    // This runs when the component unmounts or re-renders
+    // CLEANUP FUNCTION (Fixes the zombie mic issue)
     return () => {
-        if (recognition) {
-            recognition.abort(); // Kill the microphone stream
-            recognitionRef.current = null;
-        }
+        if (recognition) recognition.abort();
+        shouldListenRef.current = false;
     };
   }, []);
 
@@ -129,16 +132,19 @@ function App() {
 
   const toggleRecording = () => {
     if (!recognitionRef.current) {
-        alert("Speech recognition is not supported in this browser.");
+        alert("Speech recognition is not supported in this browser/device. Try using Chrome or Safari.");
         return;
     }
 
     if (isListening) {
+      // STOP
       shouldListenRef.current = false;
       recognitionRef.current.stop();
       setIsListening(false);
-      setTimeout(() => { if (transcript.trim() || true) setIsReviewing(true); }, 200);
+      // Wait a moment before showing review to let final transcript process
+      setTimeout(() => { if (transcript.trim() || true) setIsReviewing(true); }, 500);
     } else {
+      // START
       setTranscript('');
       setSelectedCategory('idea');
       shouldListenRef.current = true;
@@ -146,13 +152,16 @@ function App() {
         recognitionRef.current.start();
         setIsListening(true);
         setIsReviewing(false);
-      } catch (e) { shouldListenRef.current = false; }
+      } catch (e) { 
+        console.error("Failed to start", e);
+        shouldListenRef.current = false; 
+      }
     }
   };
 
   const cancelRecording = () => {
     shouldListenRef.current = false;
-    recognitionRef.current?.stop();
+    recognitionRef.current?.abort(); // Abort is faster than stop
     setIsListening(false);
     setIsReviewing(false);
     setTranscript('');
@@ -221,8 +230,7 @@ function App() {
           />
       </div>
 
-      {/* Filter Chips - COMPACT & WRAPPED */}
-      {/* Changed: flex-wrap, justify-center, smaller padding/text */}
+      {/* Filter Chips */}
       <div className="max-w-2xl mx-auto mb-8 flex flex-wrap gap-2 justify-center">
         <button 
             onClick={() => setActiveFilter('all')} 

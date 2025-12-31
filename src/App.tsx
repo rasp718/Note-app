@@ -73,23 +73,29 @@ function App() {
 
       recognition.onerror = (event: any) => {
         console.error("Speech Recognition Error:", event.error);
+        
+        // Handle explicit blocks
         if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
             shouldListenRef.current = false;
             setIsListening(false);
-            alert("Please allow microphone access in your browser settings.");
+            // Only alert if we are actually trying to listen
+            if (isListening) {
+                alert("Microphone access blocked. Please check your browser settings or use the keyboard microphone.");
+            }
         }
       };
 
       recognition.onend = () => {
-        // FIX FOR IPHONE: Manual restart loop
+        // FIX FOR IPHONE: Manual restart loop for continuous feel
         if (shouldListenRef.current) {
           setTimeout(() => {
              try { 
                // Only restart if the user hasn't cancelled
                if (shouldListenRef.current) recognition.start(); 
              } catch (e) { 
-               // Ignore errors if already started
-               console.log("Restart attempt", e);
+               // Ignore errors if already started or blocked
+               console.log("Restart attempt failed", e);
+               if (shouldListenRef.current) setIsListening(false);
              }
           }, 100); // Small delay prevents iOS crash
         } else {
@@ -131,11 +137,25 @@ function App() {
   };
 
   const toggleRecording = () => {
-    if (!recognitionRef.current) {
-        alert("Speech recognition is not supported in this browser/device. Try using Chrome or Safari.");
+    // 1. iOS Home Screen Check
+    // Apple DISABLES the speech API in "Standalone" (Home Screen) mode.
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
+
+    if (isIOS && isStandalone) {
+        alert("Apple restricts the custom microphone button in Home Screen apps.\n\nPlease tap the text box and use the Microphone key on your keyboard instead.");
+        // Open the review modal so they can type immediately
+        setIsReviewing(true); 
         return;
     }
 
+    // 2. Standard Browser Check
+    if (!recognitionRef.current) {
+        alert("Speech recognition is not supported in this browser. Please use Chrome or Safari.");
+        return;
+    }
+
+    // 3. Toggle Logic
     if (isListening) {
       // STOP
       shouldListenRef.current = false;
@@ -155,6 +175,7 @@ function App() {
       } catch (e) { 
         console.error("Failed to start", e);
         shouldListenRef.current = false; 
+        alert("Could not start microphone. Please refresh and try again.");
       }
     }
   };
@@ -370,7 +391,7 @@ function App() {
             <textarea
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
-              placeholder="..."
+              placeholder="Type or use keyboard mic..."
               className={`w-full bg-black border border-zinc-800 rounded-md p-4 text-lg text-white resize-none focus:outline-none focus:border-white mb-6 font-light ${isListening ? 'h-32 opacity-50' : 'h-48 opacity-100'}`}
             />
 

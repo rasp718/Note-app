@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Edit2, Play, Pause, Pin, MoreHorizontal } from 'lucide-react';
+import { Trash2, Edit2, Play, Pause, Pin } from 'lucide-react';
 import { Note, CategoryConfig, CategoryId } from '../types';
 
 interface NoteCardProps {
@@ -50,64 +50,72 @@ export function NoteCard({
   }).format(new Date(note.date));
 
   return (
-    <div className="relative bg-zinc-900 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-all group">
+    <div className="relative bg-zinc-900 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-all group flex flex-col">
       
       {/* Header */}
-      <div className="flex justify-between items-start p-4 pb-2">
+      <div className="flex justify-between items-start p-4 pb-2 h-9">
+        {/* SMALLER CATEGORY BUTTON */}
         <button 
           onClick={() => onCategoryClick(note.category)}
-          className="flex items-center gap-2 px-2 py-1 rounded-md bg-zinc-950 border border-zinc-800 hover:border-zinc-600 transition-colors"
+          className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-zinc-950 border border-zinc-800 hover:border-zinc-600 transition-colors"
         >
-          <span className="text-sm grayscale">{categoryConfig.emoji}</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{categoryConfig.label}</span>
+          <span className="text-xs grayscale">{categoryConfig.emoji}</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-500">{categoryConfig.label}</span>
         </button>
 
-        <div className="flex gap-1">
+        {/* ACTION BUTTONS - HIDDEN UNTIL HOVER */}
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
            {/* PIN BUTTON */}
            <button 
             onClick={() => onPin(note.id)}
-            className={`p-1.5 rounded-md hover:bg-zinc-800 transition-colors ${note.isPinned ? 'text-orange-500' : 'text-zinc-600 hover:text-zinc-300'}`}
+            className={`p-1.5 rounded-md hover:bg-zinc-800 transition-colors ${
+                note.isPinned 
+                ? 'text-orange-500' 
+                : 'text-zinc-600 hover:text-orange-500'
+            }`}
+            title={note.isPinned ? "Unpin" : "Pin"}
           >
             <Pin size={16} className={note.isPinned ? "fill-current" : ""} />
           </button>
 
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button 
-                onClick={() => onEdit(note)}
-                className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-600 hover:text-zinc-300 transition-colors"
-            >
-                <Edit2 size={16} />
-            </button>
-            
-            <button 
-                onClick={() => onDelete(note.id)}
-                className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-600 hover:text-red-500 transition-colors"
-            >
-                <Trash2 size={16} />
-            </button>
-          </div>
+          {/* EDIT BUTTON */}
+          <button 
+              onClick={() => onEdit(note)}
+              className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-600 hover:text-orange-500 transition-colors"
+          >
+              <Edit2 size={16} />
+          </button>
+          
+          {/* DELETE BUTTON */}
+          <button 
+              onClick={() => onDelete(note.id)}
+              className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-600 hover:text-red-500 transition-colors"
+          >
+              <Trash2 size={16} />
+          </button>
         </div>
       </div>
 
       {/* Body */}
-      <div className="px-4 py-2">
+      <div className="px-4 py-2 flex-grow">
         <p className="text-zinc-300 text-base leading-relaxed whitespace-pre-wrap font-light tracking-wide">{note.text}</p>
       </div>
 
       {/* Footer */}
-      <div className="flex justify-between items-center p-4 pt-2 mt-2">
+      <div className="flex justify-between items-end p-4 pt-2">
         <span className="text-[10px] text-zinc-600 font-mono uppercase tracking-wider">{formattedDate}</span>
         
+        {/* Play Button - Minimalist Icon (Bottom Right) */}
         <button 
           onClick={handleSpeak}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+          className={`p-1.5 rounded-md transition-all ${
             isPlaying 
-              ? 'bg-zinc-100 text-black border-zinc-100' 
-              : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:border-zinc-500 hover:text-white'
+              ? 'text-orange-500 bg-orange-500/10' 
+              : 'text-zinc-600 hover:text-orange-500 hover:bg-zinc-800'
           }`}
+          title="Read Aloud"
         >
-          {isPlaying ? <Pause size={12} fill="currentColor"/> : <Play size={12} fill="currentColor" />}
-          {isPlaying ? 'PLAYING' : 'PLAY'}
+          {isPlaying ? <Pause size={16} fill="currentColor"/> : <Play size={16} fill="currentColor" />}
         </button>
       </div>
     </div>

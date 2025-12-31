@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Search, X, Check, Settings, LayoutGrid, Square, Circle, AudioLines } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, X, Check, Settings, LayoutGrid, Plus, Download } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard';
 
@@ -14,14 +14,9 @@ function App() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [categories, setCategories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
   
-  // Recording State
-  const [isListening, setIsListening] = useState(false);
+  // Note State
   const [transcript, setTranscript] = useState('');
   
-  // Refs
-  const recognitionRef = useRef<any>(null);
-  const shouldListenRef = useRef(false);
-
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all'>('all');
@@ -39,7 +34,6 @@ function App() {
 
   // --- INITIALIZATION ---
   useEffect(() => {
-    // Load saved data
     const savedNotes = localStorage.getItem('vibenotes_data');
     if (savedNotes) setNotes(JSON.parse(savedNotes));
 
@@ -49,72 +43,9 @@ function App() {
     const savedVoice = localStorage.getItem('vibenotes_voice');
     if (savedVoice) setSelectedVoiceURI(savedVoice);
 
-    let recognition: any = null;
-
-    // --- VOICE RECOGNITION SETUP ---
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      
-      // FIX FOR IPHONE: Continuous must be FALSE for best iOS support
-      recognition.continuous = false; 
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event: any) => {
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
-        }
-        if (finalTranscript) {
-           setTranscript(prev => (prev ? prev + ' ' + finalTranscript : finalTranscript));
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.error("Speech Recognition Error:", event.error);
-        
-        // Handle explicit blocks
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-            shouldListenRef.current = false;
-            setIsListening(false);
-            // Only alert if we are actually trying to listen
-            if (isListening) {
-                alert("Microphone access blocked. Please check your browser settings or use the keyboard microphone.");
-            }
-        }
-      };
-
-      recognition.onend = () => {
-        // FIX FOR IPHONE: Manual restart loop for continuous feel
-        if (shouldListenRef.current) {
-          setTimeout(() => {
-             try { 
-               // Only restart if the user hasn't cancelled
-               if (shouldListenRef.current) recognition.start(); 
-             } catch (e) { 
-               // Ignore errors if already started or blocked
-               console.log("Restart attempt failed", e);
-               if (shouldListenRef.current) setIsListening(false);
-             }
-          }, 100); // Small delay prevents iOS crash
-        } else {
-          setIsListening(false);
-        }
-      };
-
-      recognitionRef.current = recognition;
-    }
-
     const loadVoices = () => setVoices(window.speechSynthesis.getVoices());
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
-
-    // CLEANUP FUNCTION (Fixes the zombie mic issue)
-    return () => {
-        if (recognition) recognition.abort();
-        shouldListenRef.current = false;
-    };
   }, []);
 
   useEffect(() => {
@@ -136,54 +67,13 @@ function App() {
     setCategories(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
   };
 
-  const toggleRecording = () => {
-    // 1. iOS Home Screen Check
-    // Apple DISABLES the speech API in "Standalone" (Home Screen) mode.
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
-
-    if (isIOS && isStandalone) {
-        alert("Apple restricts the custom microphone button in Home Screen apps.\n\nPlease tap the text box and use the Microphone key on your keyboard instead.");
-        // Open the review modal so they can type immediately
-        setIsReviewing(true); 
-        return;
-    }
-
-    // 2. Standard Browser Check
-    if (!recognitionRef.current) {
-        alert("Speech recognition is not supported in this browser. Please use Chrome or Safari.");
-        return;
-    }
-
-    // 3. Toggle Logic
-    if (isListening) {
-      // STOP
-      shouldListenRef.current = false;
-      recognitionRef.current.stop();
-      setIsListening(false);
-      // Wait a moment before showing review to let final transcript process
-      setTimeout(() => { if (transcript.trim() || true) setIsReviewing(true); }, 500);
-    } else {
-      // START
-      setTranscript('');
-      setSelectedCategory('idea');
-      shouldListenRef.current = true;
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-        setIsReviewing(false);
-      } catch (e) { 
-        console.error("Failed to start", e);
-        shouldListenRef.current = false; 
-        alert("Could not start microphone. Please refresh and try again.");
-      }
-    }
+  const startNewNote = () => {
+    setTranscript('');
+    setSelectedCategory('idea');
+    setIsReviewing(true);
   };
 
-  const cancelRecording = () => {
-    shouldListenRef.current = false;
-    recognitionRef.current?.abort(); // Abort is faster than stop
-    setIsListening(false);
+  const cancelNote = () => {
     setIsReviewing(false);
     setTranscript('');
   };
@@ -197,6 +87,7 @@ function App() {
       category: selectedCategory,
       isPinned: false
     };
+    // Newest notes go to the front of the array
     setNotes(prev => [newNote, ...prev]);
     setTranscript('');
     setIsReviewing(false);
@@ -206,6 +97,16 @@ function App() {
   
   const togglePin = (id: string) => {
     setNotes(prev => prev.map(n => n.id === id ? { ...n, isPinned: !n.isPinned } : n));
+  };
+
+  const handleExport = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(notes));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `vibenotes_backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
   };
 
   const filteredNotes = notes
@@ -255,7 +156,11 @@ function App() {
       <div className="max-w-2xl mx-auto mb-8 flex flex-wrap gap-2 justify-center">
         <button 
             onClick={() => setActiveFilter('all')} 
-            className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border transition-all ${activeFilter === 'all' ? 'bg-white text-black border-white' : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'}`}
+            className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border transition-all ${
+                activeFilter === 'all' 
+                ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
+                : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
+            }`}
         >
             All
         </button>
@@ -264,7 +169,9 @@ function App() {
                 key={cat.id}
                 onClick={() => setActiveFilter(cat.id)}
                 className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border transition-all whitespace-nowrap ${
-                    activeFilter === cat.id ? 'bg-white text-black border-white' : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
+                    activeFilter === cat.id 
+                    ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
+                    : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
                 }`}
             >
                 {cat.label}
@@ -273,7 +180,7 @@ function App() {
       </div>
 
       {/* Grid */}
-      <div className="max-w-2xl mx-auto grid gap-3">
+      <div className="max-w-2xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-3">
           {filteredNotes.map(note => (
             <NoteCard 
               key={note.id} 
@@ -292,7 +199,7 @@ function App() {
             />
           ))}
           {filteredNotes.length === 0 && (
-              <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg">
+              <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full">
                   <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
                   <p className="text-zinc-700 text-xs font-mono uppercase">Database Empty</p>
               </div>
@@ -302,7 +209,7 @@ function App() {
       {/* SETTINGS MODAL */}
       {showSettings && (
          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in">
-             <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-lg p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+             <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-lg p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                         Config
@@ -326,7 +233,7 @@ function App() {
                 </div>
 
                 {/* Categories Section */}
-                <div>
+                <div className="mb-8 border-b border-zinc-900 pb-8">
                     <label className="text-[10px] uppercase text-zinc-600 font-bold mb-4 block tracking-widest">Tags</label>
                     <div className="space-y-3">
                         {categories.map((cat) => (
@@ -340,7 +247,7 @@ function App() {
                                       </button>
                                       
                                       {openEmojiPicker === cat.id && (
-                                        <div className="absolute top-10 left-0 w-64 bg-zinc-900 border border-zinc-700 rounded-md shadow-xl z-20 p-2 grid grid-cols-6 gap-1 h-48 overflow-y-auto">
+                                        <div className="absolute top-10 left-0 w-64 bg-zinc-900 border border-zinc-700 rounded-md shadow-xl z-50 p-2 grid grid-cols-6 gap-1 h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full">
                                             {EMOJI_LIST.map(emoji => (
                                               <button
                                                 key={emoji}
@@ -363,82 +270,83 @@ function App() {
                         ))}
                     </div>
                 </div>
+
+                {/* Data Backup Section */}
+                <div>
+                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">Data Management</label>
+                    <button 
+                        onClick={handleExport}
+                        className="w-full py-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 rounded-md text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                    >
+                        <Download size={14} /> Download Backup
+                    </button>
+                </div>
              </div>
          </div>
       )}
 
-      {/* RECORDING / REVIEW MODAL */}
-      {(isListening || isReviewing) && (
+      {/* NEW NOTE MODAL */}
+      {isReviewing && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
           <div className="w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-xl p-6 shadow-2xl relative flex flex-col items-center">
             <button 
-              onClick={cancelRecording} 
+              onClick={cancelNote} 
               className="absolute top-4 right-4 p-2 rounded-md hover:bg-zinc-900 text-zinc-600 hover:text-white transition-colors"
             >
               <X size={20} />
             </button>
 
-            {isListening && (
-              <div className="relative w-24 h-24 flex items-center justify-center mb-6 mt-4">
-                <div className="absolute inset-0 bg-orange-500 rounded-full opacity-20 animate-ping"></div>
-                <div className="relative z-10 bg-gradient-to-tr from-orange-600 to-red-600 p-5 rounded-full shadow-[0_0_30px_rgba(234,88,12,0.4)]">
-                  <Mic size={32} className="text-white animate-pulse" />
-                </div>
-              </div>
-            )}
-
-            <h2 className="text-sm font-bold uppercase tracking-widest mb-4 text-center text-zinc-400">{isListening ? 'Recording Input...' : 'Confirm'}</h2>
+            <h2 className="text-sm font-bold uppercase tracking-widest mb-4 text-center text-zinc-400">New Note</h2>
+            
             <textarea
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
+              onKeyDown={(e) => {
+                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    saveNote();
+                 }
+              }}
               placeholder="Type or use keyboard mic..."
-              className={`w-full bg-black border border-zinc-800 rounded-md p-4 text-lg text-white resize-none focus:outline-none focus:border-white mb-6 font-light ${isListening ? 'h-32 opacity-50' : 'h-48 opacity-100'}`}
+              autoFocus
+              className="w-full bg-black border border-zinc-800 rounded-md p-4 text-lg text-white resize-none focus:outline-none focus:border-white mb-6 font-light h-48"
             />
 
-            {isReviewing && (
-              <div className="mb-6 w-full">
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {categories.map(cat => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedCategory(cat.id)}
-                      className={`px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider border transition-all ${selectedCategory === cat.id ? 'bg-white text-black border-white' : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600'}`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
+            <div className="mb-6 w-full">
+              <div className="flex flex-wrap gap-2 justify-center">
+                {categories.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider border transition-all ${
+                        selectedCategory === cat.id 
+                        ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
+                        : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
               </div>
-            )}
-
-            <div className="flex gap-3 w-full">
-              {isListening ? (
-                <button 
-                  onClick={toggleRecording} 
-                  className="w-full py-4 rounded-md bg-zinc-900 hover:bg-zinc-800 text-red-500 font-bold text-sm uppercase tracking-widest border border-zinc-800 flex items-center justify-center gap-2"
-                >
-                  <Square size={16} fill="currentColor" /> STOP
-                </button>
-              ) : (
-                <button 
-                  onClick={saveNote} 
-                  className="w-full py-4 rounded-md bg-white hover:bg-zinc-200 text-black font-bold text-sm uppercase tracking-widest border border-white flex items-center justify-center gap-2"
-                >
-                  <Check size={16} /> SAVE
-                </button>
-              )}
             </div>
+
+            <button 
+              onClick={saveNote} 
+              className="w-full py-4 rounded-md bg-black border border-zinc-800 text-zinc-400 font-bold text-sm uppercase tracking-widest hover:border-orange-500 hover:text-orange-500 hover:shadow-[0_0_15px_rgba(249,115,22,0.15)] transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+            >
+              <Check size={16} /> SAVE
+            </button>
           </div>
         </div>
       )}
 
-      {/* FAB - COOL GLOWING BUTTON (ORANGE) */}
-      {!isListening && !isReviewing && (
+      {/* FAB */}
+      {!isReviewing && (
         <button 
-          onClick={toggleRecording} 
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 bg-gradient-to-tr from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 rounded-2xl shadow-[0_0_20px_rgba(234,88,12,0.4)] flex items-center justify-center text-white transition-all z-40 group border border-orange-400 active:scale-95"
+          onClick={startNewNote} 
+          className="fixed bottom-10 right-8 w-14 h-14 bg-black border border-zinc-800 rounded-full flex items-center justify-center text-zinc-400 hover:text-orange-500 hover:border-orange-500 transition-all duration-300 shadow-lg hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] z-40 active:scale-95"
         >
-          <Mic size={28} className="drop-shadow-md" />
+          <Plus size={28} />
         </button>
       )}
     </div>

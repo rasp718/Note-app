@@ -152,11 +152,12 @@ function App() {
           />
       </div>
 
-      {/* Filter Chips */}
-      <div className="max-w-2xl mx-auto mb-8 flex flex-wrap gap-2 justify-center">
+      {/* Filter Chips - NO SCROLLBAR */}
+      {/* Added classes to hide scrollbar but keep swipe capability on mobile */}
+      <div className="max-w-2xl mx-auto mb-8 flex gap-2 overflow-x-auto md:flex-wrap md:justify-center md:overflow-visible [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <button 
             onClick={() => setActiveFilter('all')} 
-            className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border transition-all ${
+            className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border transition-all whitespace-nowrap flex-shrink-0 ${
                 activeFilter === 'all' 
                 ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
                 : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
@@ -168,7 +169,7 @@ function App() {
             <button
                 key={cat.id}
                 onClick={() => setActiveFilter(cat.id)}
-                className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border transition-all whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border transition-all whitespace-nowrap flex-shrink-0 ${
                     activeFilter === cat.id 
                     ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
                     : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'

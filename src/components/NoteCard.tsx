@@ -50,25 +50,25 @@ export function NoteCard({
   }).format(new Date(note.date));
 
   return (
-    <div className="relative bg-zinc-900 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-all group flex flex-col">
+    <div className="relative bg-zinc-900 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-all duration-300 group flex flex-col animate-in fade-in slide-in-from-bottom-2">
       
       {/* Header */}
       <div className="flex justify-between items-start p-4 pb-2 h-9">
-        {/* CATEGORY BADGE */}
+        {/* ICON ONLY BADGE (GRAYSCALE + PILL) */}
         <button 
           onClick={() => onCategoryClick(note.category)}
-          className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-zinc-950 border border-zinc-800 hover:border-zinc-600 transition-colors"
+          className="w-6 h-6 rounded-full bg-zinc-950 border border-zinc-800 hover:border-zinc-600 flex items-center justify-center transition-colors"
+          title={categoryConfig.label}
         >
           <span className="text-xs grayscale">{categoryConfig.emoji}</span>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-500">{categoryConfig.label}</span>
         </button>
 
-        {/* ACTION BUTTONS - HIDDEN UNTIL HOVER */}
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        {/* TOP ACTIONS: PIN & DELETE */}
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out">
            {/* PIN BUTTON */}
            <button 
             onClick={() => onPin(note.id)}
-            className={`p-1.5 rounded-md hover:bg-zinc-800 transition-colors ${
+            className={`p-1.5 rounded-full hover:bg-zinc-800 transition-colors duration-200 ${
                 note.isPinned 
                 ? 'text-orange-500' 
                 : 'text-zinc-600 hover:text-orange-500'
@@ -77,19 +77,12 @@ export function NoteCard({
           >
             <Pin size={16} className={note.isPinned ? "fill-current" : ""} />
           </button>
-
-          {/* EDIT BUTTON */}
-          <button 
-              onClick={() => onEdit(note)}
-              className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-600 hover:text-orange-500 transition-colors"
-          >
-              <Edit2 size={16} />
-          </button>
           
           {/* DELETE BUTTON */}
           <button 
               onClick={() => onDelete(note.id)}
-              className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-600 hover:text-red-500 transition-colors"
+              className="p-1.5 rounded-full hover:bg-zinc-800 text-zinc-600 hover:text-red-500 transition-colors duration-200"
+              title="Delete Note"
           >
               <Trash2 size={16} />
           </button>
@@ -105,18 +98,30 @@ export function NoteCard({
       <div className="flex justify-between items-end p-4 pt-2">
         <span className="text-[10px] text-zinc-600 font-mono uppercase tracking-wider">{formattedDate}</span>
         
-        {/* Play Button - Minimalist Icon (Hidden unless hovering or playing) */}
-        <button 
-          onClick={handleSpeak}
-          className={`p-1.5 rounded-md transition-all ${
-            isPlaying 
-              ? 'opacity-100 text-orange-500 bg-orange-500/10' 
-              : 'opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-orange-500 hover:bg-zinc-800'
-          }`}
-          title="Read Aloud"
-        >
-          {isPlaying ? <Pause size={16} fill="currentColor"/> : <Play size={16} fill="currentColor" />}
-        </button>
+        {/* BOTTOM ACTIONS: EDIT & PLAY */}
+        <div className="flex gap-1">
+            {/* EDIT BUTTON (Moved to Bottom) */}
+            <button 
+                onClick={() => onEdit(note)}
+                className="p-1.5 rounded-full opacity-0 group-hover:opacity-100 hover:bg-zinc-800 text-zinc-600 hover:text-orange-500 transition-all duration-200"
+                title="Edit Note"
+            >
+                <Edit2 size={16} />
+            </button>
+
+            {/* PLAY BUTTON */}
+            <button 
+              onClick={handleSpeak}
+              className={`p-1.5 rounded-full transition-all duration-300 ${
+                isPlaying 
+                  ? 'opacity-100 text-orange-500 bg-orange-500/10' 
+                  : 'opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-orange-500 hover:bg-zinc-800'
+              }`}
+              title="Read Aloud"
+            >
+              {isPlaying ? <Pause size={16} fill="currentColor"/> : <Play size={16} fill="currentColor" />}
+            </button>
+        </div>
       </div>
     </div>
   );

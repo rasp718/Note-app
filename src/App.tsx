@@ -141,13 +141,13 @@ function App() {
                 placeholder="SEARCH..."
                 value={searchQuery} 
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2.5 pl-9 pr-4 text-zinc-300 focus:outline-none focus:border-white transition-all placeholder:text-zinc-700 text-xs font-bold uppercase tracking-wider"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-9 pr-4 text-zinc-300 focus:outline-none focus:border-white transition-all placeholder:text-zinc-700 text-xs font-bold uppercase tracking-wider"
             />
          </div>
 
         <button 
             onClick={() => setShowSettings(true)}
-            className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-md bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-500 hover:text-white transition-all"
+            className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-500 hover:text-white transition-all active:scale-95"
         >
             <Settings size={20} />
         </button>
@@ -157,9 +157,9 @@ function App() {
       <div className="max-w-2xl mx-auto mb-6 flex gap-2 overflow-x-auto md:flex-wrap md:justify-center md:overflow-visible [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <button 
             onClick={() => setActiveFilter('all')} 
-            className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border transition-all whitespace-nowrap flex-shrink-0 ${
+            className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all whitespace-nowrap flex-shrink-0 duration-300 ${
                 activeFilter === 'all' 
-                ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
+                ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
                 : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
             }`}
         >
@@ -169,13 +169,14 @@ function App() {
             <button
                 key={cat.id}
                 onClick={() => setActiveFilter(cat.id)}
-                className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border transition-all whitespace-nowrap flex-shrink-0 ${
+                className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 duration-300 ${
                     activeFilter === cat.id 
-                    ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
+                    ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
                     : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
                 }`}
             >
-                {cat.label}
+                <span className="grayscale text-xs">{cat.emoji}</span>
+                <span>{cat.label}</span>
             </button>
         ))}
       </div>
@@ -199,7 +200,7 @@ function App() {
             />
           ))}
           {filteredNotes.length === 0 && (
-              <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50">
+              <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 animate-in fade-in zoom-in-95 duration-500">
                   <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
                   <p className="text-zinc-700 text-xs font-mono uppercase">Database Empty</p>
               </div>
@@ -210,13 +211,12 @@ function App() {
       <div className="fixed bottom-0 left-0 w-full bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 z-50">
           <div className="max-w-2xl mx-auto flex items-end gap-2">
               
-              {/* Category Cycler - BADGE STYLE */}
+              {/* Category Cycler - PILL SHAPE */}
               <button 
                   onClick={cycleCategory}
-                  className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-md bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group"
+                  className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group"
               >
                   <span className="text-xs grayscale group-hover:grayscale-0 transition-all">{currentCategoryConfig.emoji}</span>
-                  {/* On very small screens, you might want to hide this label, but it matches the card now */}
                   <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 group-hover:text-zinc-300 hidden sm:inline-block">
                     {currentCategoryConfig.label}
                   </span>
@@ -234,13 +234,13 @@ function App() {
                   />
               </div>
 
-              {/* Send Button */}
+              {/* Send Button - Lite Animation */}
               <button 
                   onClick={saveNote}
                   disabled={!transcript.trim()}
-                  className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all active:scale-95 ${
+                  className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 ${
                       transcript.trim() 
-                      ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)]' 
+                      ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)] hover:scale-110' 
                       : 'bg-zinc-900 text-zinc-600 border border-zinc-800'
                   }`}
               >
@@ -249,15 +249,15 @@ function App() {
           </div>
       </div>
 
-      {/* SETTINGS MODAL */}
+      {/* SETTINGS MODAL - PILL/ROUNDED BOX */}
       {showSettings && (
-         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in">
-             <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-lg p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700">
+         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
+             <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-[2rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 slide-in-from-bottom-5 duration-300 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                         Config
                     </h2>
-                    <button onClick={() => { setShowSettings(false); setOpenEmojiPicker(null); }} className="text-zinc-500 hover:text-white">
+                    <button onClick={() => { setShowSettings(false); setOpenEmojiPicker(null); }} className="text-zinc-500 hover:text-white transition-transform hover:rotate-90 duration-300">
                         <X size={20} />
                     </button>
                 </div>
@@ -268,7 +268,7 @@ function App() {
                     <select 
                         value={selectedVoiceURI}
                         onChange={(e) => { setSelectedVoiceURI(e.target.value); localStorage.setItem('vibenotes_voice', e.target.value); }}
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600"
+                        className="w-full bg-zinc-900 border border-zinc-800 rounded-full p-2 px-4 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600"
                     >
                         <option value="">System Default</option>
                         {voices.map(v => <option key={v.voiceURI} value={v.voiceURI}>{v.name}</option>)}
@@ -280,22 +280,22 @@ function App() {
                     <label className="text-[10px] uppercase text-zinc-600 font-bold mb-4 block tracking-widest">Tags</label>
                     <div className="space-y-3">
                         {categories.map((cat) => (
-                            <div key={cat.id} className="bg-black rounded-md p-3 border border-zinc-900 flex items-center gap-3">
+                            <div key={cat.id} className="bg-black rounded-full p-2 px-4 border border-zinc-900 flex items-center gap-3">
                                 <div className="relative">
                                       <button 
                                         onClick={() => setOpenEmojiPicker(openEmojiPicker === cat.id ? null : cat.id)}
-                                        className="w-8 h-8 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-md hover:bg-zinc-800 transition-colors text-sm"
+                                        className="w-8 h-8 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-full hover:bg-zinc-800 transition-colors text-sm"
                                       >
-                                        {cat.emoji}
+                                        <span className="grayscale">{cat.emoji}</span>
                                       </button>
                                       
                                       {openEmojiPicker === cat.id && (
-                                        <div className="absolute top-10 left-0 w-64 bg-zinc-900 border border-zinc-700 rounded-md shadow-xl z-50 p-2 grid grid-cols-6 gap-1 h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full">
+                                        <div className="absolute top-10 left-0 w-64 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-xl z-50 p-2 grid grid-cols-6 gap-1 h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full">
                                             {EMOJI_LIST.map(emoji => (
                                               <button
                                                 key={emoji}
                                                 onClick={() => { handleCategoryEdit(cat.id, 'emoji', emoji); setOpenEmojiPicker(null); }}
-                                                className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-zinc-800 text-sm"
+                                                className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-zinc-800 text-sm grayscale hover:grayscale-0"
                                               >
                                                 {emoji}
                                               </button>
@@ -319,7 +319,7 @@ function App() {
                     <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">Data Management</label>
                     <button 
                         onClick={handleExport}
-                        className="w-full py-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 rounded-md text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                        className="w-full py-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 rounded-full text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
                     >
                         <Download size={14} /> Download Backup
                     </button>

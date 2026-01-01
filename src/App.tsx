@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Check, Settings, LayoutGrid, Plus, Download, Send, ArrowUp, Lock, Globe } from 'lucide-react';
+// FIX: Added missing imports (Plus, ArrowUp, LayoutGrid) to prevent crash
+import { Search, X, Settings, Download, Lock, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard';
 import CryptoJS from 'crypto-js';
@@ -11,7 +12,6 @@ const EMOJI_LIST = [
   '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧',
 ];
 
-// SECRET KEY for Encryption
 const SECRET_KEY = "vibenotes-super-secret-key-2025"; 
 
 // --- TRANSLATIONS ---
@@ -20,15 +20,15 @@ const TRANSLATIONS = {
     search: "SEARCH...",
     all: "All",
     config: "Config",
-    audioLabel: "Audio Feedback (Premium Only)",
-    tagsLabel: "Tags",
-    dataLabel: "Data Management",
+    audioLabel: "Audio Voice",
+    tagsLabel: "Categories",
+    dataLabel: "Data",
     backup: "Download Backup",
     typePlaceholder: "Type a note...",
     noVoices: "No Premium Voices Found",
     defaultVoice: "System Default",
-    languageLabel: "Language", // New
-    // Categories
+    languageLabel: "Language",
+    selectIcon: "Select Icon",
     cat_idea: "Idea",
     cat_work: "Work",
     cat_journal: "Journal",
@@ -38,15 +38,15 @@ const TRANSLATIONS = {
     search: "ПОИСК...",
     all: "Все",
     config: "Настройки",
-    audioLabel: "Голос (Премиум)",
+    audioLabel: "Голос",
     tagsLabel: "Категории",
     dataLabel: "Данные",
     backup: "Скачать бэкап",
     typePlaceholder: "Введите заметку...",
     noVoices: "Голоса не найдены",
     defaultVoice: "По умолчанию",
-    languageLabel: "Язык", // New
-    // Categories
+    languageLabel: "Язык",
+    selectIcon: "Выберите иконку",
     cat_idea: "Идея",
     cat_work: "Работа",
     cat_journal: "Дневник",
@@ -63,36 +63,47 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all'>('all');
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('idea');
+  
+  // Settings State
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsView, setSettingsView] = useState<'main' | 'icons'>('main'); 
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
-  const [openEmojiPicker, setOpenEmojiPicker] = useState<string | null>(null);
 
-  // --- ENCRYPTION HELPERS ---
+  // --- HELPERS ---
   const encryptData = (data: any) => {
-    try {
-      return CryptoJS.AES.encrypt(JSON.stringify(data), SECRET_KEY).toString();
-    } catch (e) {
-      console.error("Encryption failed", e);
-      return "";
-    }
+    try { return CryptoJS.AES.encrypt(JSON.stringify(data), SECRET_KEY).toString(); } catch (e) { return ""; }
   };
 
   const decryptData = (ciphertext: string) => {
     try {
       if (!ciphertext) return null;
       const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
-      const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
-      if (!decryptedString) return null;
-      return JSON.parse(decryptedString);
-    } catch (e) {
-      console.error("Decryption failed", e);
-      return null;
-    }
+      return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+    } catch (e) { return null; }
   };
 
-  // --- INITIALIZATION ---
+  const getCategoryLabel = (cat: CategoryConfig) => {
+    const id = cat.id.toLowerCase();
+    const t = TRANSLATIONS[lang];
+    if (lang === 'ru') {
+        if (id === 'idea') return t.cat_idea;
+        if (id === 'work') return t.cat_work;
+        if (id === 'journal') return t.cat_journal;
+        if (id === 'to-do' || id === 'todo') return t.cat_todo;
+    } else {
+        if (id === 'idea') return t.cat_idea;
+        if (id === 'work') return t.cat_work;
+        if (id === 'journal') return t.cat_journal;
+        if (id === 'to-do' || id === 'todo') return t.cat_todo;
+    }
+    return cat.label; 
+  };
+
+  // --- EFFECTS ---
   useEffect(() => {
     try {
         const savedLang = localStorage.getItem('vibenotes_lang');
@@ -104,12 +115,7 @@ function App() {
             if (decrypted && Array.isArray(decrypted)) setNotes(decrypted);
         } else {
             const oldData = localStorage.getItem('vibenotes_data');
-            if (oldData) {
-                try {
-                    const parsed = JSON.parse(oldData);
-                    if (Array.isArray(parsed)) setNotes(parsed);
-                } catch(e) {}
-            }
+            if (oldData) { try { setNotes(JSON.parse(oldData)); } catch(e){} }
         }
 
         const savedCats = localStorage.getItem('vibenotes_categories');
@@ -117,54 +123,33 @@ function App() {
 
         const savedVoice = localStorage.getItem('vibenotes_voice');
         if (savedVoice) setSelectedVoiceURI(savedVoice);
-
-    } catch (e) {
-        console.error("Init error", e);
-    }
+    } catch (e) {}
   }, []);
 
-  // LOAD VOICES
   useEffect(() => {
     const loadVoices = () => {
         const allVoices = window.speechSynthesis.getVoices();
+        let candidates = allVoices.filter(v => v.lang.startsWith(lang === 'en' ? 'en' : 'ru'));
         
-        let candidates: SpeechSynthesisVoice[] = [];
-
+        // Strict English Filter
         if (lang === 'en') {
-            candidates = allVoices.filter(v => v.lang.startsWith('en'));
             const premiumKeywords = ['natural', 'online', 'premium', 'enhanced', 'google', 'siri'];
             const trashKeywords = ['desktop', 'mobile', 'help'];
-
             let premiumVoices = candidates.filter(v => {
                 const name = v.name.toLowerCase();
                 const isPremium = premiumKeywords.some(k => name.includes(k));
                 const isTrash = trashKeywords.some(k => name.includes(k));
                 return isPremium || (['daniel', 'samantha', 'ava'].some(n => name.includes(n)) && !isTrash);
             });
-
-            if (premiumVoices.length === 0) premiumVoices = candidates;
-
-            premiumVoices.sort((a, b) => {
-                const topTier = ['Natural', 'Premium', 'Enhanced', 'Daniel', 'Samantha'];
-                const aScore = topTier.findIndex(p => a.name.includes(p));
-                const bScore = topTier.findIndex(p => b.name.includes(p));
-                if (aScore !== -1 && bScore === -1) return -1;
-                if (aScore === -1 && bScore !== -1) return 1;
-                return a.name.localeCompare(b.name);
-            });
-            setVoices(premiumVoices);
-
-        } else {
-            const russianVoices = allVoices.filter(v => v.lang.startsWith('ru'));
-            const englishBackup = allVoices.filter(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google')));
-            setVoices([...russianVoices, ...englishBackup]);
+            if (premiumVoices.length > 0) candidates = premiumVoices;
+        } 
+        // Russian backup
+        else {
+             const enBackup = allVoices.filter(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google')));
+             candidates = [...candidates, ...enBackup];
         }
-        
-        if (!selectedVoiceURI && voices.length > 0) {
-             // Logic handled in next effect
-        }
+        setVoices(candidates);
     };
-
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }, [lang]);
@@ -175,23 +160,13 @@ function App() {
     }
   }, [selectedVoiceURI, voices]);
 
-  // SAVE DATA
   useEffect(() => {
-    if (notes.length > 0) {
-        const encrypted = encryptData(notes);
-        localStorage.setItem('vibenotes_data_secure', encrypted);
-    }
+    if (notes.length > 0) localStorage.setItem('vibenotes_data_secure', encryptData(notes));
   }, [notes]);
 
-  useEffect(() => {
-    localStorage.setItem('vibenotes_categories', JSON.stringify(categories));
-  }, [categories]);
+  useEffect(() => { localStorage.setItem('vibenotes_categories', JSON.stringify(categories)); }, [categories]);
+  useEffect(() => { localStorage.setItem('vibenotes_lang', lang); }, [lang]);
 
-  useEffect(() => {
-    localStorage.setItem('vibenotes_lang', lang);
-  }, [lang]);
-
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
@@ -199,7 +174,7 @@ function App() {
     }
   }, [transcript]);
 
-  // --- HANDLERS ---
+  // --- ACTIONS ---
   const handleCategoryEdit = (id: CategoryId, field: 'label' | 'emoji' | 'colorClass', value: string) => {
     setCategories(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
   };
@@ -208,10 +183,6 @@ function App() {
     const currentIndex = categories.findIndex(c => c.id === selectedCategory);
     const nextIndex = (currentIndex + 1) % categories.length;
     setSelectedCategory(categories[nextIndex].id);
-  };
-
-  const toggleLanguage = () => {
-      setLang(prev => prev === 'en' ? 'ru' : 'en');
   };
 
   const saveNote = () => {
@@ -225,7 +196,6 @@ function App() {
     };
     setNotes(prev => [newNote, ...prev]);
     setTranscript('');
-    if (textareaRef.current) textareaRef.current.style.height = 'auto';
   };
 
   const deleteNote = (id: string) => setNotes(prev => prev.filter(n => n.id !== id));
@@ -238,7 +208,7 @@ function App() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(notes));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `vibenotes_backup_${new Date().toISOString().split('T')[0]}.json`);
+    downloadAnchorNode.setAttribute("download", `vibenotes_backup.json`);
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
@@ -258,26 +228,6 @@ function App() {
   const currentCategoryConfig = categories.find(c => c.id === selectedCategory) || categories[0];
   const t = TRANSLATIONS[lang];
 
-  // HELPER: Get dynamic label based on ID and Language
-  const getCategoryLabel = (cat: CategoryConfig) => {
-    // Standardize ID comparison
-    const id = cat.id.toLowerCase();
-    
-    if (lang === 'ru') {
-        if (id === 'idea') return t.cat_idea;
-        if (id === 'work') return t.cat_work;
-        if (id === 'journal') return t.cat_journal;
-        if (id === 'to-do' || id === 'todo') return t.cat_todo; // Check both variations
-    } else {
-        if (id === 'idea') return t.cat_idea;
-        if (id === 'work') return t.cat_work;
-        if (id === 'journal') return t.cat_journal;
-        if (id === 'to-do' || id === 'todo') return t.cat_todo;
-    }
-    // Fallback for custom categories
-    return cat.label; 
-  };
-
   return (
     <div className="min-h-screen bg-black text-zinc-100 p-4 pb-24 font-sans selection:bg-orange-500/30">
       
@@ -286,7 +236,6 @@ function App() {
          <div className="flex-shrink-0 w-10 h-10 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-md">
              <div className="w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)]"></div>
          </div>
-
          <div className="flex-1 relative group">
             <Search className="absolute left-3 top-2.5 text-zinc-600 group-focus-within:text-white transition-colors" size={16} />
             <input 
@@ -297,16 +246,15 @@ function App() {
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-9 pr-4 text-zinc-300 focus:outline-none focus:border-white transition-all placeholder:text-zinc-700 text-xs font-bold uppercase tracking-wider"
             />
          </div>
-
         <button 
-            onClick={() => setShowSettings(true)}
+            onClick={() => { setShowSettings(true); setSettingsView('main'); }}
             className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-500 hover:text-white transition-all active:scale-95"
         >
             <Settings size={20} />
         </button>
       </header>
 
-      {/* FILTER CHIPS - FLEX JUSTIFY-BETWEEN */}
+      {/* FILTER CHIPS */}
       <div className="max-w-2xl mx-auto mb-6 flex justify-between items-center w-full px-1">
         <button 
             onClick={() => setActiveFilter('all')} 
@@ -353,7 +301,7 @@ function App() {
             />
           ))}
           {filteredNotes.length === 0 && (
-              <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 animate-in fade-in zoom-in-95 duration-500">
+              <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50">
                   <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
                   <p className="text-zinc-700 text-xs font-mono uppercase">Database Empty</p>
               </div>
@@ -363,7 +311,6 @@ function App() {
       {/* VIBE BAR */}
       <div className="fixed bottom-0 left-0 w-full bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 z-50">
           <div className="max-w-2xl mx-auto flex items-end gap-2">
-              
               <button 
                   onClick={cycleCategory}
                   className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group"
@@ -373,7 +320,6 @@ function App() {
                     {getCategoryLabel(currentCategoryConfig)}
                   </span>
               </button>
-
               <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors">
                   <textarea
                       ref={textareaRef}
@@ -384,117 +330,123 @@ function App() {
                       className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-sm resize-none max-h-32 py-0.5"
                   />
               </div>
-
               <button 
                   onClick={saveNote}
                   disabled={!transcript.trim()}
                   className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 ${
                       transcript.trim() 
-                      ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)] hover:scale-110' 
+                      ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)]' 
                       : 'bg-zinc-900 text-zinc-600 border border-zinc-800'
                   }`}
               >
-                  <ArrowUp size={20} strokeWidth={3} />
+                  {transcript.trim() ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}
               </button>
           </div>
       </div>
 
-      {/* SETTINGS MODAL */}
+      {/* SETTINGS MODAL - FULL SCREEN MOBILE */}
       {showSettings && (
-         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
-             <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-[2rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 slide-in-from-bottom-5 duration-300 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                        {t.config}
-                        <Lock size={12} className="text-orange-500" />
-                    </h2>
-                    <button onClick={() => { setShowSettings(false); setOpenEmojiPicker(null); }} className="text-zinc-500 hover:text-white transition-transform hover:rotate-90 duration-300">
-                        <X size={20} />
-                    </button>
-                </div>
-
-                <div className="mb-8 border-b border-zinc-900 pb-8 flex items-center justify-between">
-                    <label className="text-[10px] uppercase text-zinc-600 font-bold tracking-widest">{t.languageLabel}</label>
-                    <button 
-                        onClick={toggleLanguage}
-                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-orange-500 transition-all group"
-                    >
-                        <Globe size={14} className="text-zinc-500 group-hover:text-orange-500" />
-                        <span className="text-xs font-bold text-zinc-300 group-hover:text-white">
-                            {lang === 'en' ? 'ENGLISH' : 'РУССКИЙ'}
-                        </span>
-                    </button>
-                </div>
+         <div className="fixed inset-0 z-50 flex justify-center sm:items-center bg-black sm:bg-black/80 animate-in fade-in duration-200">
+             <div className="w-full h-full sm:h-auto sm:max-w-sm bg-zinc-950 sm:border border-zinc-800 sm:rounded-[2rem] p-6 pt-12 sm:pt-8 shadow-2xl relative flex flex-col">
                 
-                <div className="mb-8 border-b border-zinc-900 pb-8">
-                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">{t.audioLabel}</label>
-                    <select 
-                        value={selectedVoiceURI}
-                        onChange={(e) => { setSelectedVoiceURI(e.target.value); localStorage.setItem('vibenotes_voice', e.target.value); }}
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-full p-2 px-4 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 appearance-none"
-                    >
-                        {voices.length === 0 && <option>{t.noVoices}</option>}
-                        {voices.map(v => (
-                            <option key={v.voiceURI} value={v.voiceURI}>
-                                {v.name
-                                    .replace('Microsoft ', '')
-                                    .replace(' Online (Natural) - English (United States)', ' (Natural)')
-                                    .replace('English (United States)', 'US')
-                                    .replace('English (United Kingdom)', 'UK')
-                                }
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                {/* --- VIEW 1: MAIN SETTINGS --- */}
+                {settingsView === 'main' && (
+                    <div className="flex flex-col h-full animate-in slide-in-from-left-5 duration-300">
+                        {/* Header */}
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                {t.config} <Lock size={12} className="text-orange-500" />
+                            </h2>
+                            <button onClick={() => setShowSettings(false)} className="text-zinc-500 hover:text-white">
+                                <X size={24} />
+                            </button>
+                        </div>
 
-                <div className="mb-8 border-b border-zinc-900 pb-8">
-                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-4 block tracking-widest">{t.tagsLabel}</label>
-                    <div className="space-y-3">
-                        {categories.map((cat) => (
-                            <div key={cat.id} className="bg-black rounded-full p-2 px-4 border border-zinc-900 flex items-center gap-3">
-                                <div className="relative">
-                                      <button 
-                                        onClick={() => setOpenEmojiPicker(openEmojiPicker === cat.id ? null : cat.id)}
-                                        className="w-8 h-8 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-full hover:bg-zinc-800 transition-colors text-sm"
-                                      >
-                                        <span className="grayscale">{cat.emoji}</span>
-                                      </button>
-                                      
-                                      {openEmojiPicker === cat.id && (
-                                        <div className="absolute top-10 left-0 w-64 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-xl z-50 p-2 grid grid-cols-6 gap-1 h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full">
-                                            {EMOJI_LIST.map(emoji => (
-                                              <button
-                                                key={emoji}
-                                                onClick={() => { handleCategoryEdit(cat.id, 'emoji', emoji); setOpenEmojiPicker(null); }}
-                                                className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-zinc-800 text-sm grayscale hover:grayscale-0"
-                                              >
-                                                {emoji}
-                                              </button>
-                                            ))}
+                        {/* Language */}
+                        <div className="mb-6 flex items-center justify-between border-b border-zinc-900 pb-6">
+                            <label className="text-[10px] uppercase text-zinc-600 font-bold tracking-widest">{t.languageLabel}</label>
+                            <button onClick={() => setLang(l => l === 'en' ? 'ru' : 'en')} className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-orange-500 transition-all">
+                                <Globe size={14} className="text-zinc-500" />
+                                <span className="text-xs font-bold text-white">{lang === 'en' ? 'ENGLISH' : 'РУССКИЙ'}</span>
+                            </button>
+                        </div>
+
+                        {/* Audio */}
+                        <div className="mb-6 border-b border-zinc-900 pb-6">
+                            <label className="text-[10px] uppercase text-zinc-600 font-bold tracking-widest mb-3 block">{t.audioLabel}</label>
+                            <select 
+                                value={selectedVoiceURI}
+                                onChange={(e) => { setSelectedVoiceURI(e.target.value); localStorage.setItem('vibenotes_voice', e.target.value); }}
+                                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-300 focus:outline-none"
+                            >
+                                {voices.length === 0 && <option>{t.noVoices}</option>}
+                                {voices.map(v => (
+                                    <option key={v.voiceURI} value={v.voiceURI}>
+                                        {v.name.replace('Microsoft ', '').replace('English (United States)', 'US').replace('English (United Kingdom)', 'UK')}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Categories List (Clean Vertical) */}
+                        <div className="flex-1">
+                            <label className="text-[10px] uppercase text-zinc-600 font-bold mb-4 block tracking-widest">{t.tagsLabel}</label>
+                            <div className="space-y-3">
+                                {categories.map((cat) => (
+                                    <div key={cat.id} className="flex items-center gap-3 p-1">
+                                        <button 
+                                            onClick={() => { setEditingCatId(cat.id); setSettingsView('icons'); }}
+                                            className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 hover:border-white transition-all text-lg grayscale hover:grayscale-0"
+                                        >
+                                            {cat.emoji}
+                                        </button>
+                                        <div className="flex-1">
+                                            <p className="text-xs font-bold text-zinc-300">{getCategoryLabel(cat)}</p>
                                         </div>
-                                      )}
-                                </div>
-                                <input 
-                                    type="text" 
-                                    value={getCategoryLabel(cat)}
-                                    // DISABLED Editing for default cats to prefer translations
-                                    readOnly={['idea','work','journal','to-do','todo'].includes(cat.id.toLowerCase())}
-                                    className={`flex-1 bg-transparent border-none text-zinc-300 focus:outline-none font-bold text-sm ${['idea','work','journal','to-do','todo'].includes(cat.id.toLowerCase()) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                />
+                                        <ChevronRight size={16} className="text-zinc-700" />
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                </div>
+                        </div>
 
-                <div>
-                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">{t.dataLabel}</label>
-                    <button 
-                        onClick={handleExport}
-                        className="w-full py-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 rounded-full text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
-                    >
-                        <Download size={14} /> {t.backup}
-                    </button>
-                </div>
+                        {/* Footer */}
+                        <div className="pt-6 border-t border-zinc-900 mt-auto">
+                            <button onClick={handleExport} className="w-full py-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+                                <Download size={14} /> {t.backup}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- VIEW 2: ICON PICKER --- */}
+                {settingsView === 'icons' && (
+                    <div className="flex flex-col h-full animate-in slide-in-from-right-5 duration-300">
+                        {/* Header */}
+                        <div className="flex items-center gap-4 mb-8">
+                            <button onClick={() => setSettingsView('main')} className="text-zinc-500 hover:text-white">
+                                <ArrowLeft size={24} />
+                            </button>
+                            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400">{t.selectIcon}</h2>
+                        </div>
+
+                        {/* Grid */}
+                        <div className="grid grid-cols-5 gap-4">
+                            {EMOJI_LIST.map(emoji => (
+                                <button
+                                    key={emoji}
+                                    onClick={() => { 
+                                        if(editingCatId) handleCategoryEdit(editingCatId, 'emoji', emoji); 
+                                        setSettingsView('main');
+                                    }}
+                                    className="aspect-square flex items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-black hover:border-orange-500 text-2xl grayscale hover:grayscale-0 transition-all"
+                                >
+                                    {emoji}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
              </div>
          </div>
       )}

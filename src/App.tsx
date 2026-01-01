@@ -211,12 +211,12 @@ function App() {
         </button>
       </header>
 
-      {/* FILTER CHIPS - TIGHTLY PACKED GRID */}
-      {/* Reduced gap to gap-1, reduced padding to px-1 */}
-      <div className="max-w-2xl mx-auto mb-6 grid grid-cols-5 gap-1 w-full">
+      {/* FILTER CHIPS - VARIABLE WIDTH PILLS */}
+      {/* Changed to flex justify-between. Items size themselves based on content. */}
+      <div className="max-w-2xl mx-auto mb-6 flex w-full justify-between items-center">
         <button 
             onClick={() => setActiveFilter('all')} 
-            className={`flex items-center justify-center w-full py-1.5 rounded-full text-[9px] font-bold capitalize border transition-all duration-300 ${
+            className={`px-3 py-1.5 rounded-full text-[9px] font-bold capitalize border transition-all duration-300 ${
                 activeFilter === 'all' 
                 ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
                 : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
@@ -228,7 +228,7 @@ function App() {
             <button
                 key={cat.id}
                 onClick={() => setActiveFilter(cat.id)}
-                className={`flex items-center justify-center gap-1 w-full py-1.5 px-1 rounded-full text-[9px] font-bold capitalize border transition-all duration-300 ${
+                className={`px-3 py-1.5 rounded-full text-[9px] font-bold capitalize border transition-all flex items-center gap-1.5 duration-300 ${
                     activeFilter === cat.id 
                     ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
                     : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'

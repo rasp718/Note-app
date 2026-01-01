@@ -80,7 +80,7 @@ function App() {
         const cleanVoices = allVoices
             .filter(v => v.lang.startsWith('en'))
             .sort((a, b) => {
-                const priority = ['Daniel', 'Google US English', 'Samantha', 'Microsoft Zira'];
+                const priority = ['Daniel', 'Samantha', 'Google US English', 'Microsoft Zira'];
                 const aIndex = priority.findIndex(p => a.name.includes(p));
                 const bIndex = priority.findIndex(p => b.name.includes(p));
                 
@@ -211,11 +211,12 @@ function App() {
         </button>
       </header>
 
-      {/* FILTER CHIPS - CENTERED & TIGHT */}
-      <div className="max-w-2xl mx-auto mb-6 flex flex-wrap justify-center gap-1.5">
+      {/* FILTER CHIPS - TIGHTLY PACKED GRID */}
+      {/* Reduced gap to gap-1, reduced padding to px-1 */}
+      <div className="max-w-2xl mx-auto mb-6 grid grid-cols-5 gap-1 w-full">
         <button 
             onClick={() => setActiveFilter('all')} 
-            className={`px-3 py-1.5 rounded-full text-[10px] font-bold capitalize tracking-wider border transition-all whitespace-nowrap duration-300 ${
+            className={`flex items-center justify-center w-full py-1.5 rounded-full text-[9px] font-bold capitalize border transition-all duration-300 ${
                 activeFilter === 'all' 
                 ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
                 : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
@@ -227,13 +228,13 @@ function App() {
             <button
                 key={cat.id}
                 onClick={() => setActiveFilter(cat.id)}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-bold capitalize tracking-wider border transition-all whitespace-nowrap flex items-center gap-1.5 duration-300 ${
+                className={`flex items-center justify-center gap-1 w-full py-1.5 px-1 rounded-full text-[9px] font-bold capitalize border transition-all duration-300 ${
                     activeFilter === cat.id 
                     ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
                     : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
                 }`}
             >
-                <span className="grayscale text-xs">{cat.emoji}</span>
+                <span className="grayscale text-[10px]">{cat.emoji}</span>
                 <span>{cat.label}</span>
             </button>
         ))}

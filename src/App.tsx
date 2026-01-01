@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-// FIX: Added missing imports (Plus, ArrowUp, LayoutGrid) to prevent crash
 import { Search, X, Settings, Download, Lock, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard';
@@ -131,7 +130,6 @@ function App() {
         const allVoices = window.speechSynthesis.getVoices();
         let candidates = allVoices.filter(v => v.lang.startsWith(lang === 'en' ? 'en' : 'ru'));
         
-        // Strict English Filter
         if (lang === 'en') {
             const premiumKeywords = ['natural', 'online', 'premium', 'enhanced', 'google', 'siri'];
             const trashKeywords = ['desktop', 'mobile', 'help'];
@@ -143,7 +141,6 @@ function App() {
             });
             if (premiumVoices.length > 0) candidates = premiumVoices;
         } 
-        // Russian backup
         else {
              const enBackup = allVoices.filter(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google')));
              candidates = [...candidates, ...enBackup];
@@ -157,6 +154,8 @@ function App() {
   useEffect(() => {
     if (selectedVoiceURI && voices.length > 0) {
       setSelectedVoice(voices.find(v => v.voiceURI === selectedVoiceURI) || null);
+    } else {
+      setSelectedVoice(null);
     }
   }, [selectedVoiceURI, voices]);
 
@@ -344,20 +343,20 @@ function App() {
           </div>
       </div>
 
-      {/* SETTINGS MODAL - FULL SCREEN MOBILE */}
+      {/* SETTINGS MODAL - SLEEK, COMPACT, MINIMAL */}
       {showSettings && (
-         <div className="fixed inset-0 z-50 flex justify-center sm:items-center bg-black sm:bg-black/80 animate-in fade-in duration-200">
-             <div className="w-full h-full sm:h-auto sm:max-w-sm bg-zinc-950 sm:border border-zinc-800 sm:rounded-[2rem] p-6 pt-12 sm:pt-8 shadow-2xl relative flex flex-col">
+         <div className="fixed inset-0 z-50 flex justify-center sm:items-center bg-black sm:bg-black/80">
+             <div className="w-full h-full sm:h-auto sm:max-w-sm bg-zinc-950 sm:border border-zinc-800 sm:rounded-[2rem] p-6 pt-12 sm:pt-6 shadow-2xl relative flex flex-col">
                 
-                {/* --- VIEW 1: MAIN SETTINGS --- */}
+                {/* MAIN VIEW */}
                 {settingsView === 'main' && (
-                    <div className="flex flex-col h-full animate-in slide-in-from-left-5 duration-300">
+                    <div className="flex flex-col h-full">
                         {/* Header */}
                         <div className="flex justify-between items-center mb-8">
                             <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                                 {t.config} <Lock size={12} className="text-orange-500" />
                             </h2>
-                            <button onClick={() => setShowSettings(false)} className="text-zinc-500 hover:text-white">
+                            <button onClick={() => setShowSettings(false)} className="text-zinc-500 hover:text-white transition">
                                 <X size={24} />
                             </button>
                         </div>
@@ -365,43 +364,60 @@ function App() {
                         {/* Language */}
                         <div className="mb-6 flex items-center justify-between border-b border-zinc-900 pb-6">
                             <label className="text-[10px] uppercase text-zinc-600 font-bold tracking-widest">{t.languageLabel}</label>
-                            <button onClick={() => setLang(l => l === 'en' ? 'ru' : 'en')} className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-orange-500 transition-all">
+                            <button 
+                                onClick={() => setLang(l => l === 'en' ? 'ru' : 'en')}
+                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-orange-500 transition-all"
+                            >
                                 <Globe size={14} className="text-zinc-500" />
-                                <span className="text-xs font-bold text-white">{lang === 'en' ? 'ENGLISH' : 'РУССКИЙ'}</span>
+                                <span className="text-xs font-bold uppercase text-white tracking-wider">
+                                    {lang === 'en' ? 'ENGLISH' : 'РУССКИЙ'}
+                                </span>
                             </button>
                         </div>
 
-                        {/* Audio */}
+                        {/* Audio Voice */}
                         <div className="mb-6 border-b border-zinc-900 pb-6">
                             <label className="text-[10px] uppercase text-zinc-600 font-bold tracking-widest mb-3 block">{t.audioLabel}</label>
                             <select 
                                 value={selectedVoiceURI}
-                                onChange={(e) => { setSelectedVoiceURI(e.target.value); localStorage.setItem('vibenotes_voice', e.target.value); }}
-                                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-300 focus:outline-none"
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSelectedVoiceURI(val);
+                                    if (val) localStorage.setItem('vibenotes_voice', val);
+                                    else localStorage.removeItem('vibenotes_voice');
+                                }}
+                                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-xs text-zinc-300 focus:outline-none focus:border-zinc-600 transition"
                             >
-                                {voices.length === 0 && <option>{t.noVoices}</option>}
+                                <option value="">{t.defaultVoice}</option>
                                 {voices.map(v => (
                                     <option key={v.voiceURI} value={v.voiceURI}>
-                                        {v.name.replace('Microsoft ', '').replace('English (United States)', 'US').replace('English (United Kingdom)', 'UK')}
+                                        {v.name.replace('Microsoft ', '').replace(/ \([^)]+\)/g, '')}
                                     </option>
                                 ))}
+                                {voices.length === 0 && <option disabled>{t.noVoices}</option>}
                             </select>
                         </div>
 
-                        {/* Categories List (Clean Vertical) */}
+                        {/* Categories */}
                         <div className="flex-1">
-                            <label className="text-[10px] uppercase text-zinc-600 font-bold mb-4 block tracking-widest">{t.tagsLabel}</label>
-                            <div className="space-y-3">
+                            <label className="text-[10px] uppercase text-zinc-600 font-bold tracking-widest mb-4 block">{t.tagsLabel}</label>
+                            <div className="space-y-2">
                                 {categories.map((cat) => (
-                                    <div key={cat.id} className="flex items-center gap-3 p-1">
-                                        <button 
-                                            onClick={() => { setEditingCatId(cat.id); setSettingsView('icons'); }}
-                                            className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 hover:border-white transition-all text-lg grayscale hover:grayscale-0"
-                                        >
-                                            {cat.emoji}
-                                        </button>
-                                        <div className="flex-1">
-                                            <p className="text-xs font-bold text-zinc-300">{getCategoryLabel(cat)}</p>
+                                    <div
+                                        key={cat.id}
+                                        onClick={() => {
+                                            setEditingCatId(cat.id);
+                                            setSettingsView('icons');
+                                        }}
+                                        className="flex items-center justify-between px-2 py-3 -mx-2 rounded-lg hover:bg-zinc-900/50 transition cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center">
+                                                <span className="text-2xl grayscale">{cat.emoji}</span>
+                                            </div>
+                                            <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                                                {getCategoryLabel(cat)}
+                                            </span>
                                         </div>
                                         <ChevronRight size={16} className="text-zinc-700" />
                                     </div>
@@ -409,40 +425,57 @@ function App() {
                             </div>
                         </div>
 
-                        {/* Footer */}
+                        {/* Backup */}
                         <div className="pt-6 border-t border-zinc-900 mt-auto">
-                            <button onClick={handleExport} className="w-full py-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+                            <button 
+                                onClick={handleExport}
+                                className="w-full py-3 bg-zinc-900 border border-zinc-800 hover:border-orange-500 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 text-zinc-400 hover:text-white transition"
+                            >
                                 <Download size={14} /> {t.backup}
                             </button>
                         </div>
                     </div>
                 )}
 
-                {/* --- VIEW 2: ICON PICKER --- */}
+                {/* ICON PICKER VIEW - ADJUSTED TO PREVENT CUTOFF */}
                 {settingsView === 'icons' && (
-                    <div className="flex flex-col h-full animate-in slide-in-from-right-5 duration-300">
+                    <div className="flex flex-col h-full">
                         {/* Header */}
-                        <div className="flex items-center gap-4 mb-8">
-                            <button onClick={() => setSettingsView('main')} className="text-zinc-500 hover:text-white">
+                        <div className="flex items-center mb-8">
+                            <button 
+                                onClick={() => setSettingsView('main')}
+                                className="text-zinc-500 hover:text-white transition p-1 -ml-1"
+                            >
                                 <ArrowLeft size={24} />
                             </button>
-                            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400">{t.selectIcon}</h2>
+                            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex-1 text-center">
+                                {t.selectIcon}
+                            </h2>
+                            <div className="w-8" />
                         </div>
 
-                        {/* Grid */}
-                        <div className="grid grid-cols-5 gap-4">
-                            {EMOJI_LIST.map(emoji => (
-                                <button
-                                    key={emoji}
-                                    onClick={() => { 
-                                        if(editingCatId) handleCategoryEdit(editingCatId, 'emoji', emoji); 
-                                        setSettingsView('main');
-                                    }}
-                                    className="aspect-square flex items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-black hover:border-orange-500 text-2xl grayscale hover:grayscale-0 transition-all"
-                                >
-                                    {emoji}
-                                </button>
-                            ))}
+                        {/* Grid - 5 columns for more space, larger gap, removed scale to prevent overflow/cutoff */}
+                        <div className="flex-1 grid grid-cols-5 gap-4 overflow-y-auto">
+                            {EMOJI_LIST.map(emoji => {
+                                const currentEmoji = categories.find(c => c.id === editingCatId)?.emoji;
+                                const isSelected = emoji === currentEmoji;
+                                return (
+                                    <button
+                                        key={emoji}
+                                        onClick={() => { 
+                                            if(editingCatId) handleCategoryEdit(editingCatId, 'emoji', emoji); 
+                                            setSettingsView('main');
+                                        }}
+                                        className={`aspect-square flex items-center justify-center rounded-2xl bg-zinc-900 border-2 transition-all ${
+                                            isSelected 
+                                                ? 'border-orange-500 grayscale-0 shadow-lg shadow-orange-500/20' 
+                                                : 'border-zinc-800 grayscale hover:grayscale-0 hover:border-zinc-600'
+                                        }`}
+                                    >
+                                        <span className="text-3xl">{emoji}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 )}

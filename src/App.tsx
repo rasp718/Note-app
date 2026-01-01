@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard';
+import CryptoJS from 'crypto-js';
 
 // --- CONSTANTS ---
 const EMOJI_LIST = [
@@ -9,6 +10,8 @@ const EMOJI_LIST = [
   '📝', '📅', '🛒', '🏋️', '✈️', '🏠', 
   '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧',
 ];
+
+const SECRET_KEY = "vibenotes-super-secret-key-2025"; 
 
 // --- TRANSLATIONS ---
 const TRANSLATIONS = {
@@ -59,7 +62,6 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all'>('all');
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('idea');
-  const [isLoading, setIsLoading] = useState(true);
   
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
@@ -70,25 +72,19 @@ function App() {
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
 
-  // --- STORAGE HELPERS ---
-  const storageGet = async (key: string) => {
-    try {
-      const result = await window.storage.get(key, false);
-      return result ? JSON.parse(result.value) : null;
-    } catch (e) {
-      return null;
-    }
-  };
-
-  const storageSet = async (key: string, value: any) => {
-    try {
-      await window.storage.set(key, JSON.stringify(value), false);
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
-  };
-
   // --- HELPERS ---
+  const encryptData = (data: any) => {
+    try { return CryptoJS.AES.encrypt(JSON.stringify(data), SECRET_KEY).toString(); } catch (e) { return ""; }
+  };
+
+  const decryptData = (ciphertext: string) => {
+    try {
+      if (!ciphertext) return null;
+      const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
+      return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+    } catch (e) { return null; }
+  };
+
   const getCategoryLabel = (cat: CategoryConfig) => {
     const id = cat.id.toLowerCase();
     const t = TRANSLATIONS[lang];
@@ -106,65 +102,29 @@ function App() {
     return cat.label; 
   };
 
-  // --- LOAD DATA ON MOUNT ---
+  // --- EFFECTS ---
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load language
-        const savedLang = await storageGet('vibenotes_lang');
+    try {
+        const savedLang = localStorage.getItem('vibenotes_lang');
         if (savedLang === 'en' || savedLang === 'ru') setLang(savedLang);
 
-        // Load notes
-        const savedNotes = await storageGet('vibenotes_notes');
-        if (savedNotes && Array.isArray(savedNotes)) setNotes(savedNotes);
+        const savedNotesEncrypted = localStorage.getItem('vibenotes_data_secure');
+        if (savedNotesEncrypted) {
+            const decrypted = decryptData(savedNotesEncrypted);
+            if (decrypted && Array.isArray(decrypted)) setNotes(decrypted);
+        } else {
+            const oldData = localStorage.getItem('vibenotes_data');
+            if (oldData) { try { setNotes(JSON.parse(oldData)); } catch(e){} }
+        }
 
-        // Load categories
-        const savedCats = await storageGet('vibenotes_categories');
-        if (savedCats && Array.isArray(savedCats)) setCategories(savedCats);
+        const savedCats = localStorage.getItem('vibenotes_categories');
+        if (savedCats) setCategories(JSON.parse(savedCats));
 
-        // Load voice
-        const savedVoice = await storageGet('vibenotes_voice');
+        const savedVoice = localStorage.getItem('vibenotes_voice');
         if (savedVoice) setSelectedVoiceURI(savedVoice);
-
-      } catch (e) {
-        console.error('Failed to load data:', e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
+    } catch (e) {}
   }, []);
 
-  // --- SYNC NOTES TO STORAGE ---
-  useEffect(() => {
-    if (!isLoading && notes.length >= 0) {
-      storageSet('vibenotes_notes', notes);
-    }
-  }, [notes, isLoading]);
-
-  // --- SYNC CATEGORIES TO STORAGE ---
-  useEffect(() => {
-    if (!isLoading) {
-      storageSet('vibenotes_categories', categories);
-    }
-  }, [categories, isLoading]);
-
-  // --- SYNC LANGUAGE TO STORAGE ---
-  useEffect(() => {
-    if (!isLoading) {
-      storageSet('vibenotes_lang', lang);
-    }
-  }, [lang, isLoading]);
-
-  // --- SYNC VOICE TO STORAGE ---
-  useEffect(() => {
-    if (!isLoading && selectedVoiceURI) {
-      storageSet('vibenotes_voice', selectedVoiceURI);
-    }
-  }, [selectedVoiceURI, isLoading]);
-
-  // --- LOAD VOICES ---
   useEffect(() => {
     const loadVoices = () => {
         const allVoices = window.speechSynthesis.getVoices();
@@ -198,6 +158,13 @@ function App() {
       setSelectedVoice(voices.find(v => v.voiceURI === selectedVoiceURI) || null);
     }
   }, [selectedVoiceURI, voices]);
+
+  useEffect(() => {
+    if (notes.length > 0) localStorage.setItem('vibenotes_data_secure', encryptData(notes));
+  }, [notes]);
+
+  useEffect(() => { localStorage.setItem('vibenotes_categories', JSON.stringify(categories)); }, [categories]);
+  useEffect(() => { localStorage.setItem('vibenotes_lang', lang); }, [lang]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -259,19 +226,6 @@ function App() {
 
   const currentCategoryConfig = categories.find(c => c.id === selectedCategory) || categories[0];
   const t = TRANSLATIONS[lang];
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-black text-zinc-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-4 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-md">
-            <div className="w-4 h-4 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)] animate-pulse"></div>
-          </div>
-          <p className="text-zinc-600 text-xs font-mono uppercase">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-black text-zinc-100 p-4 pb-24 font-sans selection:bg-orange-500/30">
@@ -421,7 +375,7 @@ function App() {
                             <label className="text-[9px] uppercase text-zinc-600 font-bold tracking-widest mb-2 block">{t.audioLabel}</label>
                             <select 
                                 value={selectedVoiceURI}
-                                onChange={(e) => setSelectedVoiceURI(e.target.value)}
+                                onChange={(e) => { setSelectedVoiceURI(e.target.value); localStorage.setItem('vibenotes_voice', e.target.value); }}
                                 className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 text-[11px] text-zinc-300 focus:outline-none focus:border-zinc-700 transition-colors"
                             >
                                 {voices.length === 0 && <option>{t.noVoices}</option>}

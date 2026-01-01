@@ -20,47 +20,49 @@ const TRANSLATIONS = {
     search: "SEARCH...",
     all: "All",
     config: "Config",
-    audioLabel: "Audio Feedback",
+    audioLabel: "Audio Feedback (Premium Only)",
     tagsLabel: "Tags",
     dataLabel: "Data Management",
     backup: "Download Backup",
     typePlaceholder: "Type a note...",
     noVoices: "No Premium Voices Found",
-    defaultVoice: "System Default"
+    defaultVoice: "System Default",
+    languageLabel: "Language", // New
+    // Categories
+    cat_idea: "Idea",
+    cat_work: "Work",
+    cat_journal: "Journal",
+    cat_todo: "To-Do"
   },
   ru: {
     search: "ПОИСК...",
     all: "Все",
     config: "Настройки",
-    audioLabel: "Голос (Чтение)",
+    audioLabel: "Голос (Премиум)",
     tagsLabel: "Категории",
-    dataLabel: "Управление данными",
-    backup: "Скачать резервную копию",
+    dataLabel: "Данные",
+    backup: "Скачать бэкап",
     typePlaceholder: "Введите заметку...",
     noVoices: "Голоса не найдены",
-    defaultVoice: "Системный по умолчанию"
+    defaultVoice: "По умолчанию",
+    languageLabel: "Язык", // New
+    // Categories
+    cat_idea: "Идея",
+    cat_work: "Работа",
+    cat_journal: "Дневник",
+    cat_todo: "Задачи"
   }
 };
 
 function App() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [categories, setCategories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
-  
-  // Language State ('en' or 'ru')
   const [lang, setLang] = useState<'en' | 'ru'>('en');
-
-  // Note Input State
   const [transcript, setTranscript] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  
-  // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all'>('all');
-  
-  // Selection State
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('idea');
-
-  // Settings
   const [showSettings, setShowSettings] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('');
@@ -69,46 +71,59 @@ function App() {
 
   // --- ENCRYPTION HELPERS ---
   const encryptData = (data: any) => {
-    return CryptoJS.AES.encrypt(JSON.stringify(data), SECRET_KEY).toString();
+    try {
+      return CryptoJS.AES.encrypt(JSON.stringify(data), SECRET_KEY).toString();
+    } catch (e) {
+      console.error("Encryption failed", e);
+      return "";
+    }
   };
 
   const decryptData = (ciphertext: string) => {
     try {
+      if (!ciphertext) return null;
       const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
-      return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+      const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
+      if (!decryptedString) return null;
+      return JSON.parse(decryptedString);
     } catch (e) {
-      console.error("Failed to decrypt data", e);
+      console.error("Decryption failed", e);
       return null;
     }
   };
 
   // --- INITIALIZATION ---
   useEffect(() => {
-    // Load Language Preference
-    const savedLang = localStorage.getItem('vibenotes_lang');
-    if (savedLang === 'en' || savedLang === 'ru') setLang(savedLang);
+    try {
+        const savedLang = localStorage.getItem('vibenotes_lang');
+        if (savedLang === 'en' || savedLang === 'ru') setLang(savedLang);
 
-    // 1. Load Notes (Decrypted)
-    const savedNotesEncrypted = localStorage.getItem('vibenotes_data_secure');
-    if (savedNotesEncrypted) {
-        const decrypted = decryptData(savedNotesEncrypted);
-        if (decrypted) setNotes(decrypted);
-    } else {
-        const oldData = localStorage.getItem('vibenotes_data');
-        if (oldData) setNotes(JSON.parse(oldData));
+        const savedNotesEncrypted = localStorage.getItem('vibenotes_data_secure');
+        if (savedNotesEncrypted) {
+            const decrypted = decryptData(savedNotesEncrypted);
+            if (decrypted && Array.isArray(decrypted)) setNotes(decrypted);
+        } else {
+            const oldData = localStorage.getItem('vibenotes_data');
+            if (oldData) {
+                try {
+                    const parsed = JSON.parse(oldData);
+                    if (Array.isArray(parsed)) setNotes(parsed);
+                } catch(e) {}
+            }
+        }
+
+        const savedCats = localStorage.getItem('vibenotes_categories');
+        if (savedCats) setCategories(JSON.parse(savedCats));
+
+        const savedVoice = localStorage.getItem('vibenotes_voice');
+        if (savedVoice) setSelectedVoiceURI(savedVoice);
+
+    } catch (e) {
+        console.error("Init error", e);
     }
-
-    // 2. Load Categories
-    const savedCats = localStorage.getItem('vibenotes_categories');
-    if (savedCats) setCategories(JSON.parse(savedCats));
-
-    // 3. Load Voice Preference
-    const savedVoice = localStorage.getItem('vibenotes_voice');
-    if (savedVoice) setSelectedVoiceURI(savedVoice);
   }, []);
 
-  // LOAD VOICES (Dependencies: lang)
-  // We re-run this when language changes to show/hide Russian voices
+  // LOAD VOICES
   useEffect(() => {
     const loadVoices = () => {
         const allVoices = window.speechSynthesis.getVoices();
@@ -116,9 +131,7 @@ function App() {
         let candidates: SpeechSynthesisVoice[] = [];
 
         if (lang === 'en') {
-            // ENGLISH MODE: Filter for English
             candidates = allVoices.filter(v => v.lang.startsWith('en'));
-            
             const premiumKeywords = ['natural', 'online', 'premium', 'enhanced', 'google', 'siri'];
             const trashKeywords = ['desktop', 'mobile', 'help'];
 
@@ -142,17 +155,12 @@ function App() {
             setVoices(premiumVoices);
 
         } else {
-            // RUSSIAN MODE: Filter for Russian + English (as backup)
-            // We want to find Russian voices specifically
             const russianVoices = allVoices.filter(v => v.lang.startsWith('ru'));
             const englishBackup = allVoices.filter(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google')));
-            
-            // Put Russian voices first
             setVoices([...russianVoices, ...englishBackup]);
         }
         
-        // Ensure selected voice is valid
-        if (!savedVoice && voices.length > 0) {
+        if (!selectedVoiceURI && voices.length > 0) {
              // Logic handled in next effect
         }
     };
@@ -169,8 +177,10 @@ function App() {
 
   // SAVE DATA
   useEffect(() => {
-    const encrypted = encryptData(notes);
-    localStorage.setItem('vibenotes_data_secure', encrypted);
+    if (notes.length > 0) {
+        const encrypted = encryptData(notes);
+        localStorage.setItem('vibenotes_data_secure', encrypted);
+    }
   }, [notes]);
 
   useEffect(() => {
@@ -246,7 +256,27 @@ function App() {
     });
 
   const currentCategoryConfig = categories.find(c => c.id === selectedCategory) || categories[0];
-  const t = TRANSLATIONS[lang]; // Shortcut for translations
+  const t = TRANSLATIONS[lang];
+
+  // HELPER: Get dynamic label based on ID and Language
+  const getCategoryLabel = (cat: CategoryConfig) => {
+    // Standardize ID comparison
+    const id = cat.id.toLowerCase();
+    
+    if (lang === 'ru') {
+        if (id === 'idea') return t.cat_idea;
+        if (id === 'work') return t.cat_work;
+        if (id === 'journal') return t.cat_journal;
+        if (id === 'to-do' || id === 'todo') return t.cat_todo; // Check both variations
+    } else {
+        if (id === 'idea') return t.cat_idea;
+        if (id === 'work') return t.cat_work;
+        if (id === 'journal') return t.cat_journal;
+        if (id === 'to-do' || id === 'todo') return t.cat_todo;
+    }
+    // Fallback for custom categories
+    return cat.label; 
+  };
 
   return (
     <div className="min-h-screen bg-black text-zinc-100 p-4 pb-24 font-sans selection:bg-orange-500/30">
@@ -276,7 +306,7 @@ function App() {
         </button>
       </header>
 
-      {/* FILTER CHIPS */}
+      {/* FILTER CHIPS - FLEX JUSTIFY-BETWEEN */}
       <div className="max-w-2xl mx-auto mb-6 flex justify-between items-center w-full px-1">
         <button 
             onClick={() => setActiveFilter('all')} 
@@ -299,7 +329,7 @@ function App() {
                 }`}
             >
                 <span className="grayscale text-[10px]">{cat.emoji}</span>
-                <span className="truncate">{cat.label}</span>
+                <span className="truncate">{getCategoryLabel(cat)}</span>
             </button>
         ))}
       </div>
@@ -340,7 +370,7 @@ function App() {
               >
                   <span className="text-xs grayscale group-hover:grayscale-0 transition-all">{currentCategoryConfig.emoji}</span>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 group-hover:text-zinc-300 hidden sm:inline-block">
-                    {currentCategoryConfig.label}
+                    {getCategoryLabel(currentCategoryConfig)}
                   </span>
               </button>
 
@@ -383,9 +413,8 @@ function App() {
                     </button>
                 </div>
 
-                {/* LANGUAGE TOGGLE */}
                 <div className="mb-8 border-b border-zinc-900 pb-8 flex items-center justify-between">
-                    <label className="text-[10px] uppercase text-zinc-600 font-bold tracking-widest">Language / Язык</label>
+                    <label className="text-[10px] uppercase text-zinc-600 font-bold tracking-widest">{t.languageLabel}</label>
                     <button 
                         onClick={toggleLanguage}
                         className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-orange-500 transition-all group"
@@ -447,9 +476,10 @@ function App() {
                                 </div>
                                 <input 
                                     type="text" 
-                                    value={cat.label}
-                                    onChange={(e) => handleCategoryEdit(cat.id, 'label', e.target.value)}
-                                    className="flex-1 bg-transparent border-none text-zinc-300 focus:outline-none font-bold text-sm"
+                                    value={getCategoryLabel(cat)}
+                                    // DISABLED Editing for default cats to prefer translations
+                                    readOnly={['idea','work','journal','to-do','todo'].includes(cat.id.toLowerCase())}
+                                    className={`flex-1 bg-transparent border-none text-zinc-300 focus:outline-none font-bold text-sm ${['idea','work','journal','to-do','todo'].includes(cat.id.toLowerCase()) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 />
                             </div>
                         ))}

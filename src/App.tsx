@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Check, Settings, LayoutGrid, Plus, Download, Send, ArrowUp } from 'lucide-react';
+import { Search, X, Check, Settings, LayoutGrid, Plus, Download, Send, ArrowUp, Lock } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard';
+import CryptoJS from 'crypto-js';
 
 // --- CONSTANTS ---
 const EMOJI_LIST = [
@@ -9,6 +10,9 @@ const EMOJI_LIST = [
   '📝', '📅', '🛒', '🏋️', '✈️', '🏠', 
   '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧',
 ];
+
+// SECRET KEY for Encryption
+const SECRET_KEY = "vibenotes-super-secret-key-2025"; 
 
 function App() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -32,18 +36,71 @@ function App() {
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [openEmojiPicker, setOpenEmojiPicker] = useState<string | null>(null);
 
+  // --- ENCRYPTION HELPERS ---
+  const encryptData = (data: any) => {
+    return CryptoJS.AES.encrypt(JSON.stringify(data), SECRET_KEY).toString();
+  };
+
+  const decryptData = (ciphertext: string) => {
+    try {
+      const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
+      return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+    } catch (e) {
+      console.error("Failed to decrypt data", e);
+      return null;
+    }
+  };
+
   // --- INITIALIZATION ---
   useEffect(() => {
-    const savedNotes = localStorage.getItem('vibenotes_data');
-    if (savedNotes) setNotes(JSON.parse(savedNotes));
+    // 1. Load Notes (Decrypted)
+    const savedNotesEncrypted = localStorage.getItem('vibenotes_data_secure');
+    if (savedNotesEncrypted) {
+        const decrypted = decryptData(savedNotesEncrypted);
+        if (decrypted) setNotes(decrypted);
+    } else {
+        // Fallback for old unencrypted data
+        const oldData = localStorage.getItem('vibenotes_data');
+        if (oldData) setNotes(JSON.parse(oldData));
+    }
 
+    // 2. Load Categories
     const savedCats = localStorage.getItem('vibenotes_categories');
     if (savedCats) setCategories(JSON.parse(savedCats));
 
+    // 3. Load Voice Preference
     const savedVoice = localStorage.getItem('vibenotes_voice');
     if (savedVoice) setSelectedVoiceURI(savedVoice);
 
-    const loadVoices = () => setVoices(window.speechSynthesis.getVoices());
+    // 4. Load & Filter Voices
+    const loadVoices = () => {
+        const allVoices = window.speechSynthesis.getVoices();
+        
+        // FILTER: Only English voices
+        const cleanVoices = allVoices
+            .filter(v => v.lang.startsWith('en'))
+            .sort((a, b) => {
+                const priority = ['Daniel', 'Google US English', 'Samantha', 'Microsoft Zira'];
+                const aIndex = priority.findIndex(p => a.name.includes(p));
+                const bIndex = priority.findIndex(p => b.name.includes(p));
+                
+                if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+                if (aIndex !== -1) return -1;
+                if (bIndex !== -1) return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+        setVoices(cleanVoices);
+        
+        if (!savedVoice) {
+            const daniel = cleanVoices.find(v => v.name.includes('Daniel'));
+            if (daniel) {
+                setSelectedVoice(daniel);
+                setSelectedVoiceURI(daniel.voiceURI);
+            }
+        }
+    };
+
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }, []);
@@ -54,8 +111,10 @@ function App() {
     }
   }, [selectedVoiceURI, voices]);
 
+  // SAVE DATA (ENCRYPTED)
   useEffect(() => {
-    localStorage.setItem('vibenotes_data', JSON.stringify(notes));
+    const encrypted = encryptData(notes);
+    localStorage.setItem('vibenotes_data_secure', encrypted);
   }, [notes]);
 
   useEffect(() => {
@@ -92,7 +151,6 @@ function App() {
     };
     setNotes(prev => [newNote, ...prev]);
     setTranscript('');
-    // Reset height
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
   };
 
@@ -153,11 +211,11 @@ function App() {
         </button>
       </header>
 
-      {/* FILTER CHIPS */}
-      <div className="max-w-2xl mx-auto mb-6 flex gap-2 overflow-x-auto md:flex-wrap md:justify-center md:overflow-visible [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      {/* FILTER CHIPS - COMPACT JUSTIFIED LAYOUT */}
+      <div className="max-w-2xl mx-auto mb-6 flex justify-between items-center w-full px-1">
         <button 
             onClick={() => setActiveFilter('all')} 
-            className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all whitespace-nowrap flex-shrink-0 duration-300 ${
+            className={`px-2 py-1 rounded-full text-[9px] font-bold capitalize border transition-all whitespace-nowrap duration-300 ${
                 activeFilter === 'all' 
                 ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
                 : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
@@ -169,13 +227,13 @@ function App() {
             <button
                 key={cat.id}
                 onClick={() => setActiveFilter(cat.id)}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 duration-300 ${
+                className={`px-2 py-1 rounded-full text-[9px] font-bold capitalize border transition-all whitespace-nowrap flex items-center gap-1.5 duration-300 ${
                     activeFilter === cat.id 
                     ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
                     : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
                 }`}
             >
-                <span className="grayscale text-xs">{cat.emoji}</span>
+                <span className="grayscale text-[10px]">{cat.emoji}</span>
                 <span>{cat.label}</span>
             </button>
         ))}
@@ -211,7 +269,6 @@ function App() {
       <div className="fixed bottom-0 left-0 w-full bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 z-50">
           <div className="max-w-2xl mx-auto flex items-end gap-2">
               
-              {/* Category Cycler - PILL SHAPE */}
               <button 
                   onClick={cycleCategory}
                   className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group"
@@ -222,7 +279,6 @@ function App() {
                   </span>
               </button>
 
-              {/* Text Input (Auto-growing Textarea) */}
               <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors">
                   <textarea
                       ref={textareaRef}
@@ -234,7 +290,6 @@ function App() {
                   />
               </div>
 
-              {/* Send Button - Lite Animation */}
               <button 
                   onClick={saveNote}
                   disabled={!transcript.trim()}
@@ -249,33 +304,36 @@ function App() {
           </div>
       </div>
 
-      {/* SETTINGS MODAL - PILL/ROUNDED BOX */}
+      {/* SETTINGS MODAL */}
       {showSettings && (
          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
              <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-[2rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 slide-in-from-bottom-5 duration-300 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                         Config
+                        <Lock size={12} className="text-orange-500" />
                     </h2>
                     <button onClick={() => { setShowSettings(false); setOpenEmojiPicker(null); }} className="text-zinc-500 hover:text-white transition-transform hover:rotate-90 duration-300">
                         <X size={20} />
                     </button>
                 </div>
                 
-                {/* Voice Section */}
                 <div className="mb-8 border-b border-zinc-900 pb-8">
-                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">Audio Feedback</label>
+                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">Audio Feedback (Filtered)</label>
                     <select 
                         value={selectedVoiceURI}
                         onChange={(e) => { setSelectedVoiceURI(e.target.value); localStorage.setItem('vibenotes_voice', e.target.value); }}
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-full p-2 px-4 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600"
+                        className="w-full bg-zinc-900 border border-zinc-800 rounded-full p-2 px-4 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 appearance-none"
                     >
                         <option value="">System Default</option>
-                        {voices.map(v => <option key={v.voiceURI} value={v.voiceURI}>{v.name}</option>)}
+                        {voices.map(v => (
+                            <option key={v.voiceURI} value={v.voiceURI}>
+                                {v.name.replace('Microsoft ', '').replace('English (United States)', 'US').replace('English (United Kingdom)', 'UK')}
+                            </option>
+                        ))}
                     </select>
                 </div>
 
-                {/* Categories Section */}
                 <div className="mb-8 border-b border-zinc-900 pb-8">
                     <label className="text-[10px] uppercase text-zinc-600 font-bold mb-4 block tracking-widest">Tags</label>
                     <div className="space-y-3">
@@ -314,7 +372,6 @@ function App() {
                     </div>
                 </div>
 
-                {/* Data Backup Section */}
                 <div>
                     <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">Data Management</label>
                     <button 

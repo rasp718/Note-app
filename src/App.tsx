@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Check, Settings, LayoutGrid, Plus, Download, Send, ArrowUp, Lock } from 'lucide-react';
+import { Search, X, Check, Settings, LayoutGrid, Plus, Download, Send, ArrowUp, Lock, Globe } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard';
 import CryptoJS from 'crypto-js';
@@ -14,10 +14,41 @@ const EMOJI_LIST = [
 // SECRET KEY for Encryption
 const SECRET_KEY = "vibenotes-super-secret-key-2025"; 
 
+// --- TRANSLATIONS ---
+const TRANSLATIONS = {
+  en: {
+    search: "SEARCH...",
+    all: "All",
+    config: "Config",
+    audioLabel: "Audio Feedback",
+    tagsLabel: "Tags",
+    dataLabel: "Data Management",
+    backup: "Download Backup",
+    typePlaceholder: "Type a note...",
+    noVoices: "No Premium Voices Found",
+    defaultVoice: "System Default"
+  },
+  ru: {
+    search: "ПОИСК...",
+    all: "Все",
+    config: "Настройки",
+    audioLabel: "Голос (Чтение)",
+    tagsLabel: "Категории",
+    dataLabel: "Управление данными",
+    backup: "Скачать резервную копию",
+    typePlaceholder: "Введите заметку...",
+    noVoices: "Голоса не найдены",
+    defaultVoice: "Системный по умолчанию"
+  }
+};
+
 function App() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [categories, setCategories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
   
+  // Language State ('en' or 'ru')
+  const [lang, setLang] = useState<'en' | 'ru'>('en');
+
   // Note Input State
   const [transcript, setTranscript] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -53,6 +84,10 @@ function App() {
 
   // --- INITIALIZATION ---
   useEffect(() => {
+    // Load Language Preference
+    const savedLang = localStorage.getItem('vibenotes_lang');
+    if (savedLang === 'en' || savedLang === 'ru') setLang(savedLang);
+
     // 1. Load Notes (Decrypted)
     const savedNotesEncrypted = localStorage.getItem('vibenotes_data_secure');
     if (savedNotesEncrypted) {
@@ -70,55 +105,61 @@ function App() {
     // 3. Load Voice Preference
     const savedVoice = localStorage.getItem('vibenotes_voice');
     if (savedVoice) setSelectedVoiceURI(savedVoice);
+  }, []);
 
-    // 4. Load & Filter Voices (ULTRA STRICT MODE)
+  // LOAD VOICES (Dependencies: lang)
+  // We re-run this when language changes to show/hide Russian voices
+  useEffect(() => {
     const loadVoices = () => {
         const allVoices = window.speechSynthesis.getVoices();
         
-        // A. Basic English Filter
-        let candidates = allVoices.filter(v => v.lang.startsWith('en'));
+        let candidates: SpeechSynthesisVoice[] = [];
 
-        // B. Define "Gold Standard" Keywords
-        const premiumKeywords = ['natural', 'online', 'premium', 'enhanced', 'google', 'siri'];
-        
-        // C. Define "Trash" Keywords
-        const trashKeywords = ['desktop', 'mobile', 'help'];
-
-        // D. Filter Logic
-        let premiumVoices = candidates.filter(v => {
-            const name = v.name.toLowerCase();
-            const isPremium = premiumKeywords.some(k => name.includes(k));
-            const isTrash = trashKeywords.some(k => name.includes(k));
+        if (lang === 'en') {
+            // ENGLISH MODE: Filter for English
+            candidates = allVoices.filter(v => v.lang.startsWith('en'));
             
-            // Keep if Premium OR (It's a specific known good voice AND not trash)
-            return isPremium || (['daniel', 'samantha', 'ava'].some(n => name.includes(n)) && !isTrash);
-        });
+            const premiumKeywords = ['natural', 'online', 'premium', 'enhanced', 'google', 'siri'];
+            const trashKeywords = ['desktop', 'mobile', 'help'];
 
-        // E. Fallback
-        if (premiumVoices.length === 0) premiumVoices = candidates;
+            let premiumVoices = candidates.filter(v => {
+                const name = v.name.toLowerCase();
+                const isPremium = premiumKeywords.some(k => name.includes(k));
+                const isTrash = trashKeywords.some(k => name.includes(k));
+                return isPremium || (['daniel', 'samantha', 'ava'].some(n => name.includes(n)) && !isTrash);
+            });
 
-        // F. Sort
-        premiumVoices.sort((a, b) => {
-            const topTier = ['Natural', 'Premium', 'Enhanced', 'Daniel', 'Samantha'];
-            const aScore = topTier.findIndex(p => a.name.includes(p));
-            const bScore = topTier.findIndex(p => b.name.includes(p));
+            if (premiumVoices.length === 0) premiumVoices = candidates;
+
+            premiumVoices.sort((a, b) => {
+                const topTier = ['Natural', 'Premium', 'Enhanced', 'Daniel', 'Samantha'];
+                const aScore = topTier.findIndex(p => a.name.includes(p));
+                const bScore = topTier.findIndex(p => b.name.includes(p));
+                if (aScore !== -1 && bScore === -1) return -1;
+                if (aScore === -1 && bScore !== -1) return 1;
+                return a.name.localeCompare(b.name);
+            });
+            setVoices(premiumVoices);
+
+        } else {
+            // RUSSIAN MODE: Filter for Russian + English (as backup)
+            // We want to find Russian voices specifically
+            const russianVoices = allVoices.filter(v => v.lang.startsWith('ru'));
+            const englishBackup = allVoices.filter(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google')));
             
-            if (aScore !== -1 && bScore === -1) return -1;
-            if (aScore === -1 && bScore !== -1) return 1;
-            return a.name.localeCompare(b.name);
-        });
-
-        setVoices(premiumVoices);
+            // Put Russian voices first
+            setVoices([...russianVoices, ...englishBackup]);
+        }
         
-        if (!savedVoice && premiumVoices.length > 0) {
-            setSelectedVoice(premiumVoices[0]);
-            setSelectedVoiceURI(premiumVoices[0].voiceURI);
+        // Ensure selected voice is valid
+        if (!savedVoice && voices.length > 0) {
+             // Logic handled in next effect
         }
     };
 
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
-  }, []);
+  }, [lang]);
 
   useEffect(() => {
     if (selectedVoiceURI && voices.length > 0) {
@@ -135,6 +176,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('vibenotes_categories', JSON.stringify(categories));
   }, [categories]);
+
+  useEffect(() => {
+    localStorage.setItem('vibenotes_lang', lang);
+  }, [lang]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -153,6 +198,10 @@ function App() {
     const currentIndex = categories.findIndex(c => c.id === selectedCategory);
     const nextIndex = (currentIndex + 1) % categories.length;
     setSelectedCategory(categories[nextIndex].id);
+  };
+
+  const toggleLanguage = () => {
+      setLang(prev => prev === 'en' ? 'ru' : 'en');
   };
 
   const saveNote = () => {
@@ -197,6 +246,7 @@ function App() {
     });
 
   const currentCategoryConfig = categories.find(c => c.id === selectedCategory) || categories[0];
+  const t = TRANSLATIONS[lang]; // Shortcut for translations
 
   return (
     <div className="min-h-screen bg-black text-zinc-100 p-4 pb-24 font-sans selection:bg-orange-500/30">
@@ -211,7 +261,7 @@ function App() {
             <Search className="absolute left-3 top-2.5 text-zinc-600 group-focus-within:text-white transition-colors" size={16} />
             <input 
                 type="text" 
-                placeholder="SEARCH..."
+                placeholder={t.search}
                 value={searchQuery} 
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-9 pr-4 text-zinc-300 focus:outline-none focus:border-white transition-all placeholder:text-zinc-700 text-xs font-bold uppercase tracking-wider"
@@ -226,7 +276,7 @@ function App() {
         </button>
       </header>
 
-      {/* FILTER CHIPS - UPPERCASE RESTORED */}
+      {/* FILTER CHIPS */}
       <div className="max-w-2xl mx-auto mb-6 flex justify-between items-center w-full px-1">
         <button 
             onClick={() => setActiveFilter('all')} 
@@ -236,7 +286,7 @@ function App() {
                 : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
             }`}
         >
-            All
+            {t.all}
         </button>
         {categories.map((cat) => (
             <button
@@ -249,7 +299,6 @@ function App() {
                 }`}
             >
                 <span className="grayscale text-[10px]">{cat.emoji}</span>
-                {/* min-w-0 helps prevents flex item from overflowing */}
                 <span className="truncate">{cat.label}</span>
             </button>
         ))}
@@ -281,7 +330,7 @@ function App() {
           )}
       </div>
 
-      {/* VIBE BAR (Bottom Input) */}
+      {/* VIBE BAR */}
       <div className="fixed bottom-0 left-0 w-full bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 z-50">
           <div className="max-w-2xl mx-auto flex items-end gap-2">
               
@@ -300,7 +349,7 @@ function App() {
                       ref={textareaRef}
                       value={transcript}
                       onChange={(e) => setTranscript(e.target.value)}
-                      placeholder="Type a note..."
+                      placeholder={t.typePlaceholder}
                       rows={1}
                       className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-sm resize-none max-h-32 py-0.5"
                   />
@@ -326,22 +375,36 @@ function App() {
              <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-[2rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 slide-in-from-bottom-5 duration-300 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                        Config
+                        {t.config}
                         <Lock size={12} className="text-orange-500" />
                     </h2>
                     <button onClick={() => { setShowSettings(false); setOpenEmojiPicker(null); }} className="text-zinc-500 hover:text-white transition-transform hover:rotate-90 duration-300">
                         <X size={20} />
                     </button>
                 </div>
+
+                {/* LANGUAGE TOGGLE */}
+                <div className="mb-8 border-b border-zinc-900 pb-8 flex items-center justify-between">
+                    <label className="text-[10px] uppercase text-zinc-600 font-bold tracking-widest">Language / Язык</label>
+                    <button 
+                        onClick={toggleLanguage}
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-orange-500 transition-all group"
+                    >
+                        <Globe size={14} className="text-zinc-500 group-hover:text-orange-500" />
+                        <span className="text-xs font-bold text-zinc-300 group-hover:text-white">
+                            {lang === 'en' ? 'ENGLISH' : 'РУССКИЙ'}
+                        </span>
+                    </button>
+                </div>
                 
                 <div className="mb-8 border-b border-zinc-900 pb-8">
-                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">Audio Feedback (Filtered)</label>
+                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">{t.audioLabel}</label>
                     <select 
                         value={selectedVoiceURI}
                         onChange={(e) => { setSelectedVoiceURI(e.target.value); localStorage.setItem('vibenotes_voice', e.target.value); }}
                         className="w-full bg-zinc-900 border border-zinc-800 rounded-full p-2 px-4 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 appearance-none"
                     >
-                        {voices.length === 0 && <option>No Premium Voices Found</option>}
+                        {voices.length === 0 && <option>{t.noVoices}</option>}
                         {voices.map(v => (
                             <option key={v.voiceURI} value={v.voiceURI}>
                                 {v.name
@@ -356,7 +419,7 @@ function App() {
                 </div>
 
                 <div className="mb-8 border-b border-zinc-900 pb-8">
-                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-4 block tracking-widest">Tags</label>
+                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-4 block tracking-widest">{t.tagsLabel}</label>
                     <div className="space-y-3">
                         {categories.map((cat) => (
                             <div key={cat.id} className="bg-black rounded-full p-2 px-4 border border-zinc-900 flex items-center gap-3">
@@ -394,12 +457,12 @@ function App() {
                 </div>
 
                 <div>
-                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">Data Management</label>
+                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">{t.dataLabel}</label>
                     <button 
                         onClick={handleExport}
                         className="w-full py-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 rounded-full text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
                     >
-                        <Download size={14} /> Download Backup
+                        <Download size={14} /> {t.backup}
                     </button>
                 </div>
              </div>

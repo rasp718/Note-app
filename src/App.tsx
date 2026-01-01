@@ -71,46 +71,48 @@ function App() {
     const savedVoice = localStorage.getItem('vibenotes_voice');
     if (savedVoice) setSelectedVoiceURI(savedVoice);
 
-    // 4. Load & Filter Voices (STRICT QUALITY CONTROL)
+    // 4. Load & Filter Voices (ULTRA STRICT MODE)
     const loadVoices = () => {
         const allVoices = window.speechSynthesis.getVoices();
         
-        // Step A: Get all English voices
+        // A. Basic English Filter
         let candidates = allVoices.filter(v => v.lang.startsWith('en'));
 
-        // Step B: Define "High Quality" Keywords
-        // "Natural" & "Online" usually denote cloud-based neural voices (Microsoft Edge/Chrome)
-        // "Premium" / "Enhanced" are Apple's high quality ones
-        const qualityKeywords = ['natural', 'online', 'premium', 'enhanced', 'google', 'daniel', 'samantha', 'ava', 'zoe', 'tom'];
+        // B. Define "Gold Standard" Keywords
+        const premiumKeywords = ['natural', 'online', 'premium', 'enhanced', 'google', 'siri'];
+        
+        // C. Define "Trash" Keywords
+        const trashKeywords = ['desktop', 'mobile', 'help'];
 
-        // Step C: Strict Filter - Only keep voices that match quality keywords
-        const highQualityVoices = candidates.filter(v => 
-            qualityKeywords.some(keyword => v.name.toLowerCase().includes(keyword))
-        );
-
-        // Fallback: If strict filter removes EVERYTHING, revert to all English voices (so functionality doesn't break)
-        const finalVoices = highQualityVoices.length > 0 ? highQualityVoices : candidates;
-
-        // Step D: Sort (Prioritize Daniel/Samantha/Natural)
-        finalVoices.sort((a, b) => {
-            const priority = ['Natural', 'Online', 'Daniel', 'Samantha', 'Google'];
-            const aScore = priority.findIndex(p => a.name.includes(p));
-            const bScore = priority.findIndex(p => b.name.includes(p));
+        // D. Filter Logic
+        let premiumVoices = candidates.filter(v => {
+            const name = v.name.toLowerCase();
+            const isPremium = premiumKeywords.some(k => name.includes(k));
+            const isTrash = trashKeywords.some(k => name.includes(k));
             
-            // Higher priority appears earlier in list
+            // Keep if Premium OR (It's a specific known good voice AND not trash)
+            return isPremium || (['daniel', 'samantha', 'ava'].some(n => name.includes(n)) && !isTrash);
+        });
+
+        // E. Fallback
+        if (premiumVoices.length === 0) premiumVoices = candidates;
+
+        // F. Sort
+        premiumVoices.sort((a, b) => {
+            const topTier = ['Natural', 'Premium', 'Enhanced', 'Daniel', 'Samantha'];
+            const aScore = topTier.findIndex(p => a.name.includes(p));
+            const bScore = topTier.findIndex(p => b.name.includes(p));
+            
             if (aScore !== -1 && bScore === -1) return -1;
             if (aScore === -1 && bScore !== -1) return 1;
             return a.name.localeCompare(b.name);
         });
 
-        setVoices(finalVoices);
+        setVoices(premiumVoices);
         
-        if (!savedVoice) {
-            // Auto-select the best available
-            if (finalVoices.length > 0) {
-                setSelectedVoice(finalVoices[0]);
-                setSelectedVoiceURI(finalVoices[0].voiceURI);
-            }
+        if (!savedVoice && premiumVoices.length > 0) {
+            setSelectedVoice(premiumVoices[0]);
+            setSelectedVoiceURI(premiumVoices[0].voiceURI);
         }
     };
 
@@ -124,7 +126,7 @@ function App() {
     }
   }, [selectedVoiceURI, voices]);
 
-  // SAVE DATA (ENCRYPTED)
+  // SAVE DATA
   useEffect(() => {
     const encrypted = encryptData(notes);
     localStorage.setItem('vibenotes_data_secure', encrypted);
@@ -224,11 +226,11 @@ function App() {
         </button>
       </header>
 
-      {/* FILTER CHIPS */}
-      <div className="max-w-2xl mx-auto mb-6 grid grid-cols-5 gap-1 w-full">
+      {/* FILTER CHIPS - UPPERCASE RESTORED */}
+      <div className="max-w-2xl mx-auto mb-6 flex justify-between items-center w-full px-1">
         <button 
             onClick={() => setActiveFilter('all')} 
-            className={`flex items-center justify-center w-full py-1.5 rounded-full text-[9px] font-bold capitalize tracking-wider border transition-all duration-300 ${
+            className={`min-w-0 px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-all duration-300 flex-shrink-0 ${
                 activeFilter === 'all' 
                 ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
                 : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
@@ -240,13 +242,14 @@ function App() {
             <button
                 key={cat.id}
                 onClick={() => setActiveFilter(cat.id)}
-                className={`flex items-center justify-center gap-1 w-full py-1.5 px-1 rounded-full text-[9px] font-bold capitalize border transition-all duration-300 ${
+                className={`min-w-0 px-2 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-all flex items-center justify-center gap-1.5 duration-300 ${
                     activeFilter === cat.id 
                     ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
                     : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
                 }`}
             >
                 <span className="grayscale text-[10px]">{cat.emoji}</span>
+                {/* min-w-0 helps prevents flex item from overflowing */}
                 <span className="truncate">{cat.label}</span>
             </button>
         ))}
@@ -332,7 +335,7 @@ function App() {
                 </div>
                 
                 <div className="mb-8 border-b border-zinc-900 pb-8">
-                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">Audio Feedback (Premium Only)</label>
+                    <label className="text-[10px] uppercase text-zinc-600 font-bold mb-2 block tracking-widest">Audio Feedback (Filtered)</label>
                     <select 
                         value={selectedVoiceURI}
                         onChange={(e) => { setSelectedVoiceURI(e.target.value); localStorage.setItem('vibenotes_voice', e.target.value); }}

@@ -16,6 +16,7 @@ function App() {
   
   // Note Input State
   const [transcript, setTranscript] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,12 +62,19 @@ function App() {
     localStorage.setItem('vibenotes_categories', JSON.stringify(categories));
   }, [categories]);
 
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [transcript]);
+
   // --- HANDLERS ---
   const handleCategoryEdit = (id: CategoryId, field: 'label' | 'emoji' | 'colorClass', value: string) => {
     setCategories(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
   };
 
-  // CYCLE CATEGORY (Option A)
   const cycleCategory = () => {
     const currentIndex = categories.findIndex(c => c.id === selectedCategory);
     const nextIndex = (currentIndex + 1) % categories.length;
@@ -84,7 +92,8 @@ function App() {
     };
     setNotes(prev => [newNote, ...prev]);
     setTranscript('');
-    // Scroll to top or give feedback? For now, just clears input.
+    // Reset height
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
   };
 
   const deleteNote = (id: string) => setNotes(prev => prev.filter(n => n.id !== id));
@@ -114,7 +123,6 @@ function App() {
       return a.isPinned ? -1 : 1;
     });
 
-  // Get current category config for the input bar
   const currentCategoryConfig = categories.find(c => c.id === selectedCategory) || categories[0];
 
   return (
@@ -186,8 +194,7 @@ function App() {
               onEdit={(n) => {
                  setTranscript(n.text);
                  setSelectedCategory(n.category);
-                 deleteNote(n.id); // Remove old version to "edit" it back into input
-                 // Since we don't have a modal, we populate the input bar
+                 deleteNote(n.id);
               }}
             />
           ))}
@@ -199,31 +206,31 @@ function App() {
           )}
       </div>
 
-      {/* TELEGRAM STYLE INPUT BAR (Fixed Bottom) */}
+      {/* VIBE BAR (Bottom Input) */}
       <div className="fixed bottom-0 left-0 w-full bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 z-50">
           <div className="max-w-2xl mx-auto flex items-end gap-2">
               
-              {/* Category Cycler (Option A) */}
+              {/* Category Cycler - BADGE STYLE */}
               <button 
                   onClick={cycleCategory}
-                  className="flex-shrink-0 w-10 h-10 mb-0.5 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center justify-center transition-all active:scale-95"
+                  className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-md bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group"
               >
-                  <span className="text-lg">{currentCategoryConfig.emoji}</span>
+                  <span className="text-xs grayscale group-hover:grayscale-0 transition-all">{currentCategoryConfig.emoji}</span>
+                  {/* On very small screens, you might want to hide this label, but it matches the card now */}
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 group-hover:text-zinc-300 hidden sm:inline-block">
+                    {currentCategoryConfig.label}
+                  </span>
               </button>
 
-              {/* Text Input */}
-              <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2.5 focus-within:border-zinc-600 transition-colors">
-                  <input
-                      type="text"
+              {/* Text Input (Auto-growing Textarea) */}
+              <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors">
+                  <textarea
+                      ref={textareaRef}
                       value={transcript}
                       onChange={(e) => setTranscript(e.target.value)}
-                      onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                              saveNote();
-                          }
-                      }}
-                      placeholder={`Add to ${currentCategoryConfig.label}...`}
-                      className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-sm"
+                      placeholder="Type a note..."
+                      rows={1}
+                      className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-sm resize-none max-h-32 py-0.5"
                   />
               </div>
 

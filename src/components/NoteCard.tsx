@@ -54,7 +54,7 @@ export function NoteCard({
       
       {/* Header */}
       <div className="flex justify-between items-start p-4 pb-2 h-9">
-        {/* SMALLER CATEGORY BUTTON */}
+        {/* CATEGORY BADGE */}
         <button 
           onClick={() => onCategoryClick(note.category)}
           className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-zinc-950 border border-zinc-800 hover:border-zinc-600 transition-colors"
@@ -105,13 +105,13 @@ export function NoteCard({
       <div className="flex justify-between items-end p-4 pt-2">
         <span className="text-[10px] text-zinc-600 font-mono uppercase tracking-wider">{formattedDate}</span>
         
-        {/* Play Button - Minimalist Icon (Bottom Right) */}
+        {/* Play Button - Minimalist Icon (Hidden unless hovering or playing) */}
         <button 
           onClick={handleSpeak}
           className={`p-1.5 rounded-md transition-all ${
             isPlaying 
-              ? 'text-orange-500 bg-orange-500/10' 
-              : 'text-zinc-600 hover:text-orange-500 hover:bg-zinc-800'
+              ? 'opacity-100 text-orange-500 bg-orange-500/10' 
+              : 'opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-orange-500 hover:bg-zinc-800'
           }`}
           title="Read Aloud"
         >

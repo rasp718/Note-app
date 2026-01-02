@@ -11,34 +11,21 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { 
-  signInAnonymously, 
   onAuthStateChanged,
   User 
 } from 'firebase/auth';
-import { db, auth } from './firebase';
-import { Note, CategoryConfig } from './types';
+import { db, auth } from '../firebase';
+import { Note, CategoryConfig } from '../types';
 
 export const useFirebaseSync = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Sign in anonymously on mount
+  // Listen for auth state changes (login/logout)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setLoading(false);
-      } else {
-        signInAnonymously(auth)
-          .then((result) => {
-            setUser(result.user);
-            setLoading(false);
-          })
-          .catch((error) => {
-            console.error("Auth error:", error);
-            setLoading(false);
-          });
-      }
+      setUser(currentUser);
+      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -143,7 +130,6 @@ export const useCategories = (userId: string | null) => {
 
   const updateCategories = async (newCategories: CategoryConfig[]) => {
     if (!userId) return;
-    // Store categories as a single document for simplicity
     try {
       const categoriesDocRef = doc(db, 'users', userId, 'settings', 'categories');
       await updateDoc(categoriesDocRef, { data: newCategories });

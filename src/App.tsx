@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff } from 'lucide-react';
+import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut } from 'lucide-react';
+import { signOut } from 'firebase/auth';
+import { auth } from './firebase';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard';
 import { useFirebaseSync, useNotes } from './useFirebaseSync';
+import Auth from './components/Auth';
 
 // --- CONSTANTS ---
 const EMOJI_LIST = [
@@ -29,6 +32,7 @@ const TRANSLATIONS = {
     syncing: "Syncing...",
     synced: "Synced",
     offline: "Offline",
+    logout: "Logout",
     cat_idea: "Idea",
     cat_work: "Work",
     cat_journal: "Journal",
@@ -50,6 +54,7 @@ const TRANSLATIONS = {
     syncing: "Синхронизация...",
     synced: "Синхронизировано",
     offline: "Оффлайн",
+    logout: "Выйти",
     cat_idea: "Идея",
     cat_work: "Работа",
     cat_journal: "Дневник",
@@ -199,6 +204,14 @@ function App() {
     downloadAnchorNode.remove();
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   const filteredNotes = notes
     .filter(n => {
       const matchesSearch = n.text.toLowerCase().includes(searchQuery.toLowerCase());
@@ -213,6 +226,7 @@ function App() {
   const currentCategoryConfig = categories.find(c => c.id === selectedCategory) || categories[0];
   const t = TRANSLATIONS[lang];
 
+  // Show loading screen
   if (authLoading) {
     return (
       <div className="min-h-screen bg-black text-zinc-100 flex items-center justify-center">
@@ -222,6 +236,11 @@ function App() {
         </div>
       </div>
     );
+  }
+
+  // Show auth screen if not logged in
+  if (!user) {
+    return <Auth />;
   }
 
   return (
@@ -435,9 +454,12 @@ function App() {
                         </div>
 
                         {/* Footer */}
-                        <div className="pt-4 border-t border-zinc-900 mt-auto">
+                        <div className="pt-4 border-t border-zinc-900 mt-auto space-y-2">
                             <button onClick={handleExport} className="w-full py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
                                 <Download size={12} /> {t.backup}
+                            </button>
+                            <button onClick={handleLogout} className="w-full py-2.5 bg-red-900/20 border border-red-900/50 text-red-400 hover:text-red-300 hover:border-red-800 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                                <LogOut size={12} /> {t.logout}
                             </button>
                         </div>
                     </div>

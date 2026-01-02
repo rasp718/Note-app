@@ -266,7 +266,7 @@ function App() {
           {syncing ? (
             <Cloud className="text-orange-500 animate-pulse" size={16} />
           ) : user ? (
-            <Cloud className="text-green-500" size={16} />
+            <Cloud className="text-orange-500" size={16} />
           ) : (
             <CloudOff className="text-zinc-600" size={16} />
           )}
@@ -393,8 +393,8 @@ function App() {
                             <div className="flex items-center gap-2">
                               {user ? (
                                 <>
-                                  <Cloud className="text-green-500" size={12} />
-                                  <span className="text-[10px] font-bold text-green-500 tracking-wider">{syncing ? t.syncing : t.synced}</span>
+                                  <Cloud className="text-orange-500" size={12} />
+                                  <span className="text-[10px] font-bold text-orange-500 tracking-wider">{syncing ? t.syncing : t.synced}</span>
                                 </>
                               ) : (
                                 <>

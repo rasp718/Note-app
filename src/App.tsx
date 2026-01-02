@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid } from 'lucide-react';
+import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard';
-import CryptoJS from 'crypto-js';
+import { useFirebaseSync, useNotes } from './useFirebaseSync';
 
 // --- CONSTANTS ---
 const EMOJI_LIST = [
@@ -10,8 +10,6 @@ const EMOJI_LIST = [
   '📝', '📅', '🛒', '🏋️', '✈️', '🏠', 
   '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧',
 ];
-
-const SECRET_KEY = "vibenotes-super-secret-key-2025"; 
 
 // --- TRANSLATIONS ---
 const TRANSLATIONS = {
@@ -28,6 +26,9 @@ const TRANSLATIONS = {
     defaultVoice: "System Default",
     languageLabel: "Language",
     selectIcon: "Select Icon",
+    syncing: "Syncing...",
+    synced: "Synced",
+    offline: "Offline",
     cat_idea: "Idea",
     cat_work: "Work",
     cat_journal: "Journal",
@@ -46,6 +47,9 @@ const TRANSLATIONS = {
     defaultVoice: "По умолчанию",
     languageLabel: "Язык",
     selectIcon: "Выберите иконку",
+    syncing: "Синхронизация...",
+    synced: "Синхронизировано",
+    offline: "Оффлайн",
     cat_idea: "Идея",
     cat_work: "Работа",
     cat_journal: "Дневник",
@@ -54,7 +58,10 @@ const TRANSLATIONS = {
 };
 
 function App() {
-  const [notes, setNotes] = useState<Note[]>([]);
+  // Firebase Authentication
+  const { user, loading: authLoading } = useFirebaseSync();
+  const { notes, addNote, deleteNote: deleteNoteFromFirebase, updateNote, syncing } = useNotes(user?.uid || null);
+  
   const [categories, setCategories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
   const [lang, setLang] = useState<'en' | 'ru'>('en');
   const [transcript, setTranscript] = useState('');
@@ -73,18 +80,6 @@ function App() {
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
 
   // --- HELPERS ---
-  const encryptData = (data: any) => {
-    try { return CryptoJS.AES.encrypt(JSON.stringify(data), SECRET_KEY).toString(); } catch (e) { return ""; }
-  };
-
-  const decryptData = (ciphertext: string) => {
-    try {
-      if (!ciphertext) return null;
-      const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
-      return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-    } catch (e) { return null; }
-  };
-
   const getCategoryLabel = (cat: CategoryConfig) => {
     const id = cat.id.toLowerCase();
     const t = TRANSLATIONS[lang];
@@ -107,15 +102,6 @@ function App() {
     try {
         const savedLang = localStorage.getItem('vibenotes_lang');
         if (savedLang === 'en' || savedLang === 'ru') setLang(savedLang);
-
-        const savedNotesEncrypted = localStorage.getItem('vibenotes_data_secure');
-        if (savedNotesEncrypted) {
-            const decrypted = decryptData(savedNotesEncrypted);
-            if (decrypted && Array.isArray(decrypted)) setNotes(decrypted);
-        } else {
-            const oldData = localStorage.getItem('vibenotes_data');
-            if (oldData) { try { setNotes(JSON.parse(oldData)); } catch(e){} }
-        }
 
         const savedCats = localStorage.getItem('vibenotes_categories');
         if (savedCats) setCategories(JSON.parse(savedCats));
@@ -159,10 +145,6 @@ function App() {
     }
   }, [selectedVoiceURI, voices]);
 
-  useEffect(() => {
-    if (notes.length > 0) localStorage.setItem('vibenotes_data_secure', encryptData(notes));
-  }, [notes]);
-
   useEffect(() => { localStorage.setItem('vibenotes_categories', JSON.stringify(categories)); }, [categories]);
   useEffect(() => { localStorage.setItem('vibenotes_lang', lang); }, [lang]);
 
@@ -184,23 +166,27 @@ function App() {
     setSelectedCategory(categories[nextIndex].id);
   };
 
-  const saveNote = () => {
+  const saveNote = async () => {
     if (!transcript.trim()) return;
-    const newNote: Note = {
-      id: crypto.randomUUID(),
+    const newNote: Omit<Note, 'id'> = {
       text: transcript.trim(),
       date: Date.now(),
       category: selectedCategory,
       isPinned: false
     };
-    setNotes(prev => [newNote, ...prev]);
+    await addNote(newNote);
     setTranscript('');
   };
 
-  const deleteNote = (id: string) => setNotes(prev => prev.filter(n => n.id !== id));
+  const handleDeleteNote = async (id: string) => {
+    await deleteNoteFromFirebase(id);
+  };
   
-  const togglePin = (id: string) => {
-    setNotes(prev => prev.map(n => n.id === id ? { ...n, isPinned: !n.isPinned } : n));
+  const togglePin = async (id: string) => {
+    const note = notes.find(n => n.id === id);
+    if (note) {
+      await updateNote(id, { isPinned: !note.isPinned });
+    }
   };
 
   const handleExport = () => {
@@ -227,6 +213,17 @@ function App() {
   const currentCategoryConfig = categories.find(c => c.id === selectedCategory) || categories[0];
   const t = TRANSLATIONS[lang];
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-black text-zinc-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-zinc-600 text-xs uppercase tracking-wider">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-zinc-100 p-4 pb-24 font-sans selection:bg-orange-500/30">
       
@@ -245,6 +242,16 @@ function App() {
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-9 pr-4 text-zinc-300 focus:outline-none focus:border-white transition-all placeholder:text-zinc-700 text-xs font-bold uppercase tracking-wider"
             />
          </div>
+        {/* Sync Status Indicator */}
+        <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800">
+          {syncing ? (
+            <Cloud className="text-orange-500 animate-pulse" size={16} />
+          ) : user ? (
+            <Cloud className="text-green-500" size={16} />
+          ) : (
+            <CloudOff className="text-zinc-600" size={16} />
+          )}
+        </div>
         <button 
             onClick={() => { setShowSettings(true); setSettingsView('main'); }}
             className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-500 hover:text-white transition-all active:scale-95"
@@ -289,13 +296,13 @@ function App() {
               note={note} 
               categories={categories}
               selectedVoice={selectedVoice}
-              onDelete={deleteNote} 
+              onDelete={handleDeleteNote} 
               onPin={togglePin} 
               onCategoryClick={(cat) => setActiveFilter(cat)}
               onEdit={(n) => {
                  setTranscript(n.text);
                  setSelectedCategory(n.category);
-                 deleteNote(n.id);
+                 handleDeleteNote(n.id);
               }}
             />
           ))}
@@ -359,6 +366,24 @@ function App() {
                             <button onClick={() => setShowSettings(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700 transition-all active:scale-95">
                                 <X size={16} />
                             </button>
+                        </div>
+
+                        {/* Sync Status */}
+                        <div className="mb-4 flex items-center justify-between py-3 px-3 rounded-lg bg-zinc-900 border border-zinc-800">
+                            <label className="text-[9px] uppercase text-zinc-600 font-bold tracking-widest">Status</label>
+                            <div className="flex items-center gap-2">
+                              {user ? (
+                                <>
+                                  <Cloud className="text-green-500" size={12} />
+                                  <span className="text-[10px] font-bold text-green-500 tracking-wider">{syncing ? t.syncing : t.synced}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CloudOff className="text-zinc-600" size={12} />
+                                  <span className="text-[10px] font-bold text-zinc-600 tracking-wider">{t.offline}</span>
+                                </>
+                              )}
+                            </div>
                         </div>
 
                         {/* Language */}

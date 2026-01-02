@@ -14,8 +14,8 @@ import {
   onAuthStateChanged,
   User 
 } from 'firebase/auth';
-import { db, auth } from '../firebase';
-import { Note, CategoryConfig } from '../types';
+import { db, auth } from './firebase';
+import { Note, CategoryConfig } from './types';
 
 export const useFirebaseSync = () => {
   const [user, setUser] = useState<User | null>(null);

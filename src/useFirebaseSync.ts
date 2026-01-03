@@ -55,9 +55,9 @@ export const useNotes = (userId: string | null) => {
           date: data.date,
           category: data.category,
           isPinned: data.isPinned || false,
-          isExpanded: data.isExpanded !== undefined ? data.isExpanded : true, // Default to true
+          isExpanded: data.isExpanded !== undefined ? data.isExpanded : true,
           editedAt: data.editedAt || undefined,
-          attachments: data.attachments || []
+          imageUrl: data.imageUrl || undefined
         });
       });
       setNotes(notesData);

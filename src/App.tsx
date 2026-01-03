@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut } from 'lucide-react';
+import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut, Image as ImageIcon, X as RemoveIcon } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
@@ -62,6 +62,48 @@ const TRANSLATIONS = {
   }
 };
 
+// --- UTILS ---
+const compressImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // Resize if too large (max 800px width/height is usually safe for <1MB strings)
+        const MAX_SIZE = 800;
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Compress to JPEG with 0.7 quality
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        resolve(dataUrl);
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
 function App() {
   // Firebase Authentication
   const { user, loading: authLoading } = useFirebaseSync();
@@ -70,7 +112,10 @@ function App() {
   const [categories, setCategories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
   const [lang, setLang] = useState<'en' | 'ru'>('en');
   const [transcript, setTranscript] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all'>('all');
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('idea');
@@ -100,6 +145,56 @@ function App() {
         if (id === 'to-do' || id === 'todo') return t.cat_todo;
     }
     return cat.label; 
+  };
+
+  // --- IMAGE HANDLING ---
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      // Compress and Resize Image
+      const compressedDataUrl = await compressImage(file);
+      
+      // Double check size (Firestore limit is ~1MB)
+      if (compressedDataUrl.length > 900000) {
+          alert('Image is too complex even after compression. Please try a smaller image.');
+          setIsUploadingImage(false);
+          return;
+      }
+
+      setImageUrl(compressedDataUrl);
+      setIsUploadingImage(false);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image');
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file);
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        e.preventDefault();
+        const file = items[i].getAsFile();
+        if (file) await handleImageUpload(file);
+        break;
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageUrl('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // --- EFFECTS ---
@@ -172,16 +267,19 @@ function App() {
   };
 
   const saveNote = async () => {
-    if (!transcript.trim()) return;
+    if (!transcript.trim() && !imageUrl) return;
     const newNote: Omit<Note, 'id'> = {
       text: transcript.trim(),
       date: Date.now(),
       category: selectedCategory,
       isPinned: false,
-      isExpanded: true // New notes start expanded
+      isExpanded: true,
+      imageUrl: imageUrl || undefined
     };
     await addNote(newNote);
     setTranscript('');
+    setImageUrl('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleDeleteNote = async (id: string) => {
@@ -327,10 +425,11 @@ function App() {
               onPin={togglePin} 
               onCategoryClick={(cat) => setActiveFilter(cat)}
               onEdit={(n) => {
-                 setTranscript(n.text);
-                 setSelectedCategory(n.category);
-                 handleDeleteNote(n.id);
-              }}
+                setTranscript(n.text);
+                setSelectedCategory(n.category);
+                setImageUrl(n.imageUrl || '');
+                handleDeleteNote(n.id);
+             }}
               onUpdate={updateNote}
               onToggleExpand={handleToggleExpand}
             />
@@ -355,11 +454,25 @@ function App() {
                     {getCategoryLabel(currentCategoryConfig)}
                   </span>
               </button>
-              <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors">
+              <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3">
+                  {imageUrl && (
+                      <div className="relative flex-shrink-0 group/image">
+                          <div className="w-8 h-8 rounded overflow-hidden border border-zinc-700">
+                              <img src={imageUrl} alt="Attachment" className="w-full h-full object-cover" />
+                          </div>
+                          <button 
+                              onClick={handleRemoveImage}
+                              className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"
+                          >
+                              <X size={10} />
+                          </button>
+                      </div>
+                  )}
                   <textarea
                       ref={textareaRef}
                       value={transcript}
                       onChange={(e) => setTranscript(e.target.value)}
+                      onPaste={handlePaste}
                       placeholder={t.typePlaceholder}
                       rows={1}
                       className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-sm resize-none max-h-32 py-0.5"
@@ -367,14 +480,14 @@ function App() {
               </div>
               <button 
                   onClick={saveNote}
-                  disabled={!transcript.trim()}
+                  disabled={!transcript.trim() && !imageUrl}
                   className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 ${
-                      transcript.trim() 
+                      transcript.trim() || imageUrl
                       ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)]' 
                       : 'bg-zinc-900 text-zinc-600 border border-zinc-800'
                   }`}
               >
-                  {transcript.trim() ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}
+                  {transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}
               </button>
           </div>
       </div>

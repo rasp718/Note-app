@@ -53,7 +53,7 @@ export const useNotes = (userId: string | null) => {
           date: data.date,
           category: data.category,
           isPinned: data.isPinned || false,
-          isExpanded: data.isExpanded !== undefined ? data.isExpanded : true,
+          isExpanded: data.isExpanded ?? true,
           editedAt: data.editedAt || undefined,
           imageUrl: data.imageUrl || undefined
         });

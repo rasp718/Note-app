@@ -389,7 +389,8 @@ function App() {
                 placeholder={t.search}
                 value={searchQuery} 
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-9 pr-4 text-zinc-300 focus:outline-none focus:border-white transition-all placeholder:text-zinc-700 text-xs font-bold uppercase tracking-wider"
+                // UPDATED: text-base on mobile to prevent zoom, md:text-xs on desktop
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-9 pr-4 text-zinc-300 focus:outline-none focus:border-white transition-all placeholder:text-zinc-700 text-base md:text-xs font-bold uppercase tracking-wider"
             />
          </div>
         {/* Sync Status Indicator */}
@@ -449,7 +450,7 @@ function App() {
               onDelete={handleDeleteNote} 
               onPin={togglePin} 
               onCategoryClick={(cat) => setActiveFilter(cat)}
-              onEdit={() => {}} // FIXED: Removed delete logic here
+              onEdit={() => {}} 
               onUpdate={updateNote}
               onToggleExpand={handleToggleExpand}
             />
@@ -495,7 +496,8 @@ function App() {
                       onPaste={handlePaste}
                       placeholder={t.typePlaceholder}
                       rows={1}
-                      className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-sm resize-none max-h-32 py-0.5"
+                      // UPDATED: text-base on mobile to prevent zoom, md:text-sm on desktop
+                      className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5"
                   />
               </div>
               <button 

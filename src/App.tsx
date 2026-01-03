@@ -360,7 +360,7 @@ function App() {
   // Show loading screen
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-black text-zinc-100 flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-black text-zinc-100 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-zinc-600 text-xs uppercase tracking-wider">Loading...</p>
@@ -375,68 +375,72 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-zinc-100 p-4 pb-24 font-sans selection:bg-orange-500/30">
+    // FIX 1: Use min-h-[100dvh] to prevent mobile browser expansion glitches
+    // FIX 2: Add overflow-x-hidden to prevent horizontal scroll popping
+    <div className="min-h-[100dvh] bg-black text-zinc-100 p-4 pb-24 font-sans selection:bg-orange-500/30 overflow-x-hidden relative">
       
-      {/* HEADER */}
-      <header className="max-w-2xl mx-auto mb-4 flex items-center gap-3">
-         <div className="flex-shrink-0 w-10 h-10 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-md">
-             <div className="w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)]"></div>
-         </div>
-         <div className="flex-1 relative group">
-            <Search className="absolute left-3 top-2.5 text-zinc-600 group-focus-within:text-white transition-colors" size={16} />
-            <input 
-                type="text" 
-                placeholder={t.search}
-                value={searchQuery} 
-                onChange={(e) => setSearchQuery(e.target.value)}
-                // UPDATED: text-base on mobile to prevent zoom, md:text-xs on desktop
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-9 pr-4 text-zinc-300 focus:outline-none focus:border-white transition-all placeholder:text-zinc-700 text-base md:text-xs font-bold uppercase tracking-wider"
-            />
-         </div>
-        {/* Sync Status Indicator */}
-        <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800">
-          {syncing ? (
-            <Cloud className="text-orange-500 animate-pulse" size={16} />
-          ) : user ? (
-            <Cloud className="text-orange-500" size={16} />
-          ) : (
-            <CloudOff className="text-zinc-600" size={16} />
-          )}
-        </div>
-        <button 
-            onClick={() => { setShowSettings(true); setSettingsView('main'); }}
-            className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-500 hover:text-white transition-all active:scale-95"
-        >
-            <Settings size={20} />
-        </button>
-      </header>
+      {/* HEADER - FIX 3: Sticky positioning to keep header visible when keyboard opens/scrolls */}
+      <div className="sticky top-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/5 py-2 mb-6 -mx-4 px-4 transition-all">
+          <header className="max-w-2xl mx-auto flex items-center gap-3">
+             <div className="flex-shrink-0 w-10 h-10 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-md">
+                 <div className="w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)]"></div>
+             </div>
+             <div className="flex-1 relative group">
+                <Search className="absolute left-3 top-2.5 text-zinc-600 group-focus-within:text-white transition-colors" size={16} />
+                <input 
+                    type="text" 
+                    placeholder={t.search}
+                    value={searchQuery} 
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    // text-base prevents iOS zoom
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-9 pr-4 text-zinc-300 focus:outline-none focus:border-white transition-all placeholder:text-zinc-700 text-base md:text-xs font-bold uppercase tracking-wider"
+                />
+             </div>
+            {/* Sync Status Indicator */}
+            <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800">
+              {syncing ? (
+                <Cloud className="text-orange-500 animate-pulse" size={16} />
+              ) : user ? (
+                <Cloud className="text-orange-500" size={16} />
+              ) : (
+                <CloudOff className="text-zinc-600" size={16} />
+              )}
+            </div>
+            <button 
+                onClick={() => { setShowSettings(true); setSettingsView('main'); }}
+                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-500 hover:text-white transition-all active:scale-95"
+            >
+                <Settings size={20} />
+            </button>
+          </header>
 
-      {/* FILTER CHIPS */}
-      <div className="max-w-2xl mx-auto mb-6 flex justify-between items-center w-full px-1">
-        <button 
-            onClick={() => setActiveFilter('all')} 
-            className={`min-w-0 px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-all duration-300 flex-shrink-0 ${
-                activeFilter === 'all' 
-                ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
-                : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
-            }`}
-        >
-            {t.all}
-        </button>
-        {categories.map((cat) => (
-            <button
-                key={cat.id}
-                onClick={() => setActiveFilter(cat.id)}
-                className={`min-w-0 px-2 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-all flex items-center justify-center gap-1.5 duration-300 ${
-                    activeFilter === cat.id 
+          {/* FILTER CHIPS (Moved inside sticky header so they stay accessible) */}
+          <div className="max-w-2xl mx-auto mt-2 flex justify-between items-center w-full px-1">
+            <button 
+                onClick={() => setActiveFilter('all')} 
+                className={`min-w-0 px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-all duration-300 flex-shrink-0 ${
+                    activeFilter === 'all' 
                     ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
                     : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
                 }`}
             >
-                <span className="grayscale text-[10px]">{cat.emoji}</span>
-                <span className="truncate">{getCategoryLabel(cat)}</span>
+                {t.all}
             </button>
-        ))}
+            {categories.map((cat) => (
+                <button
+                    key={cat.id}
+                    onClick={() => setActiveFilter(cat.id)}
+                    className={`min-w-0 px-2 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-all flex items-center justify-center gap-1.5 duration-300 ${
+                        activeFilter === cat.id 
+                        ? 'bg-black text-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.2)] scale-105' 
+                        : 'bg-black text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
+                    }`}
+                >
+                    <span className="grayscale text-[10px]">{cat.emoji}</span>
+                    <span className="truncate">{getCategoryLabel(cat)}</span>
+                </button>
+            ))}
+          </div>
       </div>
 
       {/* NOTE LIST */}
@@ -496,7 +500,6 @@ function App() {
                       onPaste={handlePaste}
                       placeholder={t.typePlaceholder}
                       rows={1}
-                      // UPDATED: text-base on mobile to prevent zoom, md:text-sm on desktop
                       className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5"
                   />
               </div>

@@ -449,12 +449,7 @@ function App() {
               onDelete={handleDeleteNote} 
               onPin={togglePin} 
               onCategoryClick={(cat) => setActiveFilter(cat)}
-              onEdit={(n) => {
-                setTranscript(n.text);
-                setSelectedCategory(n.category);
-                setImageUrl(n.imageUrl || '');
-                handleDeleteNote(n.id);
-             }}
+              onEdit={() => {}} // FIXED: Removed delete logic here
               onUpdate={updateNote}
               onToggleExpand={handleToggleExpand}
             />

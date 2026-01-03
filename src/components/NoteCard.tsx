@@ -39,10 +39,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const lines = note.text.split('\n');
   
   // Logic to determine if this is a "Simple One-Liner"
-  // Used for compact padding
+  const isSingleLine = lines.length === 1 && !note.imageUrl && !isExpanded;
+  // Compact check for padding logic
   const isCompact = lines.length === 1 && !note.imageUrl;
-  // Specific check for collapsed view layout
-  const isSingleLineCollapsed = lines.length === 1 && !note.imageUrl && !isExpanded;
 
   useEffect(() => {
     if (isEditing && textareaRef.current) {
@@ -124,7 +123,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
       if (editImageUrl) {
         updates.imageUrl = editImageUrl;
       } else if (note.imageUrl) {
-        // Explicitly set to null to remove image in Firestore
         updates.imageUrl = null as any;
       }
       
@@ -163,92 +161,21 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // Tight padding logic to "hug" content closer
+  // Tight padding logic
   const paddingClass = isCompact ? 'px-3 py-2' : 'p-3';
 
   return (
     <div className={`bg-zinc-900 border border-zinc-800 rounded-xl ${paddingClass} hover:border-zinc-700 transition-all group relative w-full md:w-fit md:max-w-full`}>
-      {isExpanded && (
-        <div className="flex flex-col gap-2">
-          
-          {/* === HEADER (Category Left, Actions Right) === */}
-          <div className="flex items-center justify-between gap-2 w-full flex-shrink-0">
-             <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onCategoryClick(note.category)}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-black border border-zinc-800 hover:border-zinc-700 transition-all"
-                >
-                  <span className="text-xs grayscale">{category.emoji}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                    {category.label}
-                  </span>
-                </button>
-             </div>
-
-             <div className="flex items-center gap-2">
-                <button onClick={handleStartEdit} className="text-zinc-500 hover:text-orange-500 transition-all" title="Edit">
-                  <Edit2 size={14} />
-                </button>
-                <button onClick={handleSpeakNote} className="text-zinc-500 hover:text-orange-500 transition-all" title={isSpeaking ? 'Stop' : 'Play'}>
-                  <Volume2 size={14} />
-                </button>
-                <button onClick={() => onPin(note.id)} className={`transition-all ${note.isPinned ? 'text-orange-500' : 'text-zinc-500 hover:text-orange-500'}`} title={note.isPinned ? 'Unpin' : 'Pin'}>
-                  <Pin size={14} />
-                </button>
-                <button onClick={() => onDelete(note.id)} className="text-zinc-500 hover:text-red-500 transition-all" title="Delete">
-                  <Trash2 size={14} />
-                </button>
-                <div className="w-px h-3 bg-zinc-800 mx-1"></div>
-                <button onClick={() => onToggleExpand(note.id)} className="text-zinc-500 hover:text-orange-500 transition-all" title="Collapse">
-                  <ChevronUp size={14} />
-                </button>
-             </div>
-          </div>
-
-          {/* === CONTENT === */}
-          <div className="flex flex-col gap-2 items-end w-full">
-              {/* 1. Image (Aligned to Right/End as per red arrows) */}
-              {note.imageUrl && (
-                <div className="mb-1 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex justify-center max-w-full self-end">
-                  <img 
-                    src={note.imageUrl} 
-                    alt="Note attachment" 
-                    className="w-full md:w-auto h-auto md:max-h-96 object-contain" 
-                  />
-                </div>
-              )}
-
-              {/* 2. Text - Aligned Left, but takes full width so timestamp can float right */}
-              {note.text && (
-                <div className="w-full">
-                  <p className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap break-words text-left inline-block w-full">
-                    {note.text}
-                    {/* Timestamp embedded: Floats right to share the last line */}
-                    <span className="float-right ml-2 mt-1 text-[10px] text-zinc-600 uppercase tracking-wider select-none">
-                      {formatDate(note.date)}
-                      {note.editedAt && <> • Edited</>}
-                    </span>
-                  </p>
-                </div>
-              )}
-          </div>
-
-          {/* 3. Footer Timestamp (Only if Image exists AND No Text) */}
-          {note.imageUrl && !note.text && (
-            <div className="w-full flex justify-end">
-              <span className="text-[10px] text-zinc-600 uppercase tracking-wider">
-                {formatDate(note.date)}
-                {note.editedAt && <> • Edited</>}
-              </span>
-            </div>
-          )}
-
-        </div>
-      )}
-
+      
+      {/* 
+        MAIN TOGGLE: 
+        If Editing -> Show Edit Form ONLY. 
+        If Not Editing -> Show View (Expanded or Collapsed).
+      */}
+      
       {isEditing ? (
         <div className="space-y-3">
-          {/* ... Editing Mode ... */}
+          {/* --- EDIT MODE UI --- */}
           <div>
             {editImageUrl ? (
               <div className="relative mb-3 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex justify-center">
@@ -292,12 +219,86 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           </div>
         </div>
       ) : (
+        // --- VIEW MODE UI ---
         <div>
-          {/* Collapsed View */}
-          {!isExpanded && (
+          {isExpanded ? (
+            // === EXPANDED VIEW ===
+            <div className="flex flex-col gap-2">
+              
+              {/* Header */}
+              <div className="flex items-center justify-between gap-2 w-full flex-shrink-0">
+                 <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onCategoryClick(note.category)}
+                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-black border border-zinc-800 hover:border-zinc-700 transition-all"
+                    >
+                      <span className="text-xs grayscale">{category.emoji}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                        {category.label}
+                      </span>
+                    </button>
+                 </div>
+
+                 <div className="flex items-center gap-2">
+                    <button onClick={handleStartEdit} className="text-zinc-500 hover:text-orange-500 transition-all" title="Edit">
+                      <Edit2 size={14} />
+                    </button>
+                    <button onClick={handleSpeakNote} className="text-zinc-500 hover:text-orange-500 transition-all" title={isSpeaking ? 'Stop' : 'Play'}>
+                      <Volume2 size={14} />
+                    </button>
+                    <button onClick={() => onPin(note.id)} className={`transition-all ${note.isPinned ? 'text-orange-500' : 'text-zinc-500 hover:text-orange-500'}`} title={note.isPinned ? 'Unpin' : 'Pin'}>
+                      <Pin size={14} />
+                    </button>
+                    <button onClick={() => onDelete(note.id)} className="text-zinc-500 hover:text-red-500 transition-all" title="Delete">
+                      <Trash2 size={14} />
+                    </button>
+                    <div className="w-px h-3 bg-zinc-800 mx-1"></div>
+                    <button onClick={() => onToggleExpand(note.id)} className="text-zinc-500 hover:text-orange-500 transition-all" title="Collapse">
+                      <ChevronUp size={14} />
+                    </button>
+                 </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex flex-col gap-2 items-start w-full">
+                  {note.imageUrl && (
+                    <div className="mb-1 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex justify-center max-w-full self-end">
+                      <img 
+                        src={note.imageUrl} 
+                        alt="Note attachment" 
+                        className="w-full md:w-auto h-auto md:max-h-96 object-contain" 
+                      />
+                    </div>
+                  )}
+                  {/* Text */}
+                  {note.text && (
+                    <div className="w-full">
+                      <p className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap break-words text-left inline-block w-full">
+                        {note.text}
+                        <span className="float-right ml-2 mt-1 text-[10px] text-zinc-600 uppercase tracking-wider select-none">
+                          {formatDate(note.date)}
+                          {note.editedAt && <> • Edited</>}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+              </div>
+
+              {/* Footer Timestamp (Only for Image-only notes) */}
+              {note.imageUrl && !note.text && (
+                <div className="w-full flex justify-end">
+                  <span className="text-[10px] text-zinc-600 uppercase tracking-wider">
+                    {formatDate(note.date)}
+                    {note.editedAt && <> • Edited</>}
+                  </span>
+                </div>
+              )}
+
+            </div>
+          ) : (
+            // === COLLAPSED VIEW ===
             <>
-              {/* === LAYOUT 1: SINGLE LINE (Compact) === */}
-              {isSingleLineCollapsed ? (
+              {isSingleLine ? (
                 <div className="flex items-center justify-between gap-2">
                    <div className="flex-1 min-w-0" onClick={() => onToggleExpand(note.id)}>
                       <p className="text-zinc-300 text-sm font-semibold truncate cursor-pointer text-left">
@@ -318,9 +319,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                    </div>
                 </div>
               ) : (
-                /* === LAYOUT 2: MULTI-LINE OR IMAGE (Rich) === */
                 <div className="flex gap-2">
-                   {/* Left Column: Text */}
                    <div className="flex-1 min-w-0 flex flex-col justify-center">
                       <div onClick={() => onToggleExpand(note.id)} className="cursor-pointer">
                          <p className="text-zinc-300 text-sm font-semibold leading-tight truncate mb-1 text-left">
@@ -334,14 +333,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                       </div>
                    </div>
 
-                   {/* Middle: Image (Thumbnail size) */}
                    {note.imageUrl && (
                       <div className="flex-shrink-0 w-12 h-10 rounded bg-zinc-800 border border-zinc-700 overflow-hidden">
                         <img src={note.imageUrl} alt="" className="w-full h-full object-cover" />
                       </div>
                    )}
 
-                   {/* Right Column: Actions */}
                    <div className="flex flex-col justify-between items-end gap-1 flex-shrink-0">
                       <div className="flex gap-1">
                          <button onClick={() => onCategoryClick(note.category)} className="w-5 h-5 flex items-center justify-center rounded-full bg-black/50 border border-zinc-800/50 hover:border-zinc-700 transition-all">

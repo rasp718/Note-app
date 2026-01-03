@@ -21,7 +21,6 @@ export const useFirebaseSync = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Listen for auth state changes (login/logout)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -34,7 +33,6 @@ export const useFirebaseSync = () => {
   return { user, loading };
 };
 
-// Hook for syncing notes
 export const useNotes = (userId: string | null) => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [syncing, setSyncing] = useState(false);
@@ -71,7 +69,22 @@ export const useNotes = (userId: string | null) => {
     if (!userId) return;
     setSyncing(true);
     try {
-      await addDoc(collection(db, 'users', userId, 'notes'), note);
+      const noteData: any = {
+        text: note.text,
+        date: note.date,
+        category: note.category,
+        isPinned: note.isPinned || false,
+        isExpanded: note.isExpanded !== undefined ? note.isExpanded : true
+      };
+
+      if (note.editedAt) {
+        noteData.editedAt = note.editedAt;
+      }
+      if (note.imageUrl) {
+        noteData.imageUrl = note.imageUrl;
+      }
+
+      await addDoc(collection(db, 'users', userId, 'notes'), noteData);
     } catch (error) {
       console.error("Error adding note:", error);
       setSyncing(false);
@@ -93,7 +106,14 @@ export const useNotes = (userId: string | null) => {
     if (!userId) return;
     setSyncing(true);
     try {
-      await updateDoc(doc(db, 'users', userId, 'notes', noteId), updates);
+      const cleanUpdates: any = {};
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== undefined) {
+          cleanUpdates[key] = value;
+        }
+      });
+      
+      await updateDoc(doc(db, 'users', userId, 'notes', noteId), cleanUpdates);
     } catch (error) {
       console.error("Error updating note:", error);
       setSyncing(false);
@@ -103,7 +123,6 @@ export const useNotes = (userId: string | null) => {
   return { notes, addNote, deleteNote, updateNote, syncing };
 };
 
-// Hook for syncing categories
 export const useCategories = (userId: string | null) => {
   const [categories, setCategories] = useState<CategoryConfig[]>([]);
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut, Image as ImageIcon, X as RemoveIcon } from 'lucide-react';
+import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut, Image as ImageIcon, X as RemoveIcon, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
@@ -22,6 +22,7 @@ const TRANSLATIONS = {
     config: "Config",
     audioLabel: "Audio Voice",
     tagsLabel: "Categories",
+    alignLabel: "Card Alignment",
     dataLabel: "Data",
     backup: "Download Backup",
     typePlaceholder: "Type a note...",
@@ -44,6 +45,7 @@ const TRANSLATIONS = {
     config: "Настройки",
     audioLabel: "Голос",
     tagsLabel: "Категории",
+    alignLabel: "Выравнивание",
     dataLabel: "Данные",
     backup: "Скачать бэкап",
     typePlaceholder: "Введите заметку...",
@@ -75,8 +77,8 @@ const compressImage = (file: File): Promise<string> => {
         let width = img.width;
         let height = img.height;
         
-        // Resize if too large (max 800px width/height is usually safe for <1MB strings)
-        const MAX_SIZE = 800;
+        // Resize to max 600px to ensure it fits in Firestore < 1MB
+        const MAX_SIZE = 600;
         if (width > height) {
           if (width > MAX_SIZE) {
             height *= MAX_SIZE / width;
@@ -94,8 +96,8 @@ const compressImage = (file: File): Promise<string> => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        // Compress to JPEG with 0.7 quality
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        // Compress to JPEG with 0.6 quality (60%)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
         resolve(dataUrl);
       };
       img.onerror = (error) => reject(error);
@@ -111,6 +113,7 @@ function App() {
   
   const [categories, setCategories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
   const [lang, setLang] = useState<'en' | 'ru'>('en');
+  const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
   const [transcript, setTranscript] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -159,8 +162,8 @@ function App() {
       // Compress and Resize Image
       const compressedDataUrl = await compressImage(file);
       
-      // Double check size (Firestore limit is ~1MB)
-      if (compressedDataUrl.length > 900000) {
+      // Double check size (Firestore limit is ~1MB = 1,048,576 bytes)
+      if (compressedDataUrl.length > 800000) {
           alert('Image is too complex even after compression. Please try a smaller image.');
           setIsUploadingImage(false);
           return;
@@ -202,6 +205,11 @@ function App() {
     try {
         const savedLang = localStorage.getItem('vibenotes_lang');
         if (savedLang === 'en' || savedLang === 'ru') setLang(savedLang);
+
+        const savedAlignment = localStorage.getItem('vibenotes_alignment');
+        if (savedAlignment === 'left' || savedAlignment === 'center' || savedAlignment === 'right') {
+            setAlignment(savedAlignment as any);
+        }
 
         const savedCats = localStorage.getItem('vibenotes_categories');
         if (savedCats) setCategories(JSON.parse(savedCats));
@@ -247,6 +255,7 @@ function App() {
 
   useEffect(() => { localStorage.setItem('vibenotes_categories', JSON.stringify(categories)); }, [categories]);
   useEffect(() => { localStorage.setItem('vibenotes_lang', lang); }, [lang]);
+  useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -268,18 +277,27 @@ function App() {
 
   const saveNote = async () => {
     if (!transcript.trim() && !imageUrl) return;
-    const newNote: Omit<Note, 'id'> = {
-      text: transcript.trim(),
-      date: Date.now(),
-      category: selectedCategory,
-      isPinned: false,
-      isExpanded: true,
-      imageUrl: imageUrl || undefined
-    };
-    await addNote(newNote);
-    setTranscript('');
-    setImageUrl('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    
+    try {
+        const newNote: Omit<Note, 'id'> = {
+          text: transcript.trim(),
+          date: Date.now(),
+          category: selectedCategory,
+          isPinned: false,
+          isExpanded: true,
+          imageUrl: imageUrl || undefined
+        };
+        
+        await addNote(newNote);
+        
+        // Only clear form if save was successful
+        setTranscript('');
+        setImageUrl('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error) {
+        console.error("Error saving note:", error);
+        alert("Could not save note. If you attached an image, it might still be too large or the database is unreachable.");
+    }
   };
 
   const handleDeleteNote = async (id: string) => {
@@ -331,6 +349,13 @@ function App() {
 
   const currentCategoryConfig = categories.find(c => c.id === selectedCategory) || categories[0];
   const t = TRANSLATIONS[lang];
+
+  // Helper for dynamic alignment class
+  const getAlignmentClass = () => {
+    if (alignment === 'center') return 'items-center';
+    if (alignment === 'right') return 'items-end';
+    return 'items-start'; // default left
+  };
 
   // Show loading screen
   if (authLoading) {
@@ -413,8 +438,8 @@ function App() {
         ))}
       </div>
 
-      {/* NOTE GRID */}
-      <div className="max-w-2xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* NOTE LIST */}
+      <div className={`max-w-2xl mx-auto flex flex-col gap-3 ${getAlignmentClass()}`}>
           {filteredNotes.map(note => (
             <NoteCard 
               key={note.id} 
@@ -435,7 +460,7 @@ function App() {
             />
           ))}
           {filteredNotes.length === 0 && (
-              <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50">
+              <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full">
                   <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
                   <p className="text-zinc-700 text-xs font-mono uppercase">Database Empty</p>
               </div>
@@ -525,6 +550,31 @@ function App() {
                                   <span className="text-[10px] font-bold text-zinc-600 tracking-wider">{t.offline}</span>
                                 </>
                               )}
+                            </div>
+                        </div>
+
+                        {/* Alignment */}
+                        <div className="mb-4 flex items-center justify-between py-3 px-3 rounded-lg bg-zinc-900 border border-zinc-800">
+                            <label className="text-[9px] uppercase text-zinc-600 font-bold tracking-widest">{t.alignLabel}</label>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => setAlignment('left')} 
+                                    className={`p-1.5 rounded-md border transition-all ${alignment === 'left' ? 'bg-zinc-800 border-orange-500 text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
+                                >
+                                    <AlignLeft size={16} />
+                                </button>
+                                <button 
+                                    onClick={() => setAlignment('center')} 
+                                    className={`p-1.5 rounded-md border transition-all ${alignment === 'center' ? 'bg-zinc-800 border-orange-500 text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
+                                >
+                                    <AlignCenter size={16} />
+                                </button>
+                                <button 
+                                    onClick={() => setAlignment('right')} 
+                                    className={`p-1.5 rounded-md border transition-all ${alignment === 'right' ? 'bg-zinc-800 border-orange-500 text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
+                                >
+                                    <AlignRight size={16} />
+                                </button>
                             </div>
                         </div>
 

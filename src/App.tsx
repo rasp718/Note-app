@@ -177,7 +177,8 @@ function App() {
       text: transcript.trim(),
       date: Date.now(),
       category: selectedCategory,
-      isPinned: false
+      isPinned: false,
+      isExpanded: true // New notes start expanded
     };
     await addNote(newNote);
     setTranscript('');
@@ -191,6 +192,13 @@ function App() {
     const note = notes.find(n => n.id === id);
     if (note) {
       await updateNote(id, { isPinned: !note.isPinned });
+    }
+  };
+
+  const handleToggleExpand = async (id: string) => {
+    const note = notes.find(n => n.id === id);
+    if (note) {
+      await updateNote(id, { isExpanded: !note.isExpanded });
     }
   };
 
@@ -323,6 +331,8 @@ function App() {
                  setSelectedCategory(n.category);
                  handleDeleteNote(n.id);
               }}
+              onUpdate={updateNote}
+              onToggleExpand={handleToggleExpand}
             />
           ))}
           {filteredNotes.length === 0 && (

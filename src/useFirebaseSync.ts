@@ -54,7 +54,10 @@ export const useNotes = (userId: string | null) => {
           text: data.text,
           date: data.date,
           category: data.category,
-          isPinned: data.isPinned || false
+          isPinned: data.isPinned || false,
+          isExpanded: data.isExpanded !== undefined ? data.isExpanded : true, // Default to true
+          editedAt: data.editedAt || undefined,
+          attachments: data.attachments || []
         });
       });
       setNotes(notesData);

@@ -324,7 +324,7 @@ function App() {
 
   if (authLoading) {
     return (
-      <div className="h-[100dvh] bg-black text-zinc-100 flex items-center justify-center">
+      <div className="min-h-screen bg-black text-zinc-100 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-zinc-600 text-xs uppercase tracking-wider">Loading...</p>
@@ -338,12 +338,15 @@ function App() {
   }
 
   return (
-    // FIX: Main Container uses 100dvh and flex-col to effectively "lock" the app to the screen
-    // overflow-hidden on the parent prevents the document body from expanding/jumping
-    <div className="h-[100dvh] w-full bg-black text-zinc-100 font-sans flex flex-col overflow-hidden relative selection:bg-orange-500/30">
+    // FIX 1: Use min-h-screen to avoid weird resizing glitches
+    <div className="min-h-screen w-full bg-black text-zinc-100 font-sans selection:bg-orange-500/30">
       
-      {/* 1. HEADER AREA: Flex-none ensures it never shrinks/grows. It stays stuck to top. */}
-      <div className="flex-none z-10 bg-black/95 backdrop-blur-xl border-b border-zinc-900 pb-2">
+      {/* 
+         FIX 2: FIXED HEADER 
+         Using position: fixed ensures the header stays on top of the viewport
+         even if the browser scrolls the document to center the input.
+      */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-b border-zinc-900 pb-2 shadow-lg transition-all">
         <header className="max-w-2xl mx-auto flex items-center gap-3 p-4 pb-2">
            <div className="flex-shrink-0 w-10 h-10 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-md">
                <div className="w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)]"></div>
@@ -375,7 +378,7 @@ function App() {
           </button>
         </header>
 
-        {/* Filters moved inside the non-scrolling Header block */}
+        {/* Filter Bar included in Fixed Header block */}
         <div className="max-w-2xl mx-auto flex justify-between items-center w-full px-5">
           <button 
               onClick={() => setActiveFilter('all')} 
@@ -404,34 +407,41 @@ function App() {
         </div>
       </div>
 
-      {/* 2. MAIN SCROLLABLE AREA: This is the ONLY part that scrolls */}
-      <div className="flex-1 overflow-y-auto overscroll-contain p-4 scroll-smooth">
-          <div className={`max-w-2xl mx-auto flex flex-col gap-3 pb-4 ${getAlignmentClass()}`}>
-              {filteredNotes.map(note => (
-                <NoteCard 
-                  key={note.id} 
-                  note={note} 
-                  categories={categories}
-                  selectedVoice={selectedVoice}
-                  onDelete={handleDeleteNote} 
-                  onPin={togglePin} 
-                  onCategoryClick={(cat) => setActiveFilter(cat)}
-                  onEdit={() => {}} 
-                  onUpdate={updateNote}
-                  onToggleExpand={handleToggleExpand}
-                />
-              ))}
-              {filteredNotes.length === 0 && (
-                  <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full">
-                      <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
-                      <p className="text-zinc-700 text-xs font-mono uppercase">Database Empty</p>
-                  </div>
-              )}
-          </div>
+      {/* 
+         FIX 3: MAIN CONTENT PADDING
+         pt-36: Adds space at top so the first note isn't hidden behind the fixed header.
+         pb-40: Adds huge space at bottom. This ensures you can scroll the note you are editing 
+         WAY up, above the keyboard and footer. 
+      */}
+      <div className={`pt-36 pb-40 px-4 max-w-2xl mx-auto flex flex-col gap-3 ${getAlignmentClass()}`}>
+          {filteredNotes.map(note => (
+            <NoteCard 
+              key={note.id} 
+              note={note} 
+              categories={categories}
+              selectedVoice={selectedVoice}
+              onDelete={handleDeleteNote} 
+              onPin={togglePin} 
+              onCategoryClick={(cat) => setActiveFilter(cat)}
+              onEdit={() => {}} 
+              onUpdate={updateNote}
+              onToggleExpand={handleToggleExpand}
+            />
+          ))}
+          {filteredNotes.length === 0 && (
+              <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full">
+                  <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
+                  <p className="text-zinc-700 text-xs font-mono uppercase">Database Empty</p>
+              </div>
+          )}
       </div>
 
-      {/* 3. FOOTER: Flex-none ensures it stays at the bottom. No 'fixed' position means it respects keyboard */}
-      <div className="flex-none z-20 bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3">
+      {/* 
+         FIX 4: FIXED FOOTER
+         Pinned to bottom of viewport. Because of the pb-40 padding on main, 
+         you can scroll content out from under this bar.
+      */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 transition-all">
           <div className="max-w-2xl mx-auto flex items-end gap-2">
               <button 
                   onClick={cycleCategory}

@@ -103,8 +103,8 @@ function App() {
   const [transcript, setTranscript] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null); // For new note input
-  const editTextAreaRef = useRef<HTMLTextAreaElement>(null); // For editing note input
+  const textareaRef = useRef<HTMLTextAreaElement>(null); 
+  const editTextAreaRef = useRef<HTMLTextAreaElement>(null); 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -134,6 +134,24 @@ function App() {
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [editNoteText, setEditNoteText] = useState('');
   const [editNoteImage, setEditNoteImage] = useState('');
+
+  // 1. LOCK BODY SCROLL WHEN EDITING
+  useEffect(() => {
+    if (editingNote) {
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+    } else {
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+    }
+    return () => {
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+    };
+  }, [editingNote]);
 
   const getCategoryLabel = (cat: CategoryConfig) => {
     if (cat.id === 'secret') return TRANSLATIONS[lang].cat_secret;
@@ -200,22 +218,15 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isInputFocused, editingNote]); 
 
-  // Auto-scroll logic kept, but mostly irrelevant in isolation mode
+  // Auto-resize logic for the edit textarea
   useEffect(() => {
     if (editingNote && editTextAreaRef.current) {
-        // Auto-size the textarea on initial render or editNoteText change
         editTextAreaRef.current.style.height = 'auto';
         editTextAreaRef.current.style.height = editTextAreaRef.current.scrollHeight + 'px';
-
-        // Scroll the card into view, centered if possible
-        setTimeout(() => {
-            const element = document.getElementById(`edit-card-${editingNote.id}`); // Give the editing card an ID
-            if(element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }, 150);
+        
+        // Removed scrollIntoView on mount to prevent jumping on mobile
     }
-  }, [editingNote, editNoteText]); // Depend on editNoteText for auto-sizing
+  }, [editingNote, editNoteText]); 
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -245,7 +256,6 @@ function App() {
   useEffect(() => { localStorage.setItem('vibenotes_categories', JSON.stringify(categories)); }, [categories]);
   useEffect(() => { localStorage.setItem('vibenotes_lang', lang); }, [lang]);
   useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
-  // Auto-size for new note input
   useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
 
   const handleCategoryEdit = (id: CategoryId, field: 'label' | 'emoji' | 'colorClass', value: string) => setCategories(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
@@ -307,13 +317,13 @@ function App() {
       {editingNote ? (
         /* =========================================
            EDIT MODE (STRICT ISOLATION)
-           No header, no list, no footer.
-           Only the Card on a black screen.
            ========================================= */
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
+        // WRAPPER: touch-none (stops background scroll), overflow-hidden (stops bounce)
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4 overflow-hidden touch-none">
             <div 
-                id={`edit-card-${editingNote.id}`} // Added ID for scrolling
-                className="w-full max-w-2xl max-h-[95dvh] overflow-y-auto overscroll-y-contain bg-black border border-orange-500/50 rounded-2xl p-4 flex flex-col gap-4 shadow-[0_0_30px_rgba(234,88,12,0.1)]"
+                id={`edit-card-${editingNote.id}`}
+                // CARD: touch-pan-y (allows vertical scroll inside), overscroll-y-none (stops rubber band), max-h-[85dvh] (avoids keyboard issues)
+                className="w-full max-w-2xl max-h-[85dvh] overflow-y-auto overscroll-y-none touch-pan-y bg-black border border-orange-500/50 rounded-2xl p-4 flex flex-col gap-4 shadow-[0_0_30px_rgba(234,88,12,0.1)]"
             >
                 <div className="w-full">
                     {editNoteImage ? (
@@ -329,14 +339,14 @@ function App() {
                     )}
                 </div>
                 <textarea 
-                    ref={editTextAreaRef} // Assign ref
+                    ref={editTextAreaRef}
                     autoFocus 
                     value={editNoteText} 
                     onChange={(e) => setEditNoteText(e.target.value)} 
                     onPaste={(e) => handlePaste(e, true)} 
                     className="w-full bg-transparent text-lg text-zinc-100 placeholder:text-zinc-700 resize-none focus:outline-none leading-relaxed" 
                     placeholder="Type here..." 
-                    style={{ height: 'auto', minHeight: '40px' }} // Removed fixed min-h, added small initial min-height
+                    style={{ height: 'auto', minHeight: '40px' }}
                 />
                 <div className="flex gap-2 pt-2 border-t border-white/5 mt-auto">
                     <button onClick={handleSaveEdit} className="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-orange-900/20 active:scale-95 transition-all">

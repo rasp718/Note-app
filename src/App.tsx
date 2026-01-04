@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, Download, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, LogOut, Image as ImageIcon, Check, EyeOff } from 'lucide-react'; 
+import { Search, X, Settings, Download, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, LogOut, Image as ImageIcon, Check, EyeOff, Terminal } from 'lucide-react'; 
 import { signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
@@ -7,7 +7,7 @@ import { NoteCard } from './components/NoteCard';
 import { useFirebaseSync, useNotes } from './useFirebaseSync';
 import Auth from './components/Auth';
 
-const EMOJI_LIST = ['⚡', '💼', '🔥', '💡', '🎨', '🚀', '⭐', '📝', '📅', '🛒', '🏋️', '✈️', '🏠', '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧', '👻']; 
+const EMOJI_LIST = ['⚡', '💼', '🔥', '💡', '🎨', '🚀', '⭐', '📝', '📅', '🛒', '🏋️', '✈️', '🏠', '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧', '👻', '💻']; 
 
 const TRANSLATIONS = { 
   en: { 
@@ -32,7 +32,8 @@ const TRANSLATIONS = {
     cat_work: "Work", 
     cat_journal: "Journal", 
     cat_todo: "To-Do",
-    cat_secret: "Classified", 
+    cat_secret: "Classified",
+    cat_hacker: "Hacker", 
     editNote: "Edit Note" 
   }, 
   ru: { 
@@ -58,15 +59,24 @@ const TRANSLATIONS = {
     cat_journal: "Дневник", 
     cat_todo: "Задачи",
     cat_secret: "Секретно",
+    cat_hacker: "Хакер",
     editNote: "Редактировать" 
   } 
 };
 
-const SECRET_CATEGORY_CONFIG: CategoryConfig = {
+// --- SECRET CONFIGURATIONS ---
+const GHOST_CONFIG: CategoryConfig = {
     id: 'secret',
-    label: 'Secret',
+    label: 'Classified',
     emoji: '👻',
-    colorClass: 'bg-red-500'
+    colorClass: 'bg-red-500' // Used for logic, though we style manually below
+};
+
+const HACKER_CONFIG: CategoryConfig = {
+    id: 'secret', // Keep ID same so notes filter correctly
+    label: 'Hacker',
+    emoji: '💻',
+    colorClass: 'bg-green-500'
 };
 
 // --- UTILS ---
@@ -94,34 +104,52 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
-// --- HELPER COMPONENT: MATRIX RAIN DROP ---
-// Handles the rapid character changing without re-rendering the whole app
-const MatrixRainDrop = ({ style }: { style: React.CSSProperties }) => {
-    const elementRef = useRef<HTMLDivElement>(null);
-    // Katakana + Numbers + Symbols
+// --- HELPER COMPONENT: MATRIX RAIN STREAM ---
+const MatrixRainStream = ({ style }: { style: React.CSSProperties }) => {
+    const streamLen = useRef(Math.floor(Math.random() * 16) + 8);
+    const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
     const chars = "ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ012345789:・.=*+-<>";
+
+    const getChar = () => chars[Math.floor(Math.random() * chars.length)];
 
     useEffect(() => {
         const interval = setInterval(() => {
-            if (elementRef.current) {
-                // Directly update DOM for performance
-                elementRef.current.innerText = chars[Math.floor(Math.random() * chars.length)];
-            }
-        }, 60); // Change character every 60ms
+            charRefs.current.forEach((span) => {
+                if (span && Math.random() > 0.6) {
+                    span.innerText = getChar();
+                }
+            });
+        }, 50); 
 
         return () => clearInterval(interval);
     }, []);
 
     return (
         <div 
-            ref={elementRef}
-            className="absolute text-green-500 font-mono font-bold leading-none writing-vertical-rl select-none"
-            style={{
-                ...style,
-                textShadow: '0 0 8px rgba(34, 197, 94, 0.8)' // Neon glow effect
-            }}
+            className="absolute flex flex-col items-center leading-none select-none"
+            style={style}
         >
-            {chars[Math.floor(Math.random() * chars.length)]}
+            {Array.from({ length: streamLen.current }).map((_, index) => {
+                const isHead = index === streamLen.current - 1;
+                const opacity = Math.max(0.1, (index + 1) / streamLen.current);
+                
+                return (
+                    <span
+                        key={index}
+                        ref={(el) => (charRefs.current[index] = el)}
+                        className={`font-mono font-bold writing-vertical-rl ${isHead ? 'text-white' : 'text-green-500'}`}
+                        style={{
+                            opacity: isHead ? 1 : opacity,
+                            textShadow: isHead 
+                                ? '0 0 8px rgba(255, 255, 255, 0.9), 0 0 12px rgba(34, 197, 94, 0.9)'
+                                : '0 0 5px rgba(34, 197, 94, 0.6)',
+                            fontSize: 'inherit'
+                        }}
+                    >
+                        {getChar()}
+                    </span>
+                );
+            })}
         </div>
     );
 };
@@ -163,8 +191,6 @@ function App() {
 
   // ANIMATION STATES
   const [isStartup, setIsStartup] = useState(true);
-  
-  // Randomize Startup Animation
   const [startupAnimName] = useState(() => {
     const anims = ['logoEntrance', 'logoHeartbeat', 'logoGlitch', 'logoWobble'];
     const seed = Date.now(); 
@@ -172,17 +198,17 @@ function App() {
   });
 
   const [showConfetti, setShowConfetti] = useState(false);
-  
-  // SAVE ANIMATION STATES
   const [showSaveAnim, setShowSaveAnim] = useState(false);
   const [saveAnimType, setSaveAnimType] = useState<'brain' | 'lightning' | 'money' | 'journal' | 'fire' | null>(null);
 
-  // EDIT STATE
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [editNoteText, setEditNoteText] = useState('');
   const [editNoteImage, setEditNoteImage] = useState('');
 
-  // 1. LOCK BODY SCROLL WHEN EDITING
+  // Determine which secret config to use based on the last animation type triggered
+  // If ghost -> Red Theme. If matrix -> Green Theme.
+  const activeSecretConfig = secretAnimType === 'matrix' ? HACKER_CONFIG : GHOST_CONFIG;
+
   useEffect(() => {
     if (editingNote) {
         document.body.style.overflow = 'hidden';
@@ -201,7 +227,10 @@ function App() {
   }, [editingNote]);
 
   const getCategoryLabel = (cat: CategoryConfig) => {
-    if (cat.id === 'secret') return TRANSLATIONS[lang].cat_secret;
+    if (cat.id === 'secret') {
+        // Dynamic Label for Secret Mode
+        return secretAnimType === 'matrix' ? TRANSLATIONS[lang].cat_hacker : TRANSLATIONS[lang].cat_secret;
+    }
     const id = cat.id.toLowerCase();
     const t = TRANSLATIONS[lang];
     if (lang === 'ru') return { idea: t.cat_idea, work: t.cat_work, journal: t.cat_journal, 'to-do': t.cat_todo, todo: t.cat_todo }[id] || cat.label;
@@ -218,17 +247,17 @@ function App() {
         setSelectedCategory('secret');
         setSecretTaps(0);
         
-        // Randomly choose animation type
+        // Randomly determine the mode for this session
         const type = Math.random() > 0.5 ? 'ghost' : 'matrix';
         setSecretAnimType(type);
         setShowSecretAnim(true);
 
-        setTimeout(() => setShowSecretAnim(false), 5000); 
+        setTimeout(() => setShowSecretAnim(false), 8000);
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     }
   };
 
-  const currentCategoryConfig = selectedCategory === 'secret' ? SECRET_CATEGORY_CONFIG : categories.find(c => c.id === selectedCategory) || categories[0];
+  const currentCategoryConfig = selectedCategory === 'secret' ? activeSecretConfig : categories.find(c => c.id === selectedCategory) || categories[0];
 
   const handleImageUpload = async (file: File, isEditMode = false) => {
     if (!file.type.startsWith('image/')) return alert('Please select an image file');
@@ -270,7 +299,6 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isInputFocused, editingNote]); 
 
-  // Auto-resize logic for the edit textarea
   useEffect(() => {
     if (editingNote && editTextAreaRef.current) {
         editTextAreaRef.current.style.height = 'auto';
@@ -281,7 +309,7 @@ function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
         setIsStartup(false);
-    }, 2500);
+    }, 4500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -325,23 +353,22 @@ function App() {
     try {
         await addNote({ text: transcript.trim(), date: Date.now(), category: selectedCategory, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
         
-        // TRIGGER ANIMATIONS BASED ON CATEGORY
         if (selectedCategory === 'idea') {
             setSaveAnimType(Math.random() > 0.5 ? 'brain' : 'lightning');
             setShowSaveAnim(true);
-            setTimeout(() => setShowSaveAnim(false), 3500);
+            setTimeout(() => setShowSaveAnim(false), 6000);
         } else if (selectedCategory === 'work') {
             setSaveAnimType('money');
             setShowSaveAnim(true);
-            setTimeout(() => setShowSaveAnim(false), 3500);
+            setTimeout(() => setShowSaveAnim(false), 4500);
         } else if (selectedCategory === 'journal') {
             setSaveAnimType('journal');
             setShowSaveAnim(true);
-            setTimeout(() => setShowSaveAnim(false), 3500);
+            setTimeout(() => setShowSaveAnim(false), 4500);
         } else if (selectedCategory === 'to-do' || selectedCategory === 'todo') {
             setSaveAnimType('fire');
             setShowSaveAnim(true);
-            setTimeout(() => setShowSaveAnim(false), 3500);
+            setTimeout(() => setShowSaveAnim(false), 4500);
         }
 
         setTranscript(''); setImageUrl('');
@@ -386,7 +413,6 @@ function App() {
   const t = TRANSLATIONS[lang];
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
 
-  // SCROLL LOGIC
   const isShortNote = !editNoteImage && editNoteText.length < 150;
 
   if (authLoading) return <div className="min-h-screen bg-black" />;
@@ -396,9 +422,6 @@ function App() {
     <div className="min-h-screen w-full bg-black text-zinc-100 font-sans selection:bg-orange-500/30 overflow-x-hidden">
       
       {editingNote ? (
-        /* =========================================
-           EDIT MODE (STRICT ISOLATION)
-           ========================================= */
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4 overflow-hidden touch-none">
             <div 
                 id={`edit-card-${editingNote.id}`}
@@ -440,11 +463,7 @@ function App() {
             </div>
         </div>
       ) : (
-        /* =========================================
-           VIEW MODE (DASHBOARD)
-           ========================================= */
         <>
-            {/* HEADER */}
             <div className={`fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/5 transition-transform duration-1000 ease-in-out ${isInputFocused || showBars ? 'translate-y-0' : '-translate-y-full'}`}>
                 <header className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3">
                 <button 
@@ -454,16 +473,20 @@ function App() {
                     {isStartup && (
                         <>
                             <div className="absolute inset-[-4px] border border-orange-500/50 rounded-xl animate-[spin_1s_linear_infinite] opacity-50" />
-                            <div className="absolute inset-0 bg-orange-500 rounded-xl animate-ping opacity-75" style={{ animationDuration: '1.5s' }} />
+                            <div className="absolute inset-0 bg-orange-500 rounded-xl animate-ping opacity-75" style={{ animationDuration: '4.5s' }} />
                         </>
                     )}
 
                     {activeFilter === 'secret' ? (
-                        <EyeOff className="text-red-500 relative z-10" size={16} /> 
+                        secretAnimType === 'matrix' ? (
+                            <Terminal className="text-green-500 relative z-10" size={16} />
+                        ) : (
+                            <EyeOff className="text-red-500 relative z-10" size={16} /> 
+                        )
                     ) : (
                         <div 
                                 className={`w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)] relative z-10 ${isStartup ? 'animate-bounce' : ''}`}
-                                style={isStartup ? { animation: `${startupAnimName} 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` } : {}}
+                                style={isStartup ? { animation: `${startupAnimName} 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` } : {}}
                         ></div>
                     )}
                 </button>
@@ -472,12 +495,18 @@ function App() {
                     <Search className="absolute left-3.5 top-2.5 text-zinc-500 group-focus-within:text-zinc-300 transition-colors" size={16} />
                     <input 
                         type="text" 
-                        placeholder={activeFilter === 'secret' ? "Classified search..." : t.search}
+                        placeholder={
+                            activeFilter === 'secret' 
+                                ? (secretAnimType === 'matrix' ? "System access..." : "Classified search...")
+                                : t.search
+                        }
                         value={searchQuery} 
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onFocus={() => { setIsInputFocused(true); setShowBars(true); }}
                         onBlur={() => setIsInputFocused(false)}
-                        className="w-full bg-zinc-900/50 hover:bg-zinc-900 focus:bg-zinc-900 border border-transparent focus:border-white/10 rounded-xl py-2 pl-10 pr-4 text-zinc-200 placeholder:text-zinc-600 focus:outline-none text-base transition-all"
+                        className={`w-full bg-zinc-900/50 hover:bg-zinc-900 focus:bg-zinc-900 border border-transparent focus:border-white/10 rounded-xl py-2 pl-10 pr-4 text-zinc-200 placeholder:text-zinc-600 focus:outline-none text-base transition-all ${
+                            activeFilter === 'secret' && secretAnimType === 'matrix' ? 'font-mono text-green-500 placeholder:text-green-800' : ''
+                        }`}
                     />
                 </div>
                 <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
@@ -495,10 +524,18 @@ function App() {
 
                 <div className="max-w-2xl mx-auto grid grid-cols-5 w-full border-t border-white/5">
                 {activeFilter === 'secret' ? (
-                    <button className="flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative text-red-500 col-span-5">
-                        <span className="text-[12px]">👻</span>
-                        <span className="text-[10px] font-medium tracking-widest uppercase">Secret Mode Active</span>
-                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 shadow-[0_0_10px_rgba(220,38,38,0.8)]"></div>
+                    <button className={`flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative col-span-5 ${
+                        secretAnimType === 'matrix' ? 'text-green-500' : 'text-red-500'
+                    }`}>
+                        <span className="text-[12px]">{secretAnimType === 'matrix' ? '💻' : '👻'}</span>
+                        <span className={`text-[10px] font-medium tracking-widest uppercase ${secretAnimType === 'matrix' ? 'font-mono' : ''}`}>
+                            {secretAnimType === 'matrix' ? 'Hacker Mode Active' : 'Secret Mode Active'}
+                        </span>
+                        <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${
+                            secretAnimType === 'matrix' 
+                                ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' 
+                                : 'bg-red-500 shadow-[0_0_10px_rgba(220,38,38,0.8)]'
+                        }`}></div>
                     </button>
                 ) : (
                     <>
@@ -525,13 +562,13 @@ function App() {
                 </div>
             </div>
 
-            {/* MAIN LIST */}
             <div className={`pt-32 pb-32 px-4 max-w-2xl mx-auto flex flex-col gap-3 ${getAlignmentClass()}`}>
                 {filteredNotes.map(note => (
                     <NoteCard 
                         key={note.id} 
                         note={note} 
-                        categories={activeFilter === 'secret' ? [SECRET_CATEGORY_CONFIG] : categories} 
+                        // DYNAMIC CONFIG: Switches between Ghost and Hacker
+                        categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
                         selectedVoice={selectedVoice} 
                         onDelete={handleDeleteNote} 
                         onPin={togglePin} 
@@ -541,10 +578,9 @@ function App() {
                     />
                 ))}
                 
-                {filteredNotes.length === 0 && <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full"><LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} /><p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'No Secrets Yet' : 'Database Empty'}</p></div>}
+                {filteredNotes.length === 0 && <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full"><LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} /><p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? (secretAnimType === 'matrix' ? 'System Clean' : 'No Secrets Yet') : 'Database Empty'}</p></div>}
             </div>
 
-            {/* FOOTER */}
             <div className={`fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 transition-transform duration-1000 ease-in-out ${isInputFocused || showBars ? 'translate-y-0' : 'translate-y-full'}`}>
                 <div className="max-w-2xl mx-auto flex items-end gap-2">
                     <button onClick={cycleCategory} className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group">
@@ -557,11 +593,13 @@ function App() {
                             value={transcript} 
                             onChange={(e) => setTranscript(e.target.value)} 
                             onPaste={(e) => handlePaste(e)} 
-                            placeholder={activeFilter === 'secret' ? "Whisper a secret..." : t.typePlaceholder} 
+                            placeholder={activeFilter === 'secret' ? (secretAnimType === 'matrix' ? "Inject code..." : "Whisper a secret...") : t.typePlaceholder} 
                             rows={1} 
                             onFocus={() => { setIsInputFocused(true); setShowBars(true); }}
                             onBlur={() => setIsInputFocused(false)}
-                            className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5" 
+                            className={`w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5 ${
+                                activeFilter === 'secret' && secretAnimType === 'matrix' ? 'font-mono text-green-500 placeholder:text-green-800' : ''
+                            }`} 
                         />
                     </div>
                     <button onClick={saveNote} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 ${transcript.trim() || imageUrl ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)]' : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}>{transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}</button>
@@ -570,7 +608,6 @@ function App() {
         </>
       )}
 
-      {/* SETTINGS MODAL */}
       {showSettings && (
          <div className="fixed inset-0 z-[60] flex justify-center sm:items-center bg-black sm:bg-black/80 animate-in fade-in duration-200">
              <div className="w-full h-full sm:h-auto sm:max-w-md bg-black sm:border border-zinc-800 sm:rounded-2xl p-4 pt-12 sm:pt-6 shadow-2xl relative flex flex-col">
@@ -590,7 +627,6 @@ function App() {
          </div>
       )}
 
-      {/* CONFETTI OVERLAY */}
       {showConfetti && !editingNote && (
         <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
              {Array.from({ length: 80 }).map((_, i) => {
@@ -611,10 +647,8 @@ function App() {
         </div>
       )}
 
-      {/* SAVE ANIMATIONS */}
       {showSaveAnim && !editingNote && (
         <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
-            {/* BRAIN (Rise + Pulse) */}
             {saveAnimType === 'brain' && Array.from({ length: 20 }).map((_, i) => (
                 <div 
                     key={i} 
@@ -624,25 +658,24 @@ function App() {
                         bottom: '-50px',
                         fontSize: `${Math.random() * 25 + 15}px`,
                         opacity: 0,
-                        animation: `brainFloat ${3 + Math.random() * 2}s linear forwards`,
-                        animationDelay: `${Math.random() * 1.5}s`
+                        animation: `brainFloat ${6 + Math.random() * 3}s linear forwards`,
+                        animationDelay: `${Math.random() * 2}s`
                     }}
                 >
                     🧠
                 </div>
             ))}
 
-            {/* LIGHTNING (Flash + Strike) */}
             {saveAnimType === 'lightning' && (
                 <>
-                    <div className="absolute inset-0 bg-white/10 animate-[lightningFlash_0.5s_ease-in-out_2]" />
+                    <div className="absolute inset-0 bg-white/10 animate-[lightningFlash_0.2s_ease-in-out_6]" />
                     {Array.from({ length: 5 }).map((_, i) => (
                         <div 
                             key={i} 
                             className="absolute text-6xl text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]"
                             style={{
-                                left: `${Math.random() * 80 + 10}vw`,
-                                top: `${Math.random() * 40 + 10}vh`,
+                                left: `${Math.random() * 100}vw`,
+                                top: `${Math.random() * 90}vh`,
                                 animation: `boltStrike 0.3s ease-out forwards`,
                                 animationDelay: `${Math.random() * 1.5}s`
                             }}
@@ -653,7 +686,6 @@ function App() {
                 </>
             )}
 
-            {/* MONEY (Rain Down) */}
             {saveAnimType === 'money' && Array.from({ length: 30 }).map((_, i) => (
                 <div 
                     key={i} 
@@ -671,7 +703,6 @@ function App() {
                 </div>
             ))}
 
-            {/* JOURNAL (Rise like Ghost) */}
             {saveAnimType === 'journal' && Array.from({ length: 20 }).map((_, i) => (
                 <div 
                     key={i} 
@@ -689,7 +720,6 @@ function App() {
                 </div>
             ))}
 
-            {/* FIRE EMBERS (To-Do) */}
             {saveAnimType === 'fire' && Array.from({ length: 40 }).map((_, i) => (
                 <div 
                     key={i} 
@@ -710,11 +740,9 @@ function App() {
         </div>
       )}
 
-      {/* SECRET ANIMATIONS (GHOSTS OR MATRIX) */}
       {showSecretAnim && !editingNote && (
         <div className={`fixed inset-0 z-[60] pointer-events-none overflow-hidden ${secretAnimType === 'matrix' ? 'bg-black/80' : ''}`}>
              
-             {/* GHOSTS VARIANT */}
              {secretAnimType === 'ghost' && Array.from({ length: 15 }).map((_, i) => (
                 <div 
                     key={i} 
@@ -724,7 +752,7 @@ function App() {
                         bottom: '-50px',
                         fontSize: `${Math.random() * 30 + 20}px`,
                         opacity: 0,
-                        animation: `ghostFly ${3 + Math.random() * 2}s linear forwards`,
+                        animation: `ghostFly ${6 + Math.random() * 4}s linear forwards`,
                         animationDelay: `${Math.random() * 2}s`
                     }}
                 >
@@ -732,24 +760,21 @@ function App() {
                 </div>
              ))}
 
-             {/* MATRIX VARIANT */}
              {secretAnimType === 'matrix' && Array.from({ length: 40 }).map((_, i) => (
-                <MatrixRainDrop 
+                <MatrixRainStream 
                     key={i}
                     style={{
                         left: `${Math.random() * 100}vw`,
-                        top: '-100px',
+                        top: '-20vh', 
                         fontSize: `${Math.random() * 15 + 10}px`,
-                        opacity: 0,
-                        animation: `matrixRain ${2 + Math.random() * 3}s linear forwards`,
-                        animationDelay: `${Math.random() * 2}s`
+                        animation: `matrixRain ${6 + Math.random() * 4}s linear forwards`,
+                        animationDelay: `${Math.random() * 3}s`
                     }} 
                 />
              ))}
         </div>
       )}
 
-      {/* KEYFRAMES */}
       <style>{`
         @keyframes logoEntrance { 0% { transform: scale(0) rotate(-180deg); } 60% { transform: scale(1.2) rotate(10deg); } 100% { transform: scale(1) rotate(0deg); } }
         @keyframes logoHeartbeat { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
@@ -759,7 +784,18 @@ function App() {
         @keyframes ghostFly { 0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; } 10% { opacity: 0.7; } 90% { opacity: 0.7; } 100% { transform: translateY(-110vh) rotate(${Math.random() > 0.5 ? 45 : -45}deg) scale(1.2); opacity: 0; } }
         @keyframes matrixRain { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(110vh); opacity: 0; } }
         @keyframes rainDown { 0% { transform: translateY(0) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(110vh) rotate(${Math.random() * 90}deg); opacity: 0; } }
-        @keyframes brainFloat { 0% { transform: translateY(0) scale(1); opacity: 0; } 20% { opacity: 1; transform: translateY(-20vh) scale(1.3); } 50% { transform: translateY(-50vh) scale(0.9); } 80% { transform: translateY(-80vh) scale(1.3); } 100% { transform: translateY(-110vh) scale(1); opacity: 0; } }
+        
+        @keyframes brainFloat { 
+            0% { transform: translateY(0) scale(1); opacity: 0; }
+            15% { opacity: 1; transform: translateY(-15vh) scale(1.4); } 
+            30% { transform: translateY(-30vh) scale(0.8); } 
+            45% { transform: translateY(-45vh) scale(1.4); } 
+            60% { transform: translateY(-60vh) scale(0.8); } 
+            75% { transform: translateY(-75vh) scale(1.4); } 
+            90% { transform: translateY(-90vh) scale(0.8); } 
+            100% { transform: translateY(-110vh) scale(1); opacity: 0; } 
+        }
+
         @keyframes emberRise { 0% { transform: translateY(0) translateX(0) scale(1); opacity: 1; } 100% { transform: translateY(-100vh) translateX(var(--drift)) scale(0); opacity: 0; } }
         @keyframes lightningFlash { 0%, 100% { background-color: transparent; } 5%, 15% { background-color: rgba(255, 255, 255, 0.2); } 10% { background-color: transparent; } }
         @keyframes boltStrike { 0% { opacity: 0; transform: translateY(-100%) scale(0.5); } 10% { opacity: 1; transform: translateY(0) scale(1); } 30% { opacity: 1; } 100% { opacity: 0; } }

@@ -69,7 +69,7 @@ const SECRET_CATEGORY_CONFIG: CategoryConfig = {
     colorClass: 'bg-red-500'
 };
 
-// UTILS
+// --- UTILS ---
 const compressImage = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -92,6 +92,38 @@ const compressImage = (file: File): Promise<string> => {
     };
     reader.onerror = reject;
   });
+};
+
+// --- HELPER COMPONENT: MATRIX RAIN DROP ---
+// Handles the rapid character changing without re-rendering the whole app
+const MatrixRainDrop = ({ style }: { style: React.CSSProperties }) => {
+    const elementRef = useRef<HTMLDivElement>(null);
+    // Katakana + Numbers + Symbols
+    const chars = "ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ012345789:・.=*+-<>";
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (elementRef.current) {
+                // Directly update DOM for performance
+                elementRef.current.innerText = chars[Math.floor(Math.random() * chars.length)];
+            }
+        }, 60); // Change character every 60ms
+
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div 
+            ref={elementRef}
+            className="absolute text-green-500 font-mono font-bold leading-none writing-vertical-rl select-none"
+            style={{
+                ...style,
+                textShadow: '0 0 8px rgba(34, 197, 94, 0.8)' // Neon glow effect
+            }}
+        >
+            {chars[Math.floor(Math.random() * chars.length)]}
+        </div>
+    );
 };
 
 function App() {
@@ -141,9 +173,9 @@ function App() {
 
   const [showConfetti, setShowConfetti] = useState(false);
   
-  // NEW: Save Animation States
+  // SAVE ANIMATION STATES
   const [showSaveAnim, setShowSaveAnim] = useState(false);
-  const [saveAnimType, setSaveAnimType] = useState<'brain' | 'money' | 'journal' | null>(null);
+  const [saveAnimType, setSaveAnimType] = useState<'brain' | 'lightning' | 'money' | 'journal' | 'fire' | null>(null);
 
   // EDIT STATE
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -295,7 +327,7 @@ function App() {
         
         // TRIGGER ANIMATIONS BASED ON CATEGORY
         if (selectedCategory === 'idea') {
-            setSaveAnimType('brain');
+            setSaveAnimType(Math.random() > 0.5 ? 'brain' : 'lightning');
             setShowSaveAnim(true);
             setTimeout(() => setShowSaveAnim(false), 3500);
         } else if (selectedCategory === 'work') {
@@ -304,6 +336,10 @@ function App() {
             setTimeout(() => setShowSaveAnim(false), 3500);
         } else if (selectedCategory === 'journal') {
             setSaveAnimType('journal');
+            setShowSaveAnim(true);
+            setTimeout(() => setShowSaveAnim(false), 3500);
+        } else if (selectedCategory === 'to-do' || selectedCategory === 'todo') {
+            setSaveAnimType('fire');
             setShowSaveAnim(true);
             setTimeout(() => setShowSaveAnim(false), 3500);
         }
@@ -575,10 +611,10 @@ function App() {
         </div>
       )}
 
-      {/* SAVE ANIMATIONS (BRAIN, MONEY, JOURNAL) */}
+      {/* SAVE ANIMATIONS */}
       {showSaveAnim && !editingNote && (
         <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
-            {/* BRAIN (Rise Like Ghost) */}
+            {/* BRAIN (Rise + Pulse) */}
             {saveAnimType === 'brain' && Array.from({ length: 20 }).map((_, i) => (
                 <div 
                     key={i} 
@@ -588,13 +624,34 @@ function App() {
                         bottom: '-50px',
                         fontSize: `${Math.random() * 25 + 15}px`,
                         opacity: 0,
-                        animation: `ghostFly ${3 + Math.random() * 2}s linear forwards`,
+                        animation: `brainFloat ${3 + Math.random() * 2}s linear forwards`,
                         animationDelay: `${Math.random() * 1.5}s`
                     }}
                 >
                     🧠
                 </div>
             ))}
+
+            {/* LIGHTNING (Flash + Strike) */}
+            {saveAnimType === 'lightning' && (
+                <>
+                    <div className="absolute inset-0 bg-white/10 animate-[lightningFlash_0.5s_ease-in-out_2]" />
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <div 
+                            key={i} 
+                            className="absolute text-6xl text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]"
+                            style={{
+                                left: `${Math.random() * 80 + 10}vw`,
+                                top: `${Math.random() * 40 + 10}vh`,
+                                animation: `boltStrike 0.3s ease-out forwards`,
+                                animationDelay: `${Math.random() * 1.5}s`
+                            }}
+                        >
+                            ⚡
+                        </div>
+                    ))}
+                </>
+            )}
 
             {/* MONEY (Rain Down) */}
             {saveAnimType === 'money' && Array.from({ length: 30 }).map((_, i) => (
@@ -631,6 +688,25 @@ function App() {
                     📝
                 </div>
             ))}
+
+            {/* FIRE EMBERS (To-Do) */}
+            {saveAnimType === 'fire' && Array.from({ length: 40 }).map((_, i) => (
+                <div 
+                    key={i} 
+                    className="absolute rounded-full blur-[2px]"
+                    style={{
+                        background: 'linear-gradient(to top, #ff4500, #ff8c00, #fbbf24)',
+                        width: `${Math.random() * 8 + 3}px`,
+                        height: `${Math.random() * 8 + 3}px`,
+                        left: `${Math.random() * 100}vw`,
+                        bottom: '-20px',
+                        opacity: 0,
+                        animation: `emberRise ${3 + Math.random() * 2}s linear forwards`,
+                        animationDelay: `${Math.random() * 1.5}s`,
+                        '--drift': `${(Math.random() - 0.5) * 100}px`
+                    } as React.CSSProperties}
+                />
+            ))}
         </div>
       )}
 
@@ -658,9 +734,8 @@ function App() {
 
              {/* MATRIX VARIANT */}
              {secretAnimType === 'matrix' && Array.from({ length: 40 }).map((_, i) => (
-                <div 
-                    key={i} 
-                    className="absolute text-green-500 font-mono font-bold leading-none writing-vertical-rl"
+                <MatrixRainDrop 
+                    key={i}
                     style={{
                         left: `${Math.random() * 100}vw`,
                         top: '-100px',
@@ -668,76 +743,28 @@ function App() {
                         opacity: 0,
                         animation: `matrixRain ${2 + Math.random() * 3}s linear forwards`,
                         animationDelay: `${Math.random() * 2}s`
-                    }}
-                >
-                    {String.fromCharCode(0x30A0 + Math.random() * 96)}
-                </div>
+                    }} 
+                />
              ))}
         </div>
       )}
 
       {/* KEYFRAMES */}
       <style>{`
-        /* STARTUP ANIMATIONS */
-        @keyframes logoEntrance {
-            0% { transform: scale(0) rotate(-180deg); }
-            60% { transform: scale(1.2) rotate(10deg); }
-            100% { transform: scale(1) rotate(0deg); }
-        }
-        @keyframes logoHeartbeat {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.4); }
-            100% { transform: scale(1); }
-        }
-        @keyframes logoGlitch {
-            0% { transform: translate(0); }
-            20% { transform: translate(-3px, 3px); }
-            40% { transform: translate(-3px, -3px); }
-            60% { transform: translate(3px, 3px); }
-            80% { transform: translate(3px, -3px); }
-            100% { transform: translate(0); }
-        }
-        @keyframes logoWobble {
-            0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(-15deg) scale(1.1); }
-            75% { transform: rotate(15deg) scale(1.1); }
-        }
-
-        /* GENERAL ANIMATIONS */
-        @keyframes ghostFly {
-            0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
-            10% { opacity: 0.7; }
-            90% { opacity: 0.7; }
-            100% { transform: translateY(-110vh) rotate(${Math.random() > 0.5 ? 45 : -45}deg) scale(1.2); opacity: 0; }
-        }
-        @keyframes matrixRain {
-            0% { transform: translateY(0); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(110vh); opacity: 0; }
-        }
-        @keyframes rainDown {
-            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(110vh) rotate(${Math.random() * 90}deg); opacity: 0; }
-        }
-
-        /* CONFETTI PHYSICS */
-        @keyframes confettiGravity {
-            0% { 
-                transform: translate(-50%, -50%) rotate(0deg) scale(0.5); 
-                opacity: 1; 
-            }
-            15% {
-                transform: translate(calc(-50% + (var(--end-x) * 0.2)), calc(-50% - 20vh)) rotate(90deg) scale(1.2);
-                opacity: 1;
-            }
-            100% { 
-                transform: translate(calc(-50% + var(--end-x)), calc(-50% + var(--end-y))) rotate(var(--rot)) scale(0.5); 
-                opacity: 0; 
-            }
-        }
+        @keyframes logoEntrance { 0% { transform: scale(0) rotate(-180deg); } 60% { transform: scale(1.2) rotate(10deg); } 100% { transform: scale(1) rotate(0deg); } }
+        @keyframes logoHeartbeat { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
+        @keyframes logoGlitch { 0% { transform: translate(0); } 20% { transform: translate(-3px, 3px); } 40% { transform: translate(-3px, -3px); } 60% { transform: translate(3px, 3px); } 80% { transform: translate(3px, -3px); } 100% { transform: translate(0); } }
+        @keyframes logoWobble { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg) scale(1.1); } 75% { transform: rotate(15deg) scale(1.1); } }
+        
+        @keyframes ghostFly { 0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; } 10% { opacity: 0.7; } 90% { opacity: 0.7; } 100% { transform: translateY(-110vh) rotate(${Math.random() > 0.5 ? 45 : -45}deg) scale(1.2); opacity: 0; } }
+        @keyframes matrixRain { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(110vh); opacity: 0; } }
+        @keyframes rainDown { 0% { transform: translateY(0) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(110vh) rotate(${Math.random() * 90}deg); opacity: 0; } }
+        @keyframes brainFloat { 0% { transform: translateY(0) scale(1); opacity: 0; } 20% { opacity: 1; transform: translateY(-20vh) scale(1.3); } 50% { transform: translateY(-50vh) scale(0.9); } 80% { transform: translateY(-80vh) scale(1.3); } 100% { transform: translateY(-110vh) scale(1); opacity: 0; } }
+        @keyframes emberRise { 0% { transform: translateY(0) translateX(0) scale(1); opacity: 1; } 100% { transform: translateY(-100vh) translateX(var(--drift)) scale(0); opacity: 0; } }
+        @keyframes lightningFlash { 0%, 100% { background-color: transparent; } 5%, 15% { background-color: rgba(255, 255, 255, 0.2); } 10% { background-color: transparent; } }
+        @keyframes boltStrike { 0% { opacity: 0; transform: translateY(-100%) scale(0.5); } 10% { opacity: 1; transform: translateY(0) scale(1); } 30% { opacity: 1; } 100% { opacity: 0; } }
+        
+        @keyframes confettiGravity { 0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.5); opacity: 1; } 15% { transform: translate(calc(-50% + (var(--end-x) * 0.2)), calc(-50% - 20vh)) rotate(90deg) scale(1.2); opacity: 1; } 100% { transform: translate(calc(-50% + var(--end-x)), calc(-50% + var(--end-y))) rotate(var(--rot)) scale(0.5); opacity: 0; } }
       `}</style>
     </div>
   );

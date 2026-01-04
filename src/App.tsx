@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut, Image as ImageIcon, Check, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut, Image as ImageIcon, Check, AlignLeft, AlignCenter, AlignRight, Trash2 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
@@ -10,7 +10,7 @@ import Auth from './components/Auth';
 const EMOJI_LIST = ['⚡', '💼', '🔥', '💡', '🎨', '🚀', '⭐', '📝', '📅', '🛒', '🏋️', '✈️', '🏠', '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧'];
 const TRANSLATIONS = { 
   en: { 
-    search: "SEARCH...", 
+    search: "Search notes...", 
     all: "All", 
     config: "Config", 
     audioLabel: "Audio Voice", 
@@ -33,7 +33,7 @@ const TRANSLATIONS = {
     cat_todo: "To-Do" 
   }, 
   ru: { 
-    search: "ПОИСК...", 
+    search: "Поиск заметок...", 
     all: "Все", 
     config: "Настройки", 
     audioLabel: "Голос", 
@@ -212,7 +212,7 @@ function App() {
           <div className="max-w-2xl mx-auto flex items-end gap-2">
               <button onClick={cycleCategory} className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group"><span className="text-xs grayscale group-hover:grayscale-0 transition-all">{categories.find(c => c.id === selectedCategory)?.emoji}</span></button>
               <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3">
-                  {imageUrl && <div className="relative flex-shrink-0 group/image"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"><X size={10} /></button></div>}
+                  {imageUrl && <div className="relative flex-shrink-0 group/image"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-all text-zinc-600 hover:text-orange-500" title="Remove image"><X size={14} strokeWidth={2.5} /></button></div>}
                   <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} placeholder={t.typePlaceholder} rows={1} className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5" style={{ fontSize: '16px' }} />
               </div>
               <button onClick={saveNote} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 ${transcript.trim() || imageUrl ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)]' : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}>{transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}</button>
@@ -226,7 +226,7 @@ function App() {
                 {settingsView === 'main' ? (
                     <div className="flex flex-col gap-4">
                         <div className="flex-1 overflow-y-auto space-y-2">{categories.map((cat) => (<button key={cat.id} onClick={() => { setEditingCatId(cat.id); setSettingsView('icons'); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg bg-zinc-900 border border-zinc-800"><div className="w-8 h-8 flex items-center justify-center rounded-full bg-black border border-zinc-800 text-sm grayscale">{cat.emoji}</div><p className="text-[11px] font-bold text-zinc-300">{getCategoryLabel(cat)}</p></button>))}</div>
-                        <div className="pt-4 border-t border-zinc-900 space-y-2"><button onClick={() => { const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(notes)); const a = document.createElement('a'); a.href = data; a.download = 'backup.json'; a.click(); }} className="w-full py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Download size={12} /> {t.backup}</button><button onClick={() => signOut(auth)} className="w-full py-2.5 bg-red-900/20 border border-red-900/50 text-red-400 text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2"><LogOut size={12} /> {t.logout}</button></div>
+                        <div className="pt-4 border-t border-zinc-900 space-y-2"><button onClick={() => { const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(notes)); const a = document.createElement('a'); a.href = data; a.download = 'backup.json'; a.click(); }} className="w-full py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:text-orange-500 hover:border-zinc-700 transition-colors"><Download size={12} /> {t.backup}</button><button onClick={() => signOut(auth)} className="w-full py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:text-orange-500 hover:border-zinc-700 transition-colors"><LogOut size={12} /> {t.logout}</button></div>
                     </div>
                 ) : (
                     <div className="grid grid-cols-6 gap-2">{EMOJI_LIST.map(emoji => (<button key={emoji} onClick={() => { if(editingCatId) handleCategoryEdit(editingCatId as CategoryId, 'emoji', emoji); setSettingsView('main'); }} className="aspect-square flex items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800 text-base grayscale hover:grayscale-0">{emoji}</button>))}</div>

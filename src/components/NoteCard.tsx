@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Trash2, Pin, Volume2, ChevronDown, ChevronUp, Edit2, Check, X, Image as ImageIcon, X as RemoveIcon } from 'lucide-react';
+import { Trash2, Pin, Volume2, ChevronDown, ChevronUp, Edit2, Check, X, Image as ImageIcon } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig } from '../types';
 
 interface NoteCardProps {
@@ -140,13 +140,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         <div className="space-y-3">
           <div>
             {editImageUrl ? (
-              <div className="relative mb-3 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex justify-center">
+              <div className="relative mb-3 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex justify-center group/img">
                 <img src={editImageUrl} alt="Note attachment" className="w-full md:w-auto h-auto md:max-h-96 object-contain" />
                 <button 
                   onClick={handleRemoveImage} 
-                  className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors"
+                  className="absolute top-2 right-2 p-1.5 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-all text-zinc-600 hover:text-orange-500"
+                  title="Remove image"
                 >
-                  <RemoveIcon size={14} />
+                  <X size={18} strokeWidth={2.5} />
                 </button>
               </div>
             ) : (
@@ -211,7 +212,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                       <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{category.label}</span>
                     </button>
                  </div>
-                 <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-3 md:gap-2">
                     <button 
                       onClick={handleStartEdit} 
                       className="text-zinc-500 hover:text-orange-500 transition-all" 
@@ -235,7 +236,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                     </button>
                     <button 
                       onClick={() => onDelete(note.id)} 
-                      className="text-zinc-500 hover:text-red-500 transition-all" 
+                      className="text-zinc-500 hover:text-orange-500 transition-all" 
                       title="Delete"
                     >
                       <Trash2 size={14} />

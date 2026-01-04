@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut, Image as ImageIcon, Check, AlignLeft, AlignCenter, AlignRight, EyeOff } from 'lucide-react'; // Added EyeOff icon
+import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut, Image as ImageIcon, Check, AlignLeft, AlignCenter, AlignRight, EyeOff } from 'lucide-react'; 
 import { signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
@@ -7,7 +7,7 @@ import { NoteCard } from './components/NoteCard';
 import { useFirebaseSync, useNotes } from './useFirebaseSync';
 import Auth from './components/Auth';
 
-const EMOJI_LIST = ['⚡', '💼', '🔥', '💡', '🎨', '🚀', '⭐', '📝', '📅', '🛒', '🏋️', '✈️', '🏠', '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧', '👻']; // Added Ghost emoji
+const EMOJI_LIST = ['⚡', '💼', '🔥', '💡', '🎨', '🚀', '⭐', '📝', '📅', '🛒', '🏋️', '✈️', '🏠', '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧', '👻']; 
 
 const TRANSLATIONS = { 
   en: { 
@@ -32,7 +32,7 @@ const TRANSLATIONS = {
     cat_work: "Work", 
     cat_journal: "Journal", 
     cat_todo: "To-Do",
-    cat_secret: "Classified", // Secret Name
+    cat_secret: "Classified", 
     editNote: "Edit Note" 
   }, 
   ru: { 
@@ -108,7 +108,6 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Update Filter type to include 'secret'
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all' | 'secret'>('all');
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'secret'>('idea');
   
@@ -126,6 +125,8 @@ function App() {
   // --- SECRET MODE STATE ---
   const [secretTaps, setSecretTaps] = useState(0);
   const tapTimeoutRef = useRef<any>(null);
+  // NEW: State for flying ghosts
+  const [showGhosts, setShowGhosts] = useState(false);
 
   // --- EDIT MODAL STATE ---
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -153,8 +154,12 @@ function App() {
         setActiveFilter('secret');
         setSelectedCategory('secret');
         setSecretTaps(0);
-        // Optional: Vibration feedback if on mobile
-        if (navigator.vibrate) navigator.vibrate(200);
+        
+        // Trigger Ghost Animation
+        setShowGhosts(true);
+        setTimeout(() => setShowGhosts(false), 5000); // Stop after 5 seconds
+
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     }
   };
 
@@ -263,11 +268,8 @@ function App() {
       if (!matchesSearch) return false;
 
       // SECRET LOGIC:
-      // 1. If filter is 'all', show everything EXCEPT 'secret' notes
       if (activeFilter === 'all') return n.category !== 'secret';
-      // 2. If filter is 'secret', show ONLY 'secret' notes
       if (activeFilter === 'secret') return n.category === 'secret';
-      // 3. Otherwise show specific category
       return n.category === activeFilter;
   }).sort((a, b) => (a.isPinned === b.isPinned ? 0 : a.isPinned ? -1 : 1));
 
@@ -278,7 +280,7 @@ function App() {
   if (!user) return <Auth />;
 
   return (
-    <div className="min-h-screen w-full bg-black text-zinc-100 font-sans selection:bg-orange-500/30">
+    <div className="min-h-screen w-full bg-black text-zinc-100 font-sans selection:bg-orange-500/30 overflow-x-hidden">
       
       {/* HEADER */}
       <div className={`fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/5 transition-transform duration-1000 ease-in-out ${showBars ? 'translate-y-0' : '-translate-y-full'}`}>
@@ -290,7 +292,7 @@ function App() {
                 className="flex-shrink-0 w-10 h-10 bg-zinc-900/80 border border-white/10 flex items-center justify-center rounded-xl active:scale-95 transition-transform"
            >
                {activeFilter === 'secret' ? (
-                   <EyeOff className="text-red-500" size={16} /> // Visual indicator for secret mode
+                   <EyeOff className="text-red-500" size={16} /> 
                ) : (
                    <div className="w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)]"></div>
                )}
@@ -322,7 +324,7 @@ function App() {
         {/* CATEGORY BAR */}
         <div className="max-w-2xl mx-auto grid grid-cols-5 w-full border-t border-white/5">
           
-          {/* If Active Filter is SECRET, show the Secret Tab instead of 'All' */}
+          {/* If Active Filter is SECRET, show the Secret Tab */}
           {activeFilter === 'secret' ? (
              <button className="flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative text-red-500 col-span-5">
                 <span className="text-[12px]">👻</span>
@@ -419,6 +421,47 @@ function App() {
                 )}
              </div>
          </div>
+      )}
+
+      {/* --- GHOST ANIMATION OVERLAY --- */}
+      {showGhosts && (
+        <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
+             {Array.from({ length: 15 }).map((_, i) => (
+                <div 
+                    key={i} 
+                    className="absolute text-4xl"
+                    style={{
+                        left: `${Math.random() * 100}vw`,
+                        bottom: '-50px',
+                        fontSize: `${Math.random() * 30 + 20}px`, // Random size
+                        opacity: 0,
+                        animation: `ghostFly ${3 + Math.random() * 2}s linear forwards`,
+                        animationDelay: `${Math.random() * 2}s` // Random delay start
+                    }}
+                >
+                    👻
+                </div>
+             ))}
+             {/* Dynamic CSS for the flight path */}
+             <style>{`
+                @keyframes ghostFly {
+                    0% {
+                        transform: translateY(0) rotate(0deg) scale(0.8);
+                        opacity: 0;
+                    }
+                    10% {
+                        opacity: 0.7;
+                    }
+                    90% {
+                        opacity: 0.7;
+                    }
+                    100% {
+                        transform: translateY(-110vh) rotate(${Math.random() > 0.5 ? 45 : -45}deg) scale(1.2);
+                        opacity: 0;
+                    }
+                }
+             `}</style>
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut, Image as ImageIcon, Check, AlignLeft, AlignCenter, AlignRight, EyeOff } from 'lucide-react'; 
+import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut, Image as ImageIcon, Check, AlignLeft, AlignCenter, AlignRight, EyeOff, Save } from 'lucide-react'; 
 import { signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
@@ -118,15 +118,20 @@ function App() {
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
 
   const [showBars, setShowBars] = useState(true);
+  
+  // NEW STATE: Locks bars in place when typing Search or New Note
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
   const lastScrollY = useRef(0);
 
   const [secretTaps, setSecretTaps] = useState(0);
   const tapTimeoutRef = useRef<any>(null);
   const [showGhosts, setShowGhosts] = useState(false);
 
-  // --- NEW: STARTUP ANIMATION STATE ---
+  // STARTUP ANIMATION STATE
   const [isStartup, setIsStartup] = useState(true);
 
+  // EDIT STATE
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [editNoteText, setEditNoteText] = useState('');
   const [editNoteImage, setEditNoteImage] = useState('');
@@ -181,6 +186,15 @@ function App() {
 
   useEffect(() => {
     const handleScroll = () => {
+      // LOGIC: If input is focused (search or new note), FORCE bars to show.
+      if (isInputFocused) {
+        setShowBars(true);
+        return;
+      }
+      // If editing an existing note, logic is handled by conditional rendering, so scroll doesn't matter much, 
+      // but we return to prevent state oscillation.
+      if (editingNote) return;
+
       const currentScrollY = window.scrollY;
       if (currentScrollY < 10) { setShowBars(true); lastScrollY.current = currentScrollY; return; }
       if (currentScrollY > lastScrollY.current) { setShowBars(false); } else { setShowBars(true); }
@@ -188,11 +202,9 @@ function App() {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isInputFocused, editingNote]); 
 
-  // --- STARTUP EFFECT TRIGGER ---
   useEffect(() => {
-    // Play startup animation for 2.5 seconds then stop
     const timer = setTimeout(() => {
         setIsStartup(false);
     }, 2500);
@@ -242,7 +254,15 @@ function App() {
     } catch (e) { console.error(e); }
   };
 
-  const handleEditClick = (note: Note) => { setEditingNote(note); setEditNoteText(note.text); setEditNoteImage(note.imageUrl || ''); };
+  const handleEditClick = (note: Note) => { 
+    setEditingNote(note); 
+    setEditNoteText(note.text); 
+    setEditNoteImage(note.imageUrl || ''); 
+    setTimeout(() => {
+        const element = document.getElementById(`note-${note.id}`);
+        if(element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+  };
   
   const handleSaveEdit = async () => {
       if(editingNote) {
@@ -274,136 +294,162 @@ function App() {
   return (
     <div className="min-h-screen w-full bg-black text-zinc-100 font-sans selection:bg-orange-500/30 overflow-x-hidden">
       
-      {/* HEADER */}
-      <div className={`fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/5 transition-transform duration-1000 ease-in-out ${showBars ? 'translate-y-0' : '-translate-y-full'}`}>
-        <header className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3">
-           
-           {/* LOGO - SECRET TRIGGER + STARTUP ANIMATION */}
-           <button 
-                onClick={handleSecretTrigger}
-                className="flex-shrink-0 w-10 h-10 bg-zinc-900/80 border border-white/10 flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible"
-           >
-               {/* STARTUP ANIMATION LAYERS */}
-               {isStartup && (
-                 <>
-                    {/* Spinning Ring */}
-                    <div className="absolute inset-[-4px] border border-orange-500/50 rounded-xl animate-[spin_1s_linear_infinite] opacity-50" />
-                    {/* Shockwave Ripple */}
-                    <div className="absolute inset-0 bg-orange-500 rounded-xl animate-ping opacity-75" style={{ animationDuration: '1.5s' }} />
-                 </>
-               )}
-
-               {/* ACTUAL LOGO ICON */}
-               {activeFilter === 'secret' ? (
-                   <EyeOff className="text-red-500 relative z-10" size={16} /> 
-               ) : (
-                   <div 
-                        className={`w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)] relative z-10 ${isStartup ? 'animate-bounce' : ''}`}
-                        style={isStartup ? { animation: 'logoEntrance 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards' } : {}}
-                   ></div>
-               )}
-           </button>
-
-           <div className="flex-1 relative group">
-              <Search className="absolute left-3.5 top-2.5 text-zinc-500 group-focus-within:text-zinc-300 transition-colors" size={16} />
-              <input 
-                  type="text" 
-                  placeholder={activeFilter === 'secret' ? "Classified search..." : t.search}
-                  value={searchQuery} 
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-zinc-900/50 hover:bg-zinc-900 focus:bg-zinc-900 border border-transparent focus:border-white/10 rounded-xl py-2 pl-10 pr-4 text-zinc-200 placeholder:text-zinc-600 focus:outline-none text-sm transition-all"
-              />
-           </div>
-           <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
-             <div className="flex items-center justify-center w-full h-full rounded-full">
-                {syncing ? <Cloud className="text-orange-500/80 animate-pulse" size={16} /> : <Cloud className="text-orange-500/80" size={16} />}
-             </div>
-           </div>
-           <button 
-              onClick={() => { setShowSettings(true); setSettingsView('main'); }} 
-              className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-900/50 border border-transparent hover:bg-zinc-900 hover:border-white/10 text-zinc-500 hover:text-zinc-200 transition-all active:scale-95"
+      {/* 1. HEADER - VISIBLE ONLY IF `editingNote` IS NULL */}
+      {!editingNote && (
+        // LOGIC: If isInputFocused is true, force translate-y-0. Else follow showBars state.
+        <div className={`fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/5 transition-transform duration-1000 ease-in-out ${isInputFocused || showBars ? 'translate-y-0' : '-translate-y-full'}`}>
+            <header className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3">
+            
+            <button 
+                    onClick={handleSecretTrigger}
+                    className="flex-shrink-0 w-10 h-10 bg-zinc-900/80 border border-white/10 flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible"
             >
-              <Settings size={18} />
-           </button>
-        </header>
+                {isStartup && (
+                    <>
+                        <div className="absolute inset-[-4px] border border-orange-500/50 rounded-xl animate-[spin_1s_linear_infinite] opacity-50" />
+                        <div className="absolute inset-0 bg-orange-500 rounded-xl animate-ping opacity-75" style={{ animationDuration: '1.5s' }} />
+                    </>
+                )}
 
-        {/* CATEGORY BAR */}
-        <div className="max-w-2xl mx-auto grid grid-cols-5 w-full border-t border-white/5">
-          {activeFilter === 'secret' ? (
-             <button className="flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative text-red-500 col-span-5">
-                <span className="text-[12px]">👻</span>
-                <span className="text-[10px] font-medium tracking-widest uppercase">Secret Mode Active</span>
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 shadow-[0_0_10px_rgba(220,38,38,0.8)]"></div>
-             </button>
-          ) : (
-            <>
-                <button 
-                    onClick={() => setActiveFilter('all')} 
-                    className={`flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative group transition-colors ${activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}`}
+                {activeFilter === 'secret' ? (
+                    <EyeOff className="text-red-500 relative z-10" size={16} /> 
+                ) : (
+                    <div 
+                            className={`w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)] relative z-10 ${isStartup ? 'animate-bounce' : ''}`}
+                            style={isStartup ? { animation: 'logoEntrance 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards' } : {}}
+                    ></div>
+                )}
+            </button>
+
+            <div className="flex-1 relative group">
+                <Search className="absolute left-3.5 top-2.5 text-zinc-500 group-focus-within:text-zinc-300 transition-colors" size={16} />
+                <input 
+                    type="text" 
+                    placeholder={activeFilter === 'secret' ? "Classified search..." : t.search}
+                    value={searchQuery} 
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    // LOCK UI ON FOCUS
+                    onFocus={() => { setIsInputFocused(true); setShowBars(true); }}
+                    onBlur={() => setIsInputFocused(false)}
+                    // PREVENT ZOOM: text-base
+                    className="w-full bg-zinc-900/50 hover:bg-zinc-900 focus:bg-zinc-900 border border-transparent focus:border-white/10 rounded-xl py-2 pl-10 pr-4 text-zinc-200 placeholder:text-zinc-600 focus:outline-none text-base transition-all"
+                />
+            </div>
+            <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
+                <div className="flex items-center justify-center w-full h-full rounded-full">
+                    {syncing ? <Cloud className="text-orange-500/80 animate-pulse" size={16} /> : <Cloud className="text-orange-500/80" size={16} />}
+                </div>
+            </div>
+            <button 
+                onClick={() => { setShowSettings(true); setSettingsView('main'); }} 
+                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-900/50 border border-transparent hover:bg-zinc-900 hover:border-white/10 text-zinc-500 hover:text-zinc-200 transition-all active:scale-95"
                 >
-                    <LayoutGrid size={13} className={activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500'} />
-                    <span className="text-[10px] font-medium">{t.all}</span>
-                </button>
-                
-                {categories.map((cat, index) => (
-                    <button 
-                        key={cat.id} 
-                        onClick={() => setActiveFilter(cat.id)} 
-                        className={`flex flex-row items-center justify-center gap-1.5 py-3 relative group transition-colors ${index !== categories.length - 1 ? 'border-r border-white/5' : ''} ${activeFilter === cat.id ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}`}
-                    >
-                        <span className={`text-[12px] leading-none ${activeFilter === cat.id ? 'grayscale-0' : 'grayscale opacity-70'}`}>{cat.emoji}</span>
-                        <span className="text-[10px] font-medium truncate">{getCategoryLabel(cat)}</span>
-                    </button>
-                ))}
-            </>
-          )}
-        </div>
-      </div>
+                <Settings size={18} />
+            </button>
+            </header>
 
-      <div className={`pt-32 pb-32 px-4 max-w-2xl mx-auto flex flex-col gap-3 ${getAlignmentClass()}`}>
+            {/* CATEGORY BAR */}
+            <div className="max-w-2xl mx-auto grid grid-cols-5 w-full border-t border-white/5">
+            {activeFilter === 'secret' ? (
+                <button className="flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative text-red-500 col-span-5">
+                    <span className="text-[12px]">👻</span>
+                    <span className="text-[10px] font-medium tracking-widest uppercase">Secret Mode Active</span>
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 shadow-[0_0_10px_rgba(220,38,38,0.8)]"></div>
+                </button>
+            ) : (
+                <>
+                    <button 
+                        onClick={() => setActiveFilter('all')} 
+                        className={`flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative group transition-colors ${activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    >
+                        <LayoutGrid size={13} className={activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500'} />
+                        <span className="text-[10px] font-medium">{t.all}</span>
+                    </button>
+                    
+                    {categories.map((cat, index) => (
+                        <button 
+                            key={cat.id} 
+                            onClick={() => setActiveFilter(cat.id)} 
+                            className={`flex flex-row items-center justify-center gap-1.5 py-3 relative group transition-colors ${index !== categories.length - 1 ? 'border-r border-white/5' : ''} ${activeFilter === cat.id ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}`}
+                        >
+                            <span className={`text-[12px] leading-none ${activeFilter === cat.id ? 'grayscale-0' : 'grayscale opacity-70'}`}>{cat.emoji}</span>
+                            <span className="text-[10px] font-medium truncate">{getCategoryLabel(cat)}</span>
+                        </button>
+                    ))}
+                </>
+            )}
+            </div>
+        </div>
+      )}
+
+      {/* 2. MAIN LIST - DYNAMIC PADDING */}
+      <div className={`${editingNote ? 'pt-4 pb-4' : 'pt-32 pb-32'} px-4 max-w-2xl mx-auto flex flex-col gap-3 ${getAlignmentClass()} transition-all duration-300`}>
           {filteredNotes.map(note => (
-            <NoteCard key={note.id} note={note} categories={activeFilter === 'secret' ? [SECRET_CATEGORY_CONFIG] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onUpdate={updateNote} onToggleExpand={handleToggleExpand} />
+            // INLINE EDITING LOGIC - Header/Footer HIDDEN
+            editingNote && editingNote.id === note.id ? (
+                <div key={note.id} id={`note-${note.id}`} className="w-full bg-black border border-orange-500/50 rounded-2xl p-4 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 shadow-[0_0_30px_rgba(234,88,12,0.1)] relative z-[100]">
+                     <div className="w-full">
+                        {editNoteImage ? (
+                            <div className="relative mb-3 rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950 flex justify-center max-h-60 group/img">
+                                <img src={editNoteImage} className="w-full h-full object-cover" />
+                                <button onClick={() => setEditNoteImage('')} className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur text-white rounded-full hover:bg-red-500 transition-colors"><X size={14} /></button>
+                            </div>
+                        ) : (
+                            <label className="flex items-center justify-center gap-2 w-full py-3 border border-dashed border-zinc-800 rounded-xl text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 cursor-pointer transition-all bg-zinc-900/30">
+                                <ImageIcon size={16} /> <span className="text-xs font-bold uppercase tracking-wider">Add Image</span>
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0], true); }} />
+                            </label>
+                        )}
+                     </div>
+                     <textarea 
+                        autoFocus 
+                        value={editNoteText} 
+                        onChange={(e) => setEditNoteText(e.target.value)} 
+                        onPaste={(e) => handlePaste(e, true)} 
+                        className="w-full bg-transparent text-lg text-zinc-100 placeholder:text-zinc-700 resize-none focus:outline-none leading-relaxed min-h-[120px]" 
+                        placeholder="Type here..." 
+                     />
+                     <div className="flex gap-2 pt-2 border-t border-white/5">
+                        <button onClick={handleSaveEdit} className="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-orange-900/20 active:scale-95 transition-all">
+                            <Check size={16} /> Save
+                        </button>
+                        <button onClick={() => setEditingNote(null)} className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 border border-zinc-800 active:scale-95 transition-all">
+                            <X size={16} /> Cancel
+                        </button>
+                     </div>
+                </div>
+            ) : (
+                <NoteCard key={note.id} note={note} categories={activeFilter === 'secret' ? [SECRET_CATEGORY_CONFIG] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onUpdate={updateNote} onToggleExpand={handleToggleExpand} />
+            )
           ))}
           {filteredNotes.length === 0 && <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full"><LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} /><p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'No Secrets Yet' : 'Database Empty'}</p></div>}
       </div>
 
-      <div className={`fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 transition-transform duration-1000 ease-in-out ${showBars ? 'translate-y-0' : 'translate-y-full'}`}>
-          <div className="max-w-2xl mx-auto flex items-end gap-2">
-              <button onClick={cycleCategory} className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group">
-                  <span className="text-xs grayscale-0 transition-all">{currentCategoryConfig.emoji}</span>
-              </button>
-              <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3">
-                  {imageUrl && <div className="relative flex-shrink-0 group/image"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"><X size={10} /></button></div>}
-                  <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} placeholder={activeFilter === 'secret' ? "Whisper a secret..." : t.typePlaceholder} rows={1} className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5" />
-              </div>
-              <button onClick={saveNote} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 ${transcript.trim() || imageUrl ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)]' : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}>{transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}</button>
-          </div>
-      </div>
-
-      {editingNote && (
-        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col animate-in fade-in slide-in-from-bottom-5 duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-zinc-800 bg-black/50">
-                <button onClick={() => setEditingNote(null)} className="p-2 rounded-full hover:bg-zinc-900 text-zinc-500 hover:text-white transition-colors"><X size={20} /></button>
-                <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">{t.editNote}</span>
-                <button onClick={handleSaveEdit} className="p-2 rounded-full bg-orange-600/20 text-orange-500 hover:bg-orange-600 hover:text-white transition-all"><Check size={20} /></button>
+      {/* 3. FOOTER - VISIBLE ONLY IF `editingNote` IS NULL */}
+      {!editingNote && (
+        // LOGIC: If isInputFocused is true, force translate-y-0. Else follow showBars state.
+        <div className={`fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 transition-transform duration-1000 ease-in-out ${isInputFocused || showBars ? 'translate-y-0' : 'translate-y-full'}`}>
+            <div className="max-w-2xl mx-auto flex items-end gap-2">
+                <button onClick={cycleCategory} className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group">
+                    <span className="text-xs grayscale-0 transition-all">{currentCategoryConfig.emoji}</span>
+                </button>
+                <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3">
+                    {imageUrl && <div className="relative flex-shrink-0 group/image"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"><X size={10} /></button></div>}
+                    <textarea 
+                        ref={textareaRef} 
+                        value={transcript} 
+                        onChange={(e) => setTranscript(e.target.value)} 
+                        onPaste={(e) => handlePaste(e)} 
+                        placeholder={activeFilter === 'secret' ? "Whisper a secret..." : t.typePlaceholder} 
+                        rows={1} 
+                        // LOCK UI ON FOCUS
+                        onFocus={() => { setIsInputFocused(true); setShowBars(true); }}
+                        onBlur={() => setIsInputFocused(false)}
+                        className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5" 
+                    />
+                </div>
+                <button onClick={saveNote} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 ${transcript.trim() || imageUrl ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)]' : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}>{transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}</button>
             </div>
-            <div className="flex-1 p-6 overflow-y-auto flex flex-col items-center">
-                 <div className="w-full mb-4">
-                    {editNoteImage ? (
-                        <div className="relative mb-3 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex justify-center max-h-80">
-                            <img src={editNoteImage} className="w-full h-full object-contain" />
-                            <button onClick={() => setEditNoteImage('')} className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-lg"><X size={14} /></button>
-                        </div>
-                    ) : (
-                        <label className="flex items-center justify-center gap-2 w-full py-4 border border-dashed border-zinc-800 rounded-lg text-zinc-600 hover:text-zinc-400 hover:border-zinc-600 cursor-pointer transition-all">
-                            <ImageIcon size={16} /> <span className="text-xs font-bold uppercase">Add Image</span>
-                            <input type="file" accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0], true); }} />
-                        </label>
-                    )}
-                 </div>
-                 <textarea autoFocus value={editNoteText} onChange={(e) => setEditNoteText(e.target.value)} onPaste={(e) => handlePaste(e, true)} className="w-full h-full bg-transparent text-lg md:text-xl text-zinc-100 placeholder:text-zinc-700 resize-none focus:outline-none leading-relaxed" placeholder="Type here..." />
-            </div>
-            <div className="h-[40vh] sm:h-0 pointer-events-none"></div>
         </div>
       )}
 

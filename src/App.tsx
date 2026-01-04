@@ -9,7 +9,6 @@ import Auth from './components/Auth';
 
 const EMOJI_LIST = ['⚡', '💼', '🔥', '💡', '🎨', '🚀', '⭐', '📝', '📅', '🛒', '🏋️', '✈️', '🏠', '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧'];
 
-// --- TRANSLATIONS (Ensure casing is Title Case, not ALL CAPS) ---
 const TRANSLATIONS = { 
   en: { 
     search: "Search notes...", 
@@ -176,6 +175,7 @@ function App() {
     } catch (e) { console.error(e); }
   };
 
+  // Called from NoteCard ONLY IF ON MOBILE
   const handleEditClick = (note: Note) => { setEditingNote(note); setEditNoteText(note.text); setEditNoteImage(note.imageUrl || ''); };
   
   const handleSaveEdit = async () => {
@@ -231,36 +231,40 @@ function App() {
         </header>
 
         {/* 
-            CATEGORY BAR (Mobile Fixes)
-            1. overflow-x-auto: Enables horizontal scrolling so items aren't crushed.
-            2. no-scrollbar: Standard class to hide the scrollbar (browser specific, see css below if needed, or usually handled by Tailwind plugin).
-            3. flex-nowrap: Prevents wrapping to a second line.
-            4. Buttons: whitespace-nowrap, flex-shrink-0, no uppercase/bold tracking.
+            CATEGORY BAR (Grid Layout / Tab Style)
+            - No "pills", no backgrounds.
+            - Active State: Orange text & icon only (No underline).
         */}
-        <div className="max-w-2xl mx-auto flex items-center w-full px-4 pb-3 gap-2 overflow-x-auto no-scrollbar mask-linear-fade">
+        <div className="max-w-2xl mx-auto grid grid-cols-5 w-full border-t border-white/5">
           
+          {/* ALL BUTTON */}
           <button 
             onClick={() => setActiveFilter('all')} 
-            className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 ${activeFilter === 'all' ? 'bg-zinc-900 text-orange-500 border border-orange-500/30 shadow-[0_0_15px_rgba(234,88,12,0.15)]' : 'bg-transparent text-zinc-500 border border-transparent hover:bg-zinc-900 hover:text-zinc-300'}`}
+            className={`
+              flex flex-row items-center justify-center gap-1.5 py-3 
+              border-r border-white/5 relative group transition-colors
+              ${activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}
+            `}
           >
-              {t.all}
+              <LayoutGrid size={13} className={activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500'} />
+              <span className="text-[10px] font-medium">{t.all}</span>
           </button>
           
-          <div className="h-4 w-px bg-zinc-800/50 flex-shrink-0"></div>
-
-          {categories.map((cat) => (
+          {/* CATEGORY BUTTONS */}
+          {categories.map((cat, index) => (
               <button 
                 key={cat.id} 
                 onClick={() => setActiveFilter(cat.id)} 
-                // Changed text-[10px] to text-xs (12px) for readability, removed uppercase/tracking.
-                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center justify-center gap-1.5 duration-300 whitespace-nowrap ${activeFilter === cat.id ? 'bg-zinc-900 text-orange-500 border-orange-500/30 shadow-[0_0_15px_rgba(234,88,12,0.15)]' : 'bg-transparent text-zinc-500 border-transparent hover:bg-zinc-900 hover:text-zinc-300'}`}
+                className={`
+                  flex flex-row items-center justify-center gap-1.5 py-3 relative group transition-colors
+                  ${index !== categories.length - 1 ? 'border-r border-white/5' : ''}
+                  ${activeFilter === cat.id ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}
+                `}
               >
-                  <span className="grayscale opacity-70 text-[10px]">{cat.emoji}</span>
-                  <span>{getCategoryLabel(cat)}</span>
+                  <span className={`text-[12px] leading-none ${activeFilter === cat.id ? 'grayscale-0' : 'grayscale opacity-70'}`}>{cat.emoji}</span>
+                  <span className="text-[10px] font-medium truncate">{getCategoryLabel(cat)}</span>
               </button>
           ))}
-          {/* Spacer to allow scrolling past the last item */}
-          <div className="w-2 flex-shrink-0"></div>
         </div>
       </div>
 

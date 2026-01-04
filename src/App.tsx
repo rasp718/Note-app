@@ -9,6 +9,7 @@ import Auth from './components/Auth';
 
 const EMOJI_LIST = ['⚡', '💼', '🔥', '💡', '🎨', '🚀', '⭐', '📝', '📅', '🛒', '🏋️', '✈️', '🏠', '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧'];
 
+// --- TRANSLATIONS (Ensure casing is Title Case, not ALL CAPS) ---
 const TRANSLATIONS = { 
   en: { 
     search: "Search notes...", 
@@ -175,7 +176,6 @@ function App() {
     } catch (e) { console.error(e); }
   };
 
-  // Called from NoteCard ONLY IF ON MOBILE
   const handleEditClick = (note: Note) => { setEditingNote(note); setEditNoteText(note.text); setEditNoteImage(note.imageUrl || ''); };
   
   const handleSaveEdit = async () => {
@@ -230,22 +230,37 @@ function App() {
            </button>
         </header>
 
-        <div className="max-w-2xl mx-auto flex justify-between items-center w-full px-4 pb-3">
+        {/* 
+            CATEGORY BAR (Mobile Fixes)
+            1. overflow-x-auto: Enables horizontal scrolling so items aren't crushed.
+            2. no-scrollbar: Standard class to hide the scrollbar (browser specific, see css below if needed, or usually handled by Tailwind plugin).
+            3. flex-nowrap: Prevents wrapping to a second line.
+            4. Buttons: whitespace-nowrap, flex-shrink-0, no uppercase/bold tracking.
+        */}
+        <div className="max-w-2xl mx-auto flex items-center w-full px-4 pb-3 gap-2 overflow-x-auto no-scrollbar mask-linear-fade">
+          
           <button 
             onClick={() => setActiveFilter('all')} 
-            className={`min-w-0 px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all duration-300 flex-shrink-0 ${activeFilter === 'all' ? 'bg-zinc-900 text-orange-500 border-orange-500/50 shadow-[0_0_15px_rgba(234,88,12,0.15)]' : 'bg-transparent text-zinc-500 border-transparent hover:bg-zinc-900 hover:text-zinc-300'}`}
+            className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 ${activeFilter === 'all' ? 'bg-zinc-900 text-orange-500 border border-orange-500/30 shadow-[0_0_15px_rgba(234,88,12,0.15)]' : 'bg-transparent text-zinc-500 border border-transparent hover:bg-zinc-900 hover:text-zinc-300'}`}
           >
               {t.all}
           </button>
           
-          <div className="h-4 w-px bg-zinc-800/50 mx-1"></div>
+          <div className="h-4 w-px bg-zinc-800/50 flex-shrink-0"></div>
 
           {categories.map((cat) => (
-              <button key={cat.id} onClick={() => setActiveFilter(cat.id)} className={`min-w-0 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all flex items-center justify-center gap-2 duration-300 ${activeFilter === cat.id ? 'bg-zinc-900 text-orange-500 border-orange-500/50 shadow-[0_0_15px_rgba(234,88,12,0.15)]' : 'bg-transparent text-zinc-500 border-transparent hover:bg-zinc-900 hover:text-zinc-300'}`}>
-                  <span className="grayscale opacity-70 text-xs">{cat.emoji}</span>
-                  <span className="truncate">{getCategoryLabel(cat)}</span>
+              <button 
+                key={cat.id} 
+                onClick={() => setActiveFilter(cat.id)} 
+                // Changed text-[10px] to text-xs (12px) for readability, removed uppercase/tracking.
+                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center justify-center gap-1.5 duration-300 whitespace-nowrap ${activeFilter === cat.id ? 'bg-zinc-900 text-orange-500 border-orange-500/30 shadow-[0_0_15px_rgba(234,88,12,0.15)]' : 'bg-transparent text-zinc-500 border-transparent hover:bg-zinc-900 hover:text-zinc-300'}`}
+              >
+                  <span className="grayscale opacity-70 text-[10px]">{cat.emoji}</span>
+                  <span>{getCategoryLabel(cat)}</span>
               </button>
           ))}
+          {/* Spacer to allow scrolling past the last item */}
+          <div className="w-2 flex-shrink-0"></div>
         </div>
       </div>
 
@@ -304,8 +319,6 @@ function App() {
                         <div className="flex-1 overflow-y-auto space-y-2">{categories.map((cat) => (<button key={cat.id} onClick={() => { setEditingCatId(cat.id); setSettingsView('icons'); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg bg-zinc-900 border border-zinc-800"><div className="w-8 h-8 flex items-center justify-center rounded-full bg-black border border-zinc-800 text-sm grayscale">{cat.emoji}</div><p className="text-[11px] font-bold text-zinc-300">{getCategoryLabel(cat)}</p></button>))}</div>
                         <div className="pt-4 border-t border-zinc-900 space-y-2">
                           <button onClick={() => { const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(notes)); const a = document.createElement('a'); a.href = data; a.download = 'backup.json'; a.click(); }} className="w-full py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98]"><Download size={12} /> {t.backup}</button>
-                          
-                          {/* UPDATED LOGOUT BUTTON: ORANGE THEME */}
                           <button onClick={() => signOut(auth)} className="w-full py-2.5 bg-orange-900/20 border border-orange-900/50 text-orange-500 hover:text-orange-400 hover:border-orange-700 hover:bg-orange-900/30 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98]"><LogOut size={12} /> {t.logout}</button>
                         </div>
                     </div>

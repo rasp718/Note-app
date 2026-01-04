@@ -145,30 +145,22 @@ function App() {
     }
   };
 
-  // --- SCROLL HANDLER FOR TWITTER/X STYLE ---
+  // --- SCROLL HANDLER ---
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
-      // If at the very top, always show
       if (currentScrollY < 10) {
         setShowBars(true);
         lastScrollY.current = currentScrollY;
         return;
       }
-
-      // Determine direction
       if (currentScrollY > lastScrollY.current) {
-        // Scrolling DOWN -> Hide
-        setShowBars(false);
+        setShowBars(false); // Scrolling DOWN -> Hide
       } else {
-        // Scrolling UP -> Show
-        setShowBars(true);
+        setShowBars(true);  // Scrolling UP -> Show
       }
-      
       lastScrollY.current = currentScrollY;
     };
-
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -233,11 +225,10 @@ function App() {
     <div className="min-h-screen w-full bg-black text-zinc-100 font-sans selection:bg-orange-500/30">
       
       {/* 
-        HEADER CONTAINER 
-        - translate-y-0 when showBars is true
-        - -translate-y-full (slide up out of view) when showBars is false
+        HEADER
+        Changed: duration-300 -> duration-500 (Slower animation)
       */}
-      <div className={`fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/5 transition-transform duration-300 ease-in-out ${showBars ? 'translate-y-0' : '-translate-y-full'}`}>
+      <div className={`fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/5 transition-transform duration-1000 ease-in-out ${showBars ? 'translate-y-0' : '-translate-y-full'}`}>
         <header className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3">
            <div className="flex-shrink-0 w-10 h-10 bg-zinc-900/80 border border-white/10 flex items-center justify-center rounded-xl">
                <div className="w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)]"></div>
@@ -296,12 +287,6 @@ function App() {
         </div>
       </div>
 
-      {/* 
-        MAIN CONTENT PADDING
-        - pt-32: Keeps space for the header so content doesn't start hidden.
-        - pb-32: Keeps space for the footer.
-        - When bars slide away, this padding essentially becomes "empty" space allowing content to be fully visible.
-      */}
       <div className={`pt-32 pb-32 px-4 max-w-2xl mx-auto flex flex-col gap-3 ${getAlignmentClass()}`}>
           {filteredNotes.map(note => (
             <NoteCard key={note.id} note={note} categories={categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onUpdate={updateNote} onToggleExpand={handleToggleExpand} />
@@ -310,11 +295,10 @@ function App() {
       </div>
 
       {/* 
-        FOOTER CONTAINER 
-        - translate-y-0 when showBars is true
-        - translate-y-full (slide down out of view) when showBars is false
+        FOOTER
+        Changed: duration-300 -> duration-500
       */}
-      <div className={`fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 transition-transform duration-300 ease-in-out ${showBars ? 'translate-y-0' : 'translate-y-full'}`}>
+      <div className={`fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 transition-transform duration-1000 ease-in-out ${showBars ? 'translate-y-0' : 'translate-y-full'}`}>
           <div className="max-w-2xl mx-auto flex items-end gap-2">
               <button onClick={cycleCategory} className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group"><span className="text-xs grayscale group-hover:grayscale-0 transition-all">{categories.find(c => c.id === selectedCategory)?.emoji}</span></button>
               <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3">

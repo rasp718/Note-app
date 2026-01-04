@@ -118,8 +118,6 @@ function App() {
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
 
   const [showBars, setShowBars] = useState(true);
-  
-  // NEW STATE: Locks bars in place when typing Search or New Note
   const [isInputFocused, setIsInputFocused] = useState(false);
 
   const lastScrollY = useRef(0);
@@ -186,13 +184,10 @@ function App() {
 
   useEffect(() => {
     const handleScroll = () => {
-      // LOGIC: If input is focused (search or new note), FORCE bars to show.
       if (isInputFocused) {
         setShowBars(true);
         return;
       }
-      // If editing an existing note, logic is handled by conditional rendering, so scroll doesn't matter much, 
-      // but we return to prevent state oscillation.
       if (editingNote) return;
 
       const currentScrollY = window.scrollY;
@@ -203,6 +198,20 @@ function App() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isInputFocused, editingNote]); 
+
+  // STRATEGY PART 2: Auto-scroll to the bottom of the active note when editing starts
+  useEffect(() => {
+    if (editingNote) {
+        // Allow DOM to update and cut off bottom notes, then scroll
+        setTimeout(() => {
+            const element = document.getElementById(`note-${editingNote.id}`);
+            if(element) {
+                // block: 'end' forces the bottom of the element to align with the bottom of the view (top of keyboard)
+                element.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        }, 150);
+    }
+  }, [editingNote]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -258,10 +267,6 @@ function App() {
     setEditingNote(note); 
     setEditNoteText(note.text); 
     setEditNoteImage(note.imageUrl || ''); 
-    setTimeout(() => {
-        const element = document.getElementById(`note-${note.id}`);
-        if(element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 50);
   };
   
   const handleSaveEdit = async () => {
@@ -285,6 +290,17 @@ function App() {
       return n.category === activeFilter;
   }).sort((a, b) => (a.isPinned === b.isPinned ? 0 : a.isPinned ? -1 : 1));
 
+  // STRATEGY PART 1: The Truncated List Logic
+  // If editing, find the index of that note and chop off everything after it.
+  let notesToRender = filteredNotes;
+  if (editingNote) {
+      const activeIndex = filteredNotes.findIndex(n => n.id === editingNote.id);
+      if (activeIndex !== -1) {
+          // Keep everything from the start (0) up to and including the active note (activeIndex + 1)
+          notesToRender = filteredNotes.slice(0, activeIndex + 1);
+      }
+  }
+
   const t = TRANSLATIONS[lang];
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
 
@@ -294,9 +310,8 @@ function App() {
   return (
     <div className="min-h-screen w-full bg-black text-zinc-100 font-sans selection:bg-orange-500/30 overflow-x-hidden">
       
-      {/* 1. HEADER - VISIBLE ONLY IF `editingNote` IS NULL */}
+      {/* 1. HEADER */}
       {!editingNote && (
-        // LOGIC: If isInputFocused is true, force translate-y-0. Else follow showBars state.
         <div className={`fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/5 transition-transform duration-1000 ease-in-out ${isInputFocused || showBars ? 'translate-y-0' : '-translate-y-full'}`}>
             <header className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3">
             
@@ -328,10 +343,8 @@ function App() {
                     placeholder={activeFilter === 'secret' ? "Classified search..." : t.search}
                     value={searchQuery} 
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    // LOCK UI ON FOCUS
                     onFocus={() => { setIsInputFocused(true); setShowBars(true); }}
                     onBlur={() => setIsInputFocused(false)}
-                    // PREVENT ZOOM: text-base
                     className="w-full bg-zinc-900/50 hover:bg-zinc-900 focus:bg-zinc-900 border border-transparent focus:border-white/10 rounded-xl py-2 pl-10 pr-4 text-zinc-200 placeholder:text-zinc-600 focus:outline-none text-base transition-all"
                 />
             </div>
@@ -382,10 +395,10 @@ function App() {
         </div>
       )}
 
-      {/* 2. MAIN LIST - DYNAMIC PADDING */}
+      {/* 2. MAIN LIST - RENDER "notesToRender" (The Truncated List) */}
       <div className={`${editingNote ? 'pt-4 pb-4' : 'pt-32 pb-32'} px-4 max-w-2xl mx-auto flex flex-col gap-3 ${getAlignmentClass()} transition-all duration-300`}>
-          {filteredNotes.map(note => (
-            // INLINE EDITING LOGIC - Header/Footer HIDDEN
+          {notesToRender.map(note => (
+            // INLINE EDITING LOGIC
             editingNote && editingNote.id === note.id ? (
                 <div key={note.id} id={`note-${note.id}`} className="w-full bg-black border border-orange-500/50 rounded-2xl p-4 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 shadow-[0_0_30px_rgba(234,88,12,0.1)] relative z-[100]">
                      <div className="w-full">
@@ -422,12 +435,13 @@ function App() {
                 <NoteCard key={note.id} note={note} categories={activeFilter === 'secret' ? [SECRET_CATEGORY_CONFIG] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onUpdate={updateNote} onToggleExpand={handleToggleExpand} />
             )
           ))}
+          
+          {/* Empty State - Only show if truly empty, not if truncated */}
           {filteredNotes.length === 0 && <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full"><LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} /><p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'No Secrets Yet' : 'Database Empty'}</p></div>}
       </div>
 
-      {/* 3. FOOTER - VISIBLE ONLY IF `editingNote` IS NULL */}
+      {/* 3. FOOTER */}
       {!editingNote && (
-        // LOGIC: If isInputFocused is true, force translate-y-0. Else follow showBars state.
         <div className={`fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 transition-transform duration-1000 ease-in-out ${isInputFocused || showBars ? 'translate-y-0' : 'translate-y-full'}`}>
             <div className="max-w-2xl mx-auto flex items-end gap-2">
                 <button onClick={cycleCategory} className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group">
@@ -442,7 +456,6 @@ function App() {
                         onPaste={(e) => handlePaste(e)} 
                         placeholder={activeFilter === 'secret' ? "Whisper a secret..." : t.typePlaceholder} 
                         rows={1} 
-                        // LOCK UI ON FOCUS
                         onFocus={() => { setIsInputFocused(true); setShowBars(true); }}
                         onBlur={() => setIsInputFocused(false)}
                         className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5" 

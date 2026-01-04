@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut, Image as ImageIcon, Check, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Search, X, Settings, Download, Globe, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, CloudOff, LogOut, Image as ImageIcon, Check, AlignLeft, AlignCenter, AlignRight, EyeOff } from 'lucide-react'; // Added EyeOff icon
 import { signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
@@ -7,7 +7,7 @@ import { NoteCard } from './components/NoteCard';
 import { useFirebaseSync, useNotes } from './useFirebaseSync';
 import Auth from './components/Auth';
 
-const EMOJI_LIST = ['⚡', '💼', '🔥', '💡', '🎨', '🚀', '⭐', '📝', '📅', '🛒', '🏋️', '✈️', '🏠', '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧'];
+const EMOJI_LIST = ['⚡', '💼', '🔥', '💡', '🎨', '🚀', '⭐', '📝', '📅', '🛒', '🏋️', '✈️', '🏠', '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧', '👻']; // Added Ghost emoji
 
 const TRANSLATIONS = { 
   en: { 
@@ -31,7 +31,8 @@ const TRANSLATIONS = {
     cat_idea: "Idea", 
     cat_work: "Work", 
     cat_journal: "Journal", 
-    cat_todo: "To-Do", 
+    cat_todo: "To-Do",
+    cat_secret: "Classified", // Secret Name
     editNote: "Edit Note" 
   }, 
   ru: { 
@@ -55,9 +56,18 @@ const TRANSLATIONS = {
     cat_idea: "Идея", 
     cat_work: "Работа", 
     cat_journal: "Дневник", 
-    cat_todo: "Задачи", 
+    cat_todo: "Задачи",
+    cat_secret: "Секретно",
     editNote: "Редактировать" 
   } 
+};
+
+// Config for the hidden category
+const SECRET_CATEGORY_CONFIG: CategoryConfig = {
+    id: 'secret',
+    label: 'Secret',
+    emoji: '👻',
+    colorClass: 'bg-red-500'
 };
 
 // UTILS
@@ -97,8 +107,11 @@ function App() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<CategoryId | 'all'>('all');
-  const [selectedCategory, setSelectedCategory] = useState<CategoryId>('idea');
+  
+  // Update Filter type to include 'secret'
+  const [activeFilter, setActiveFilter] = useState<CategoryId | 'all' | 'secret'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'secret'>('idea');
+  
   const [showSettings, setShowSettings] = useState(false);
   const [settingsView, setSettingsView] = useState<'main' | 'icons'>('main'); 
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
@@ -110,17 +123,45 @@ function App() {
   const [showBars, setShowBars] = useState(true);
   const lastScrollY = useRef(0);
 
+  // --- SECRET MODE STATE ---
+  const [secretTaps, setSecretTaps] = useState(0);
+  const tapTimeoutRef = useRef<any>(null);
+
   // --- EDIT MODAL STATE ---
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [editNoteText, setEditNoteText] = useState('');
   const [editNoteImage, setEditNoteImage] = useState('');
 
   const getCategoryLabel = (cat: CategoryConfig) => {
+    if (cat.id === 'secret') return TRANSLATIONS[lang].cat_secret;
     const id = cat.id.toLowerCase();
     const t = TRANSLATIONS[lang];
     if (lang === 'ru') return { idea: t.cat_idea, work: t.cat_work, journal: t.cat_journal, 'to-do': t.cat_todo, todo: t.cat_todo }[id] || cat.label;
     return { idea: t.cat_idea, work: t.cat_work, journal: t.cat_journal, 'to-do': t.cat_todo, todo: t.cat_todo }[id] || cat.label;
   };
+
+  // --- SECRET TRIGGER ---
+  const handleSecretTrigger = () => {
+    setSecretTaps(prev => prev + 1);
+    
+    // Clear taps if user stops tapping for 1 second
+    if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
+    tapTimeoutRef.current = setTimeout(() => setSecretTaps(0), 1000);
+
+    // 5 Taps unlocks the secret
+    if (secretTaps + 1 >= 5) {
+        setActiveFilter('secret');
+        setSelectedCategory('secret');
+        setSecretTaps(0);
+        // Optional: Vibration feedback if on mobile
+        if (navigator.vibrate) navigator.vibrate(200);
+    }
+  };
+
+  // Helper to get current config (handles secret case)
+  const currentCategoryConfig = selectedCategory === 'secret' 
+    ? SECRET_CATEGORY_CONFIG 
+    : categories.find(c => c.id === selectedCategory) || categories[0];
 
   const handleImageUpload = async (file: File, isEditMode = false) => {
     if (!file.type.startsWith('image/')) return alert('Please select an image file');
@@ -149,16 +190,8 @@ function App() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      if (currentScrollY < 10) {
-        setShowBars(true);
-        lastScrollY.current = currentScrollY;
-        return;
-      }
-      if (currentScrollY > lastScrollY.current) {
-        setShowBars(false); // Scrolling DOWN -> Hide
-      } else {
-        setShowBars(true);  // Scrolling UP -> Show
-      }
+      if (currentScrollY < 10) { setShowBars(true); lastScrollY.current = currentScrollY; return; }
+      if (currentScrollY > lastScrollY.current) { setShowBars(false); } else { setShowBars(true); }
       lastScrollY.current = currentScrollY;
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -189,7 +222,17 @@ function App() {
   useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
 
   const handleCategoryEdit = (id: CategoryId, field: 'label' | 'emoji' | 'colorClass', value: string) => setCategories(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
-  const cycleCategory = () => { const i = categories.findIndex(c => c.id === selectedCategory); setSelectedCategory(categories[(i + 1) % categories.length].id); };
+  
+  const cycleCategory = () => { 
+      // If in secret mode, clicking button returns to normal
+      if (selectedCategory === 'secret') {
+          setSelectedCategory(categories[0].id);
+          setActiveFilter(categories[0].id); // Exit secret view
+          return;
+      }
+      const i = categories.findIndex(c => c.id === selectedCategory); 
+      setSelectedCategory(categories[(i + 1) % categories.length].id); 
+  };
   
   const saveNote = async () => {
     if (!transcript.trim() && !imageUrl) return;
@@ -214,7 +257,20 @@ function App() {
   const togglePin = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
   const handleToggleExpand = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
 
-  const filteredNotes = notes.filter(n => (n.text.toLowerCase().includes(searchQuery.toLowerCase()) && (activeFilter === 'all' || n.category === activeFilter))).sort((a, b) => (a.isPinned === b.isPinned ? 0 : a.isPinned ? -1 : 1));
+  // --- MODIFIED FILTER LOGIC ---
+  const filteredNotes = notes.filter(n => {
+      const matchesSearch = n.text.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchesSearch) return false;
+
+      // SECRET LOGIC:
+      // 1. If filter is 'all', show everything EXCEPT 'secret' notes
+      if (activeFilter === 'all') return n.category !== 'secret';
+      // 2. If filter is 'secret', show ONLY 'secret' notes
+      if (activeFilter === 'secret') return n.category === 'secret';
+      // 3. Otherwise show specific category
+      return n.category === activeFilter;
+  }).sort((a, b) => (a.isPinned === b.isPinned ? 0 : a.isPinned ? -1 : 1));
+
   const t = TRANSLATIONS[lang];
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
 
@@ -224,20 +280,27 @@ function App() {
   return (
     <div className="min-h-screen w-full bg-black text-zinc-100 font-sans selection:bg-orange-500/30">
       
-      {/* 
-        HEADER
-        Changed: duration-300 -> duration-500 (Slower animation)
-      */}
+      {/* HEADER */}
       <div className={`fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/5 transition-transform duration-1000 ease-in-out ${showBars ? 'translate-y-0' : '-translate-y-full'}`}>
         <header className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3">
-           <div className="flex-shrink-0 w-10 h-10 bg-zinc-900/80 border border-white/10 flex items-center justify-center rounded-xl">
-               <div className="w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)]"></div>
-           </div>
+           
+           {/* LOGO - THIS IS THE SECRET TRIGGER */}
+           <button 
+                onClick={handleSecretTrigger}
+                className="flex-shrink-0 w-10 h-10 bg-zinc-900/80 border border-white/10 flex items-center justify-center rounded-xl active:scale-95 transition-transform"
+           >
+               {activeFilter === 'secret' ? (
+                   <EyeOff className="text-red-500" size={16} /> // Visual indicator for secret mode
+               ) : (
+                   <div className="w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)]"></div>
+               )}
+           </button>
+
            <div className="flex-1 relative group">
               <Search className="absolute left-3.5 top-2.5 text-zinc-500 group-focus-within:text-zinc-300 transition-colors" size={16} />
               <input 
                   type="text" 
-                  placeholder={t.search}
+                  placeholder={activeFilter === 'secret' ? "Classified search..." : t.search}
                   value={searchQuery} 
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-zinc-900/50 hover:bg-zinc-900 focus:bg-zinc-900 border border-transparent focus:border-white/10 rounded-xl py-2 pl-10 pr-4 text-zinc-200 placeholder:text-zinc-600 focus:outline-none text-sm transition-all"
@@ -258,52 +321,54 @@ function App() {
 
         {/* CATEGORY BAR */}
         <div className="max-w-2xl mx-auto grid grid-cols-5 w-full border-t border-white/5">
-          <button 
-            onClick={() => setActiveFilter('all')} 
-            className={`
-              flex flex-row items-center justify-center gap-1.5 py-3 
-              border-r border-white/5 relative group transition-colors
-              ${activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}
-            `}
-          >
-              <LayoutGrid size={13} className={activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500'} />
-              <span className="text-[10px] font-medium">{t.all}</span>
-          </button>
           
-          {categories.map((cat, index) => (
-              <button 
-                key={cat.id} 
-                onClick={() => setActiveFilter(cat.id)} 
-                className={`
-                  flex flex-row items-center justify-center gap-1.5 py-3 relative group transition-colors
-                  ${index !== categories.length - 1 ? 'border-r border-white/5' : ''}
-                  ${activeFilter === cat.id ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}
-                `}
-              >
-                  <span className={`text-[12px] leading-none ${activeFilter === cat.id ? 'grayscale-0' : 'grayscale opacity-70'}`}>{cat.emoji}</span>
-                  <span className="text-[10px] font-medium truncate">{getCategoryLabel(cat)}</span>
-              </button>
-          ))}
+          {/* If Active Filter is SECRET, show the Secret Tab instead of 'All' */}
+          {activeFilter === 'secret' ? (
+             <button className="flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative text-red-500 col-span-5">
+                <span className="text-[12px]">👻</span>
+                <span className="text-[10px] font-medium tracking-widest uppercase">Secret Mode Active</span>
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 shadow-[0_0_10px_rgba(220,38,38,0.8)]"></div>
+             </button>
+          ) : (
+            <>
+                <button 
+                    onClick={() => setActiveFilter('all')} 
+                    className={`flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative group transition-colors ${activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}`}
+                >
+                    <LayoutGrid size={13} className={activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500'} />
+                    <span className="text-[10px] font-medium">{t.all}</span>
+                </button>
+                
+                {categories.map((cat, index) => (
+                    <button 
+                        key={cat.id} 
+                        onClick={() => setActiveFilter(cat.id)} 
+                        className={`flex flex-row items-center justify-center gap-1.5 py-3 relative group transition-colors ${index !== categories.length - 1 ? 'border-r border-white/5' : ''} ${activeFilter === cat.id ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    >
+                        <span className={`text-[12px] leading-none ${activeFilter === cat.id ? 'grayscale-0' : 'grayscale opacity-70'}`}>{cat.emoji}</span>
+                        <span className="text-[10px] font-medium truncate">{getCategoryLabel(cat)}</span>
+                    </button>
+                ))}
+            </>
+          )}
         </div>
       </div>
 
       <div className={`pt-32 pb-32 px-4 max-w-2xl mx-auto flex flex-col gap-3 ${getAlignmentClass()}`}>
           {filteredNotes.map(note => (
-            <NoteCard key={note.id} note={note} categories={categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onUpdate={updateNote} onToggleExpand={handleToggleExpand} />
+            <NoteCard key={note.id} note={note} categories={activeFilter === 'secret' ? [SECRET_CATEGORY_CONFIG] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onUpdate={updateNote} onToggleExpand={handleToggleExpand} />
           ))}
-          {filteredNotes.length === 0 && <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full"><LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} /><p className="text-zinc-700 text-xs font-mono uppercase">Database Empty</p></div>}
+          {filteredNotes.length === 0 && <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full"><LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} /><p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'No Secrets Yet' : 'Database Empty'}</p></div>}
       </div>
 
-      {/* 
-        FOOTER
-        Changed: duration-300 -> duration-500
-      */}
       <div className={`fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 transition-transform duration-1000 ease-in-out ${showBars ? 'translate-y-0' : 'translate-y-full'}`}>
           <div className="max-w-2xl mx-auto flex items-end gap-2">
-              <button onClick={cycleCategory} className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group"><span className="text-xs grayscale group-hover:grayscale-0 transition-all">{categories.find(c => c.id === selectedCategory)?.emoji}</span></button>
+              <button onClick={cycleCategory} className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group">
+                  <span className="text-xs grayscale-0 transition-all">{currentCategoryConfig.emoji}</span>
+              </button>
               <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3">
                   {imageUrl && <div className="relative flex-shrink-0 group/image"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"><X size={10} /></button></div>}
-                  <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} placeholder={t.typePlaceholder} rows={1} className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5" />
+                  <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} placeholder={activeFilter === 'secret' ? "Whisper a secret..." : t.typePlaceholder} rows={1} className="w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5" />
               </div>
               <button onClick={saveNote} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 ${transcript.trim() || imageUrl ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)]' : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}>{transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}</button>
           </div>

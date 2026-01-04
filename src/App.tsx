@@ -123,12 +123,27 @@ function App() {
 
   const lastScrollY = useRef(0);
 
+  // SECRET MODE STATES
   const [secretTaps, setSecretTaps] = useState(0);
   const tapTimeoutRef = useRef<any>(null);
-  const [showGhosts, setShowGhosts] = useState(false);
+  const [showSecretAnim, setShowSecretAnim] = useState(false);
+  const [secretAnimType, setSecretAnimType] = useState<'ghost' | 'matrix'>('ghost');
 
-  // STARTUP ANIMATION STATE
+  // ANIMATION STATES
   const [isStartup, setIsStartup] = useState(true);
+  
+  // Randomize Startup Animation
+  const [startupAnimName] = useState(() => {
+    const anims = ['logoEntrance', 'logoHeartbeat', 'logoGlitch', 'logoWobble'];
+    const seed = Date.now(); 
+    return anims[seed % anims.length];
+  });
+
+  const [showConfetti, setShowConfetti] = useState(false);
+  
+  // NEW: Save Animation States
+  const [showSaveAnim, setShowSaveAnim] = useState(false);
+  const [saveAnimType, setSaveAnimType] = useState<'brain' | 'money' | 'journal' | null>(null);
 
   // EDIT STATE
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -170,8 +185,13 @@ function App() {
         setActiveFilter('secret');
         setSelectedCategory('secret');
         setSecretTaps(0);
-        setShowGhosts(true);
-        setTimeout(() => setShowGhosts(false), 5000); 
+        
+        // Randomly choose animation type
+        const type = Math.random() > 0.5 ? 'ghost' : 'matrix';
+        setSecretAnimType(type);
+        setShowSecretAnim(true);
+
+        setTimeout(() => setShowSecretAnim(false), 5000); 
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     }
   };
@@ -272,6 +292,22 @@ function App() {
     if (!transcript.trim() && !imageUrl) return;
     try {
         await addNote({ text: transcript.trim(), date: Date.now(), category: selectedCategory, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
+        
+        // TRIGGER ANIMATIONS BASED ON CATEGORY
+        if (selectedCategory === 'idea') {
+            setSaveAnimType('brain');
+            setShowSaveAnim(true);
+            setTimeout(() => setShowSaveAnim(false), 3500);
+        } else if (selectedCategory === 'work') {
+            setSaveAnimType('money');
+            setShowSaveAnim(true);
+            setTimeout(() => setShowSaveAnim(false), 3500);
+        } else if (selectedCategory === 'journal') {
+            setSaveAnimType('journal');
+            setShowSaveAnim(true);
+            setTimeout(() => setShowSaveAnim(false), 3500);
+        }
+
         setTranscript(''); setImageUrl('');
     } catch (e) { console.error(e); }
   };
@@ -291,7 +327,15 @@ function App() {
       }
   };
 
-  const handleDeleteNote = async (id: string) => { await deleteNoteFromFirebase(id); };
+  const handleDeleteNote = async (id: string) => { 
+      const noteToDelete = notes.find(n => n.id === id);
+      if (noteToDelete && (noteToDelete.category === 'to-do' || noteToDelete.category === 'todo')) {
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 4500); 
+      }
+      await deleteNoteFromFirebase(id); 
+  };
+
   const togglePin = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
   const handleToggleExpand = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
 
@@ -306,8 +350,7 @@ function App() {
   const t = TRANSLATIONS[lang];
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
 
-  // DETERMINE IF SCROLL SHOULD BE DISABLED
-  // If there is no image and text is short (<150 chars, approx 2-3 lines), disable scroll physically.
+  // SCROLL LOGIC
   const isShortNote = !editNoteImage && editNoteText.length < 150;
 
   if (authLoading) return <div className="min-h-screen bg-black" />;
@@ -320,12 +363,9 @@ function App() {
         /* =========================================
            EDIT MODE (STRICT ISOLATION)
            ========================================= */
-        // WRAPPER
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4 overflow-hidden touch-none">
             <div 
                 id={`edit-card-${editingNote.id}`}
-                // CARD
-                // Conditional Class: if short, overflow-y-hidden (solid pill). If long, overflow-y-auto (scrollable).
                 className={`w-full max-w-2xl max-h-[85dvh] overscroll-y-none bg-black border border-orange-500/50 rounded-2xl p-4 flex flex-col gap-4 shadow-[0_0_30px_rgba(234,88,12,0.1)] ${
                     isShortNote ? 'overflow-y-hidden touch-none' : 'overflow-y-auto touch-pan-y'
                 }`}
@@ -387,7 +427,7 @@ function App() {
                     ) : (
                         <div 
                                 className={`w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)] relative z-10 ${isStartup ? 'animate-bounce' : ''}`}
-                                style={isStartup ? { animation: 'logoEntrance 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards' } : {}}
+                                style={isStartup ? { animation: `${startupAnimName} 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` } : {}}
                         ></div>
                     )}
                 </button>
@@ -514,10 +554,92 @@ function App() {
          </div>
       )}
 
-      {/* GHOSTS */}
-      {showGhosts && !editingNote && (
+      {/* CONFETTI OVERLAY */}
+      {showConfetti && !editingNote && (
         <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
-             {Array.from({ length: 15 }).map((_, i) => (
+             {Array.from({ length: 80 }).map((_, i) => {
+                 const style = {
+                     backgroundColor: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ff8800'][Math.floor(Math.random() * 7)],
+                     left: '50%',
+                     top: '50%',
+                     width: `${Math.random() * 6 + 4}px`, 
+                     height: `${Math.random() * 6 + 4}px`,
+                     '--end-x': `${(Math.random() - 0.5) * 150}vw`, 
+                     '--end-y': `${Math.random() * 100 + 50}vh`, 
+                     '--rot': `${Math.random() * 1080}deg`, 
+                     animation: `confettiGravity ${2.5 + Math.random() * 2}s cubic-bezier(0.25, 1, 0.5, 1) forwards`,
+                 } as React.CSSProperties;
+
+                 return <div key={i} className="absolute rounded-sm" style={style} />
+             })}
+        </div>
+      )}
+
+      {/* SAVE ANIMATIONS (BRAIN, MONEY, JOURNAL) */}
+      {showSaveAnim && !editingNote && (
+        <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
+            {/* BRAIN (Rise Like Ghost) */}
+            {saveAnimType === 'brain' && Array.from({ length: 20 }).map((_, i) => (
+                <div 
+                    key={i} 
+                    className="absolute text-4xl"
+                    style={{
+                        left: `${Math.random() * 100}vw`,
+                        bottom: '-50px',
+                        fontSize: `${Math.random() * 25 + 15}px`,
+                        opacity: 0,
+                        animation: `ghostFly ${3 + Math.random() * 2}s linear forwards`,
+                        animationDelay: `${Math.random() * 1.5}s`
+                    }}
+                >
+                    🧠
+                </div>
+            ))}
+
+            {/* MONEY (Rain Down) */}
+            {saveAnimType === 'money' && Array.from({ length: 30 }).map((_, i) => (
+                <div 
+                    key={i} 
+                    className="absolute text-4xl"
+                    style={{
+                        left: `${Math.random() * 100}vw`,
+                        top: '-50px',
+                        fontSize: `${Math.random() * 25 + 15}px`,
+                        opacity: 0,
+                        animation: `rainDown ${2 + Math.random() * 2}s linear forwards`,
+                        animationDelay: `${Math.random() * 1.5}s`
+                    }}
+                >
+                    💰
+                </div>
+            ))}
+
+            {/* JOURNAL (Rise like Ghost) */}
+            {saveAnimType === 'journal' && Array.from({ length: 20 }).map((_, i) => (
+                <div 
+                    key={i} 
+                    className="absolute text-4xl"
+                    style={{
+                        left: `${Math.random() * 100}vw`,
+                        bottom: '-50px',
+                        fontSize: `${Math.random() * 25 + 15}px`,
+                        opacity: 0,
+                        animation: `ghostFly ${3 + Math.random() * 2}s linear forwards`,
+                        animationDelay: `${Math.random() * 1.5}s`
+                    }}
+                >
+                    📝
+                </div>
+            ))}
+        </div>
+      )}
+
+      {/* SECRET ANIMATIONS (GHOSTS OR MATRIX) */}
+      {showSecretAnim && !editingNote && (
+        <div className={`fixed inset-0 z-[60] pointer-events-none overflow-hidden ${secretAnimType === 'matrix' ? 'bg-black/80' : ''}`}>
+             
+             {/* GHOSTS VARIANT */}
+             {secretAnimType === 'ghost' && Array.from({ length: 15 }).map((_, i) => (
                 <div 
                     key={i} 
                     className="absolute text-4xl"
@@ -533,21 +655,90 @@ function App() {
                     👻
                 </div>
              ))}
-             <style>{`
-                @keyframes ghostFly {
-                    0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
-                    10% { opacity: 0.7; }
-                    90% { opacity: 0.7; }
-                    100% { transform: translateY(-110vh) rotate(${Math.random() > 0.5 ? 45 : -45}deg) scale(1.2); opacity: 0; }
-                }
-                @keyframes logoEntrance {
-                    0% { transform: scale(0) rotate(-180deg); }
-                    60% { transform: scale(1.2) rotate(10deg); }
-                    100% { transform: scale(1) rotate(0deg); }
-                }
-             `}</style>
+
+             {/* MATRIX VARIANT */}
+             {secretAnimType === 'matrix' && Array.from({ length: 40 }).map((_, i) => (
+                <div 
+                    key={i} 
+                    className="absolute text-green-500 font-mono font-bold leading-none writing-vertical-rl"
+                    style={{
+                        left: `${Math.random() * 100}vw`,
+                        top: '-100px',
+                        fontSize: `${Math.random() * 15 + 10}px`,
+                        opacity: 0,
+                        animation: `matrixRain ${2 + Math.random() * 3}s linear forwards`,
+                        animationDelay: `${Math.random() * 2}s`
+                    }}
+                >
+                    {String.fromCharCode(0x30A0 + Math.random() * 96)}
+                </div>
+             ))}
         </div>
       )}
+
+      {/* KEYFRAMES */}
+      <style>{`
+        /* STARTUP ANIMATIONS */
+        @keyframes logoEntrance {
+            0% { transform: scale(0) rotate(-180deg); }
+            60% { transform: scale(1.2) rotate(10deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        @keyframes logoHeartbeat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4); }
+            100% { transform: scale(1); }
+        }
+        @keyframes logoGlitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-3px, 3px); }
+            40% { transform: translate(-3px, -3px); }
+            60% { transform: translate(3px, 3px); }
+            80% { transform: translate(3px, -3px); }
+            100% { transform: translate(0); }
+        }
+        @keyframes logoWobble {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-15deg) scale(1.1); }
+            75% { transform: rotate(15deg) scale(1.1); }
+        }
+
+        /* GENERAL ANIMATIONS */
+        @keyframes ghostFly {
+            0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
+            10% { opacity: 0.7; }
+            90% { opacity: 0.7; }
+            100% { transform: translateY(-110vh) rotate(${Math.random() > 0.5 ? 45 : -45}deg) scale(1.2); opacity: 0; }
+        }
+        @keyframes matrixRain {
+            0% { transform: translateY(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(110vh); opacity: 0; }
+        }
+        @keyframes rainDown {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(110vh) rotate(${Math.random() * 90}deg); opacity: 0; }
+        }
+
+        /* CONFETTI PHYSICS */
+        @keyframes confettiGravity {
+            0% { 
+                transform: translate(-50%, -50%) rotate(0deg) scale(0.5); 
+                opacity: 1; 
+            }
+            15% {
+                transform: translate(calc(-50% + (var(--end-x) * 0.2)), calc(-50% - 20vh)) rotate(90deg) scale(1.2);
+                opacity: 1;
+            }
+            100% { 
+                transform: translate(calc(-50% + var(--end-x)), calc(-50% + var(--end-y))) rotate(var(--rot)) scale(0.5); 
+                opacity: 0; 
+            }
+        }
+      `}</style>
     </div>
   );
 }

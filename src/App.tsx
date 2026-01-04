@@ -223,8 +223,6 @@ function App() {
     if (editingNote && editTextAreaRef.current) {
         editTextAreaRef.current.style.height = 'auto';
         editTextAreaRef.current.style.height = editTextAreaRef.current.scrollHeight + 'px';
-        
-        // Removed scrollIntoView on mount to prevent jumping on mobile
     }
   }, [editingNote, editNoteText]); 
 
@@ -308,6 +306,10 @@ function App() {
   const t = TRANSLATIONS[lang];
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
 
+  // DETERMINE IF SCROLL SHOULD BE DISABLED
+  // If there is no image and text is short (<150 chars, approx 2-3 lines), disable scroll physically.
+  const isShortNote = !editNoteImage && editNoteText.length < 150;
+
   if (authLoading) return <div className="min-h-screen bg-black" />;
   if (!user) return <Auth />;
 
@@ -318,12 +320,15 @@ function App() {
         /* =========================================
            EDIT MODE (STRICT ISOLATION)
            ========================================= */
-        // WRAPPER: touch-none (stops background scroll), overflow-hidden (stops bounce)
+        // WRAPPER
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4 overflow-hidden touch-none">
             <div 
                 id={`edit-card-${editingNote.id}`}
-                // CARD: touch-pan-y (allows vertical scroll inside), overscroll-y-none (stops rubber band), max-h-[85dvh] (avoids keyboard issues)
-                className="w-full max-w-2xl max-h-[85dvh] overflow-y-auto overscroll-y-none touch-pan-y bg-black border border-orange-500/50 rounded-2xl p-4 flex flex-col gap-4 shadow-[0_0_30px_rgba(234,88,12,0.1)]"
+                // CARD
+                // Conditional Class: if short, overflow-y-hidden (solid pill). If long, overflow-y-auto (scrollable).
+                className={`w-full max-w-2xl max-h-[85dvh] overscroll-y-none bg-black border border-orange-500/50 rounded-2xl p-4 flex flex-col gap-4 shadow-[0_0_30px_rgba(234,88,12,0.1)] ${
+                    isShortNote ? 'overflow-y-hidden touch-none' : 'overflow-y-auto touch-pan-y'
+                }`}
             >
                 <div className="w-full">
                     {editNoteImage ? (

@@ -62,7 +62,6 @@ const TRANSLATIONS = {
   } 
 };
 
-// Config for the hidden category
 const SECRET_CATEGORY_CONFIG: CategoryConfig = {
     id: 'secret',
     label: 'Secret',
@@ -118,17 +117,16 @@ function App() {
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
 
-  // --- SCROLL VISIBILITY STATE ---
   const [showBars, setShowBars] = useState(true);
   const lastScrollY = useRef(0);
 
-  // --- SECRET MODE STATE ---
   const [secretTaps, setSecretTaps] = useState(0);
   const tapTimeoutRef = useRef<any>(null);
-  // NEW: State for flying ghosts
   const [showGhosts, setShowGhosts] = useState(false);
 
-  // --- EDIT MODAL STATE ---
+  // --- NEW: STARTUP ANIMATION STATE ---
+  const [isStartup, setIsStartup] = useState(true);
+
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [editNoteText, setEditNoteText] = useState('');
   const [editNoteImage, setEditNoteImage] = useState('');
@@ -141,32 +139,22 @@ function App() {
     return { idea: t.cat_idea, work: t.cat_work, journal: t.cat_journal, 'to-do': t.cat_todo, todo: t.cat_todo }[id] || cat.label;
   };
 
-  // --- SECRET TRIGGER ---
   const handleSecretTrigger = () => {
     setSecretTaps(prev => prev + 1);
-    
-    // Clear taps if user stops tapping for 1 second
     if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
     tapTimeoutRef.current = setTimeout(() => setSecretTaps(0), 1000);
 
-    // 5 Taps unlocks the secret
     if (secretTaps + 1 >= 5) {
         setActiveFilter('secret');
         setSelectedCategory('secret');
         setSecretTaps(0);
-        
-        // Trigger Ghost Animation
         setShowGhosts(true);
-        setTimeout(() => setShowGhosts(false), 5000); // Stop after 5 seconds
-
+        setTimeout(() => setShowGhosts(false), 5000); 
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     }
   };
 
-  // Helper to get current config (handles secret case)
-  const currentCategoryConfig = selectedCategory === 'secret' 
-    ? SECRET_CATEGORY_CONFIG 
-    : categories.find(c => c.id === selectedCategory) || categories[0];
+  const currentCategoryConfig = selectedCategory === 'secret' ? SECRET_CATEGORY_CONFIG : categories.find(c => c.id === selectedCategory) || categories[0];
 
   const handleImageUpload = async (file: File, isEditMode = false) => {
     if (!file.type.startsWith('image/')) return alert('Please select an image file');
@@ -191,7 +179,6 @@ function App() {
     }
   };
 
-  // --- SCROLL HANDLER ---
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -201,6 +188,15 @@ function App() {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // --- STARTUP EFFECT TRIGGER ---
+  useEffect(() => {
+    // Play startup animation for 2.5 seconds then stop
+    const timer = setTimeout(() => {
+        setIsStartup(false);
+    }, 2500);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -229,10 +225,9 @@ function App() {
   const handleCategoryEdit = (id: CategoryId, field: 'label' | 'emoji' | 'colorClass', value: string) => setCategories(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
   
   const cycleCategory = () => { 
-      // If in secret mode, clicking button returns to normal
       if (selectedCategory === 'secret') {
           setSelectedCategory(categories[0].id);
-          setActiveFilter(categories[0].id); // Exit secret view
+          setActiveFilter(categories[0].id);
           return;
       }
       const i = categories.findIndex(c => c.id === selectedCategory); 
@@ -262,12 +257,9 @@ function App() {
   const togglePin = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
   const handleToggleExpand = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
 
-  // --- MODIFIED FILTER LOGIC ---
   const filteredNotes = notes.filter(n => {
       const matchesSearch = n.text.toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchesSearch) return false;
-
-      // SECRET LOGIC:
       if (activeFilter === 'all') return n.category !== 'secret';
       if (activeFilter === 'secret') return n.category === 'secret';
       return n.category === activeFilter;
@@ -286,15 +278,29 @@ function App() {
       <div className={`fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/5 transition-transform duration-1000 ease-in-out ${showBars ? 'translate-y-0' : '-translate-y-full'}`}>
         <header className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3">
            
-           {/* LOGO - THIS IS THE SECRET TRIGGER */}
+           {/* LOGO - SECRET TRIGGER + STARTUP ANIMATION */}
            <button 
                 onClick={handleSecretTrigger}
-                className="flex-shrink-0 w-10 h-10 bg-zinc-900/80 border border-white/10 flex items-center justify-center rounded-xl active:scale-95 transition-transform"
+                className="flex-shrink-0 w-10 h-10 bg-zinc-900/80 border border-white/10 flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible"
            >
+               {/* STARTUP ANIMATION LAYERS */}
+               {isStartup && (
+                 <>
+                    {/* Spinning Ring */}
+                    <div className="absolute inset-[-4px] border border-orange-500/50 rounded-xl animate-[spin_1s_linear_infinite] opacity-50" />
+                    {/* Shockwave Ripple */}
+                    <div className="absolute inset-0 bg-orange-500 rounded-xl animate-ping opacity-75" style={{ animationDuration: '1.5s' }} />
+                 </>
+               )}
+
+               {/* ACTUAL LOGO ICON */}
                {activeFilter === 'secret' ? (
-                   <EyeOff className="text-red-500" size={16} /> 
+                   <EyeOff className="text-red-500 relative z-10" size={16} /> 
                ) : (
-                   <div className="w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)]"></div>
+                   <div 
+                        className={`w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)] relative z-10 ${isStartup ? 'animate-bounce' : ''}`}
+                        style={isStartup ? { animation: 'logoEntrance 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards' } : {}}
+                   ></div>
                )}
            </button>
 
@@ -323,8 +329,6 @@ function App() {
 
         {/* CATEGORY BAR */}
         <div className="max-w-2xl mx-auto grid grid-cols-5 w-full border-t border-white/5">
-          
-          {/* If Active Filter is SECRET, show the Secret Tab */}
           {activeFilter === 'secret' ? (
              <button className="flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative text-red-500 col-span-5">
                 <span className="text-[12px]">👻</span>
@@ -376,7 +380,6 @@ function App() {
           </div>
       </div>
 
-      {/* FULL SCREEN EDIT MODAL */}
       {editingNote && (
         <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col animate-in fade-in slide-in-from-bottom-5 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-zinc-800 bg-black/50">
@@ -423,7 +426,6 @@ function App() {
          </div>
       )}
 
-      {/* --- GHOST ANIMATION OVERLAY --- */}
       {showGhosts && (
         <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
              {Array.from({ length: 15 }).map((_, i) => (
@@ -433,32 +435,26 @@ function App() {
                     style={{
                         left: `${Math.random() * 100}vw`,
                         bottom: '-50px',
-                        fontSize: `${Math.random() * 30 + 20}px`, // Random size
+                        fontSize: `${Math.random() * 30 + 20}px`,
                         opacity: 0,
                         animation: `ghostFly ${3 + Math.random() * 2}s linear forwards`,
-                        animationDelay: `${Math.random() * 2}s` // Random delay start
+                        animationDelay: `${Math.random() * 2}s`
                     }}
                 >
                     👻
                 </div>
              ))}
-             {/* Dynamic CSS for the flight path */}
              <style>{`
                 @keyframes ghostFly {
-                    0% {
-                        transform: translateY(0) rotate(0deg) scale(0.8);
-                        opacity: 0;
-                    }
-                    10% {
-                        opacity: 0.7;
-                    }
-                    90% {
-                        opacity: 0.7;
-                    }
-                    100% {
-                        transform: translateY(-110vh) rotate(${Math.random() > 0.5 ? 45 : -45}deg) scale(1.2);
-                        opacity: 0;
-                    }
+                    0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
+                    10% { opacity: 0.7; }
+                    90% { opacity: 0.7; }
+                    100% { transform: translateY(-110vh) rotate(${Math.random() > 0.5 ? 45 : -45}deg) scale(1.2); opacity: 0; }
+                }
+                @keyframes logoEntrance {
+                    0% { transform: scale(0) rotate(-180deg); }
+                    60% { transform: scale(1.2) rotate(10deg); }
+                    100% { transform: scale(1) rotate(0deg); }
                 }
              `}</style>
         </div>

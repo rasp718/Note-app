@@ -33,7 +33,7 @@ const TRANSLATIONS = {
     cat_journal: "Journal", 
     cat_todo: "To-Do",
     cat_secret: "Classified",
-    cat_hacker: "Anonymous", // Renamed
+    cat_hacker: "Anonymous", 
     editNote: "Edit Note" 
   }, 
   ru: { 
@@ -74,7 +74,7 @@ const GHOST_CONFIG: CategoryConfig = {
 
 const HACKER_CONFIG: CategoryConfig = {
     id: 'secret', 
-    label: 'Anon', // Updated Label to 'Anon'
+    label: 'Anon', 
     emoji: '💻',
     colorClass: 'bg-green-500'
 };
@@ -212,38 +212,36 @@ function App() {
     if (editingNote?.category === 'secret') {
         if (secretAnimType === 'matrix') {
             return {
-                containerBorder: 'border-green-500/50',
+                containerBorder: 'border-green-900/50', 
                 uploadBorder: 'border-green-500/30',
-                text: 'text-green-400 font-mono',
+                text: 'text-white font-mono', // Changed from text-green-400 to text-white
                 placeholder: 'placeholder:text-green-700',
-                icon: 'text-green-500',
-                // Green button with 50% opacity when inactive
-                saveBtn: 'bg-green-600/50 hover:bg-green-500 shadow-green-900/20',
-                cancelBtn: 'bg-zinc-900 border-green-500/30 text-green-600 hover:bg-zinc-800'
+                icon: 'text-zinc-500 hover:text-green-500',
+                saveBtn: 'bg-transparent border border-zinc-800 text-zinc-500 hover:border-green-500 hover:text-green-500',
+                cancelBtn: 'bg-transparent border border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-green-400'
             };
         } else {
             // Ghost Mode
             return {
-                containerBorder: 'border-red-500/50',
+                containerBorder: 'border-zinc-800',
                 uploadBorder: 'border-red-500/30',
-                text: 'text-red-100',
+                text: 'text-white', // Changed from text-zinc-300 to text-white
                 placeholder: 'placeholder:text-red-800',
-                icon: 'text-red-500',
-                // Red button with 50% opacity when inactive
-                saveBtn: 'bg-red-600/50 hover:bg-red-500 shadow-red-900/20',
-                cancelBtn: 'bg-zinc-900 border-red-500/30 text-red-600 hover:bg-zinc-800'
+                icon: 'text-zinc-500 hover:text-red-500',
+                saveBtn: 'bg-transparent border border-zinc-800 text-zinc-500 hover:border-red-500 hover:text-red-500',
+                cancelBtn: 'bg-transparent border border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-red-400'
             };
         }
     }
     // Default / Standard Notes
     return {
-        containerBorder: 'border-orange-500/50',
+        containerBorder: 'border-zinc-800',
         uploadBorder: 'border-zinc-800',
-        text: 'text-zinc-100', // FIXED: Text is now white/gray, not orange
+        text: 'text-white', // Changed from text-zinc-300 to text-white
         placeholder: 'placeholder:text-zinc-700',
         icon: 'text-zinc-500 hover:text-zinc-300',
-        saveBtn: 'bg-orange-600 hover:bg-orange-500 shadow-orange-900/20',
-        cancelBtn: 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800'
+        saveBtn: 'bg-transparent border border-zinc-800 text-zinc-500 hover:border-orange-500 hover:text-orange-500',
+        cancelBtn: 'bg-transparent border border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'
     };
   };
 
@@ -509,15 +507,15 @@ function App() {
   if (!user) return <Auth />;
 
   return (
-    <div className={`min-h-screen w-full bg-black text-zinc-100 font-sans selection:bg-orange-500/30 overflow-x-hidden ${currentTheme.font}`}>
+    <div className={`min-h-screen w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} overflow-x-hidden ${currentTheme.font}`}>
       
       {editingNote ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4 overflow-hidden touch-none">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-hidden touch-none">
             <div 
                 id={`edit-card-${editingNote.id}`}
                 className={`
                     ${editNoteImage ? 'w-min min-w-[300px] max-w-[95vw]' : 'w-full max-w-md md:max-w-sm'} 
-                    max-h-[85dvh] overscroll-y-none bg-black border rounded-2xl p-3 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,0,0,0.5)] 
+                    max-h-[85dvh] overscroll-y-none bg-zinc-900 border rounded-2xl p-3 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,0,0,0.5)] 
                     ${isShortNote ? 'overflow-y-hidden touch-none' : 'overflow-y-auto touch-pan-y'} 
                     ${editTheme.containerBorder}
                 `}
@@ -546,7 +544,7 @@ function App() {
                     style={{ height: 'auto', minHeight: '40px' }}
                 />
                 <div className="flex gap-2 pt-2 border-t border-white/5 mt-auto">
-                    <button onClick={handleSaveEdit} className={`flex-1 text-white h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all ${editTheme.saveBtn}`}>
+                    <button onClick={handleSaveEdit} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all ${editTheme.saveBtn}`}>
                         <Check size={12} /> Save
                     </button>
                     <button onClick={() => setEditingNote(null)} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 border active:scale-95 transition-all ${editTheme.cancelBtn}`}>
@@ -622,7 +620,7 @@ function App() {
                         <span className="text-[10px] font-medium tracking-widest uppercase">
                             {secretAnimType === 'matrix' ? 'Hacker Mode Active' : 'Secret Mode Active'}
                         </span>
-                        <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${currentTheme.bg} ${currentTheme.shadow}`}></div>
+                        
                     </button>
                 ) : (
                     <>
@@ -807,20 +805,21 @@ function App() {
                 </div>
             ))}
 
-            {saveAnimType === 'fire' && Array.from({ length: 40 }).map((_, i) => (
+{saveAnimType === 'fire' && Array.from({ length: 60 }).map((_, i) => (
                 <div 
                     key={i} 
-                    className="absolute rounded-full blur-[2px]"
+                    className="absolute rounded-full"
                     style={{
-                        background: 'linear-gradient(to top, #ff4500, #ff8c00, #fbbf24)',
-                        width: `${Math.random() * 8 + 3}px`,
-                        height: `${Math.random() * 8 + 3}px`,
+                        background: 'radial-gradient(circle, #fef08a 10%, #f97316 40%, #ef4444 100%)', // White-hot center to red edge
+                        boxShadow: '0 0 4px 1px rgba(249, 115, 22, 0.6)', // Orange glow
+                        width: `${Math.random() * 6 + 2}px`,
+                        height: `${Math.random() * 6 + 2}px`,
                         left: `${Math.random() * 100}vw`,
                         bottom: '-20px',
                         opacity: 0,
-                        animation: `emberRise ${3 + Math.random() * 2}s linear forwards`,
-                        animationDelay: `${Math.random() * 1.5}s`,
-                        '--drift': `${(Math.random() - 0.5) * 100}px`
+                        animation: `emberRise ${2 + Math.random() * 3}s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
+                        animationDelay: `${Math.random() * 0.5}s`, // Faster start
+                        '--drift': `${(Math.random() - 0.5) * 150}px`
                     } as React.CSSProperties}
                 />
             ))}
@@ -915,7 +914,10 @@ function App() {
             100% { transform: translateY(-110vh) scale(1); opacity: 0; } 
         }
 
-        @keyframes emberRise { 0% { transform: translateY(0) translateX(0) scale(1); opacity: 1; } 100% { transform: translateY(-100vh) translateX(var(--drift)) scale(0); opacity: 0; } }
+        @keyframes emberRise { 
+            0% { transform: translateY(0) translateX(0) scale(1); opacity: 0; } 
+            10% { opacity: 1; transform: translateY(-10vh) translateX(calc(var(--drift) * 0.1)) scale(1.2); } 
+            100% { transform: translateY(-110vh) translateX(var(--drift)) scale(0.2); opacity: 0; } 
         @keyframes lightningFlash { 0%, 100% { background-color: transparent; } 5%, 15% { background-color: rgba(255, 255, 255, 0.2); } 10% { background-color: transparent; } }
         @keyframes boltStrike { 0% { opacity: 0; transform: translateY(-100%) scale(0.5); } 10% { opacity: 1; transform: translateY(0) scale(1); } 30% { opacity: 1; } 100% { opacity: 0; } }
         

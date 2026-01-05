@@ -28,16 +28,19 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const category = categories.find(c => c.id === note.category) || categories[0];
   
   // --- THEME LOGIC ---
-  const isHacker = category.label === 'Hacker';
+  const isHacker = category.label === 'Hacker' || category.label === 'Anon'; // Handle both label possibilities
   const isSecret = category.id === 'secret' && !isHacker; // "Classified" / Ghost mode
 
   // Define dynamic styles based on theme
   const themeStyles = {
+    // Hover colors remain specific to the theme
     accentHover: isHacker ? 'hover:text-green-500' : isSecret ? 'hover:text-red-500' : 'hover:text-orange-500',
     accentText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : 'text-orange-500',
-    bodyText: isHacker ? 'text-green-400 font-mono' : 'text-zinc-300',
+    // Body text matches App.tsx Edit Mode
+    bodyText: isHacker ? 'text-zinc-300 font-mono' : 'text-zinc-300',
     dateText: isHacker ? 'text-green-600' : 'text-zinc-600',
-    iconColor: isHacker ? 'text-green-700' : 'text-zinc-500',
+    // ICONS: Always gray by default now, even in hacker mode
+    iconColor: 'text-zinc-500', 
     borderColor: isHacker ? 'border-green-900/50' : 'border-zinc-800'
   };
 
@@ -81,7 +84,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-black border hover:border-zinc-700 transition-all ${themeStyles.borderColor}`}
                 >
                   <span className="text-xs grayscale">{category.emoji}</span>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${themeStyles.iconColor}`}>{category.label}</span>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${themeStyles.accentText}`}>{category.label}</span>
                 </button>
              </div>
              <div className="flex items-center gap-3 md:gap-2">

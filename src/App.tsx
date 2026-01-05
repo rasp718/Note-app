@@ -33,7 +33,7 @@ const TRANSLATIONS = {
     cat_journal: "Journal", 
     cat_todo: "To-Do",
     cat_secret: "Classified",
-    cat_hacker: "Hacker", 
+    cat_hacker: "Anonymous", // Renamed
     editNote: "Edit Note" 
   }, 
   ru: { 
@@ -59,7 +59,7 @@ const TRANSLATIONS = {
     cat_journal: "Дневник", 
     cat_todo: "Задачи",
     cat_secret: "Секретно",
-    cat_hacker: "Хакер",
+    cat_hacker: "Аноним",
     editNote: "Редактировать" 
   } 
 };
@@ -69,12 +69,12 @@ const GHOST_CONFIG: CategoryConfig = {
     id: 'secret',
     label: 'Classified',
     emoji: '👻',
-    colorClass: 'bg-red-500' // Used for logic, though we style manually below
+    colorClass: 'bg-red-500' 
 };
 
 const HACKER_CONFIG: CategoryConfig = {
-    id: 'secret', // Keep ID same so notes filter correctly
-    label: 'Hacker',
+    id: 'secret', 
+    label: 'Anon', // Updated Label to 'Anon'
     emoji: '💻',
     colorClass: 'bg-green-500'
 };
@@ -199,15 +199,97 @@ function App() {
 
   const [showConfetti, setShowConfetti] = useState(false);
   const [showSaveAnim, setShowSaveAnim] = useState(false);
-  const [saveAnimType, setSaveAnimType] = useState<'brain' | 'lightning' | 'money' | 'journal' | 'fire' | null>(null);
+  const [saveAnimType, setSaveAnimType] = useState<'brain' | 'lightning' | 'money' | 'journal' | 'fire' | 'matrix' | 'ghost' | null>(null);
 
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [editNoteText, setEditNoteText] = useState('');
   const [editNoteImage, setEditNoteImage] = useState('');
 
-  // Determine which secret config to use based on the last animation type triggered
-  // If ghost -> Red Theme. If matrix -> Green Theme.
   const activeSecretConfig = secretAnimType === 'matrix' ? HACKER_CONFIG : GHOST_CONFIG;
+
+  // --- DYNAMIC EDIT THEME CALCULATOR ---
+  const getEditTheme = () => {
+    if (editingNote?.category === 'secret') {
+        if (secretAnimType === 'matrix') {
+            return {
+                containerBorder: 'border-green-500/50',
+                uploadBorder: 'border-green-500/30',
+                text: 'text-green-400 font-mono',
+                placeholder: 'placeholder:text-green-700',
+                icon: 'text-green-500',
+                // Green button with 50% opacity when inactive
+                saveBtn: 'bg-green-600/50 hover:bg-green-500 shadow-green-900/20',
+                cancelBtn: 'bg-zinc-900 border-green-500/30 text-green-600 hover:bg-zinc-800'
+            };
+        } else {
+            // Ghost Mode
+            return {
+                containerBorder: 'border-red-500/50',
+                uploadBorder: 'border-red-500/30',
+                text: 'text-red-100',
+                placeholder: 'placeholder:text-red-800',
+                icon: 'text-red-500',
+                // Red button with 50% opacity when inactive
+                saveBtn: 'bg-red-600/50 hover:bg-red-500 shadow-red-900/20',
+                cancelBtn: 'bg-zinc-900 border-red-500/30 text-red-600 hover:bg-zinc-800'
+            };
+        }
+    }
+    // Default / Standard Notes
+    return {
+        containerBorder: 'border-orange-500/50',
+        uploadBorder: 'border-zinc-800',
+        text: 'text-zinc-100', // FIXED: Text is now white/gray, not orange
+        placeholder: 'placeholder:text-zinc-700',
+        icon: 'text-zinc-500 hover:text-zinc-300',
+        saveBtn: 'bg-orange-600 hover:bg-orange-500 shadow-orange-900/20',
+        cancelBtn: 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800'
+    };
+  };
+
+  const editTheme = getEditTheme();
+
+  // --- GLOBAL THEME ENGINE ---
+  const currentTheme = (() => {
+    if (activeFilter === 'secret' || editingNote?.category === 'secret') {
+        if (secretAnimType === 'matrix') {
+            return {
+                text: 'text-green-500',
+                textDim: 'text-green-500/50',
+                border: 'border-green-500/50',
+                borderDim: 'border-green-500/30',
+                bg: 'bg-green-600',
+                bgHover: 'hover:bg-green-500',
+                shadow: 'shadow-green-900/20',
+                ring: 'focus:border-green-500/50',
+                font: 'font-mono'
+            };
+        } else {
+            return {
+                text: 'text-red-500',
+                textDim: 'text-red-500/50',
+                border: 'border-red-500/50',
+                borderDim: 'border-red-500/30',
+                bg: 'bg-red-600',
+                bgHover: 'hover:bg-red-500',
+                shadow: 'shadow-red-900/20',
+                ring: 'focus:border-red-500/50',
+                font: 'font-sans'
+            };
+        }
+    }
+    return {
+        text: 'text-orange-500',
+        textDim: 'text-zinc-500',
+        border: 'border-orange-500/50',
+        borderDim: 'border-zinc-800',
+        bg: 'bg-orange-600',
+        bgHover: 'hover:bg-orange-500',
+        shadow: 'shadow-[0_0_15px_rgba(234,88,12,0.5)]',
+        ring: 'focus:border-white/10',
+        font: 'font-sans'
+    };
+  })();
 
   useEffect(() => {
     if (editingNote) {
@@ -228,7 +310,6 @@ function App() {
 
   const getCategoryLabel = (cat: CategoryConfig) => {
     if (cat.id === 'secret') {
-        // Dynamic Label for Secret Mode
         return secretAnimType === 'matrix' ? TRANSLATIONS[lang].cat_hacker : TRANSLATIONS[lang].cat_secret;
     }
     const id = cat.id.toLowerCase();
@@ -247,7 +328,6 @@ function App() {
         setSelectedCategory('secret');
         setSecretTaps(0);
         
-        // Randomly determine the mode for this session
         const type = Math.random() > 0.5 ? 'ghost' : 'matrix';
         setSecretAnimType(type);
         setShowSecretAnim(true);
@@ -369,6 +449,16 @@ function App() {
             setSaveAnimType('fire');
             setShowSaveAnim(true);
             setTimeout(() => setShowSaveAnim(false), 4500);
+        } else if (selectedCategory === 'secret') {
+            if (secretAnimType === 'matrix') {
+                setSaveAnimType('matrix');
+                setShowSaveAnim(true);
+                setTimeout(() => setShowSaveAnim(false), 6000);
+            } else {
+                setSaveAnimType('ghost');
+                setShowSaveAnim(true);
+                setTimeout(() => setShowSaveAnim(false), 6000);
+            }
         }
 
         setTranscript(''); setImageUrl('');
@@ -419,25 +509,28 @@ function App() {
   if (!user) return <Auth />;
 
   return (
-    <div className="min-h-screen w-full bg-black text-zinc-100 font-sans selection:bg-orange-500/30 overflow-x-hidden">
+    <div className={`min-h-screen w-full bg-black text-zinc-100 font-sans selection:bg-orange-500/30 overflow-x-hidden ${currentTheme.font}`}>
       
       {editingNote ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4 overflow-hidden touch-none">
             <div 
                 id={`edit-card-${editingNote.id}`}
-                className={`w-full max-w-2xl max-h-[85dvh] overscroll-y-none bg-black border border-orange-500/50 rounded-2xl p-4 flex flex-col gap-4 shadow-[0_0_30px_rgba(234,88,12,0.1)] ${
-                    isShortNote ? 'overflow-y-hidden touch-none' : 'overflow-y-auto touch-pan-y'
-                }`}
+                className={`
+                    ${editNoteImage ? 'w-min min-w-[300px] max-w-[95vw]' : 'w-full max-w-md md:max-w-sm'} 
+                    max-h-[85dvh] overscroll-y-none bg-black border rounded-2xl p-3 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,0,0,0.5)] 
+                    ${isShortNote ? 'overflow-y-hidden touch-none' : 'overflow-y-auto touch-pan-y'} 
+                    ${editTheme.containerBorder}
+                `}
             >
                 <div className="w-full">
                     {editNoteImage ? (
-                        <div className="relative mb-3 rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950 flex justify-center max-h-80 group/img">
-                            <img src={editNoteImage} className="w-full h-auto object-contain" alt="Editing" />
+                        <div className={`relative mb-2 rounded-xl overflow-hidden border bg-zinc-950 flex justify-center max-h-80 group/img ${editTheme.uploadBorder}`}>
+                            <img src={editNoteImage} className="max-h-[70vh] w-auto max-w-full object-contain" alt="Editing" />
                             <button onClick={() => setEditNoteImage('')} className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur text-white rounded-full hover:bg-red-500 transition-colors"><X size={14} /></button>
                         </div>
                     ) : (
-                        <label className="flex items-center justify-center gap-2 w-full py-3 border border-dashed border-zinc-800 rounded-xl text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 cursor-pointer transition-all bg-zinc-900/30">
-                            <ImageIcon size={16} /> <span className="text-xs font-bold uppercase tracking-wider">Add Image</span>
+                        <label className={`flex items-center justify-center gap-2 w-full py-3 border border-dashed rounded-xl cursor-pointer transition-all bg-zinc-900/30 ${editTheme.uploadBorder} ${editTheme.icon}`}>
+                            <ImageIcon size={16} /> <span className="text-[10px] font-bold uppercase tracking-wider">Add Image</span>
                             <input type="file" accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0], true); }} />
                         </label>
                     )}
@@ -448,16 +541,16 @@ function App() {
                     value={editNoteText} 
                     onChange={(e) => setEditNoteText(e.target.value)} 
                     onPaste={(e) => handlePaste(e, true)} 
-                    className="w-full bg-transparent text-lg text-zinc-100 placeholder:text-zinc-700 resize-none focus:outline-none leading-relaxed" 
+                    className={`w-full bg-transparent text-base resize-none focus:outline-none leading-relaxed ${editTheme.text} ${editTheme.placeholder}`} 
                     placeholder="Type here..." 
                     style={{ height: 'auto', minHeight: '40px' }}
                 />
                 <div className="flex gap-2 pt-2 border-t border-white/5 mt-auto">
-                    <button onClick={handleSaveEdit} className="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-orange-900/20 active:scale-95 transition-all">
-                        <Check size={16} /> Save
+                    <button onClick={handleSaveEdit} className={`flex-1 text-white h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all ${editTheme.saveBtn}`}>
+                        <Check size={12} /> Save
                     </button>
-                    <button onClick={() => setEditingNote(null)} className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 border border-zinc-800 active:scale-95 transition-all">
-                        <X size={16} /> Cancel
+                    <button onClick={() => setEditingNote(null)} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 border active:scale-95 transition-all ${editTheme.cancelBtn}`}>
+                        <X size={12} /> Cancel
                     </button>
                 </div>
             </div>
@@ -492,7 +585,7 @@ function App() {
                 </button>
 
                 <div className="flex-1 relative group">
-                    <Search className="absolute left-3.5 top-2.5 text-zinc-500 group-focus-within:text-zinc-300 transition-colors" size={16} />
+                    <Search className={`absolute left-3.5 top-2.5 text-zinc-500 group-focus-within:${currentTheme.text} transition-colors`} size={16} />
                     <input 
                         type="text" 
                         placeholder={
@@ -504,14 +597,14 @@ function App() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onFocus={() => { setIsInputFocused(true); setShowBars(true); }}
                         onBlur={() => setIsInputFocused(false)}
-                        className={`w-full bg-zinc-900/50 hover:bg-zinc-900 focus:bg-zinc-900 border border-transparent focus:border-white/10 rounded-xl py-2 pl-10 pr-4 text-zinc-200 placeholder:text-zinc-600 focus:outline-none text-base transition-all ${
-                            activeFilter === 'secret' && secretAnimType === 'matrix' ? 'font-mono text-green-500 placeholder:text-green-800' : ''
+                        className={`w-full bg-zinc-900/50 hover:bg-zinc-900 focus:bg-zinc-900 border border-transparent ${currentTheme.ring} rounded-xl py-2 pl-10 pr-4 text-zinc-200 placeholder:text-zinc-600 focus:outline-none text-base transition-all ${
+                            activeFilter === 'secret' && secretAnimType === 'matrix' ? 'placeholder:text-green-800' : ''
                         }`}
                     />
                 </div>
                 <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
                     <div className="flex items-center justify-center w-full h-full rounded-full">
-                        {syncing ? <Cloud className="text-orange-500/80 animate-pulse" size={16} /> : <Cloud className="text-orange-500/80" size={16} />}
+                        {syncing ? <Cloud className={`${currentTheme.text} animate-pulse`} size={16} /> : <Cloud className={currentTheme.text} size={16} />}
                     </div>
                 </div>
                 <button 
@@ -524,18 +617,12 @@ function App() {
 
                 <div className="max-w-2xl mx-auto grid grid-cols-5 w-full border-t border-white/5">
                 {activeFilter === 'secret' ? (
-                    <button className={`flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative col-span-5 ${
-                        secretAnimType === 'matrix' ? 'text-green-500' : 'text-red-500'
-                    }`}>
+                    <button className={`flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative col-span-5 ${currentTheme.text}`}>
                         <span className="text-[12px]">{secretAnimType === 'matrix' ? '💻' : '👻'}</span>
-                        <span className={`text-[10px] font-medium tracking-widest uppercase ${secretAnimType === 'matrix' ? 'font-mono' : ''}`}>
+                        <span className="text-[10px] font-medium tracking-widest uppercase">
                             {secretAnimType === 'matrix' ? 'Hacker Mode Active' : 'Secret Mode Active'}
                         </span>
-                        <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${
-                            secretAnimType === 'matrix' 
-                                ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' 
-                                : 'bg-red-500 shadow-[0_0_10px_rgba(220,38,38,0.8)]'
-                        }`}></div>
+                        <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${currentTheme.bg} ${currentTheme.shadow}`}></div>
                     </button>
                 ) : (
                     <>
@@ -567,7 +654,6 @@ function App() {
                     <NoteCard 
                         key={note.id} 
                         note={note} 
-                        // DYNAMIC CONFIG: Switches between Ghost and Hacker
                         categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
                         selectedVoice={selectedVoice} 
                         onDelete={handleDeleteNote} 
@@ -602,7 +688,8 @@ function App() {
                             }`} 
                         />
                     </div>
-                    <button onClick={saveNote} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 ${transcript.trim() || imageUrl ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)]' : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}>{transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}</button>
+                    {/* DYNAMIC FOOTER BUTTON COLOR */}
+                    <button onClick={saveNote} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 ${transcript.trim() || imageUrl ? `${currentTheme.bg} ${currentTheme.shadow} text-white` : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}>{transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}</button>
                 </div>
             </div>
         </>
@@ -736,6 +823,38 @@ function App() {
                         '--drift': `${(Math.random() - 0.5) * 100}px`
                     } as React.CSSProperties}
                 />
+            ))}
+
+            {/* SAVE ANIM: MATRIX (Green Rain) */}
+            {saveAnimType === 'matrix' && Array.from({ length: 40 }).map((_, i) => (
+                <MatrixRainStream 
+                    key={i}
+                    style={{
+                        left: `${Math.random() * 100}vw`,
+                        top: '-20vh', 
+                        fontSize: `${Math.random() * 15 + 10}px`,
+                        animation: `matrixRain ${6 + Math.random() * 4}s linear forwards`,
+                        animationDelay: `${Math.random() * 3}s`
+                    }} 
+                />
+            ))}
+
+            {/* SAVE ANIM: GHOST (Red Ghosts) */}
+            {saveAnimType === 'ghost' && Array.from({ length: 15 }).map((_, i) => (
+                <div 
+                    key={i} 
+                    className="absolute text-4xl"
+                    style={{
+                        left: `${Math.random() * 100}vw`,
+                        bottom: '-50px',
+                        fontSize: `${Math.random() * 30 + 20}px`,
+                        opacity: 0,
+                        animation: `ghostFly ${6 + Math.random() * 4}s linear forwards`,
+                        animationDelay: `${Math.random() * 2}s`
+                    }}
+                >
+                    👻
+                </div>
             ))}
         </div>
       )}

@@ -513,46 +513,56 @@ function App() {
     <div className={`min-h-screen w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} overflow-x-hidden ${currentTheme.font}`}>
       
       {editingNote ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-hidden touch-none">
-            <div 
-                id={`edit-card-${editingNote.id}`}
-                className={`
-                    ${editNoteImage ? 'w-min min-w-[300px] max-w-[95vw]' : 'w-full max-w-md md:max-w-sm'} 
-                    max-h-[85dvh] overscroll-y-none bg-zinc-900 border rounded-2xl p-3 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,0,0,0.5)] 
-                    ${isShortNote ? 'overflow-y-hidden touch-none' : 'overflow-y-auto touch-pan-y'} 
-                    ${editTheme.containerBorder}
-                `}
-            >
-                <div className="w-full">
-                    {editNoteImage ? (
-                        <div className={`relative mb-2 rounded-xl overflow-hidden border bg-zinc-950 flex justify-center max-h-80 group/img ${editTheme.uploadBorder}`}>
-                            <img src={editNoteImage} className="max-h-[70vh] w-auto max-w-full object-contain" alt="Editing" />
-                            <button onClick={() => setEditNoteImage('')} className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur text-white rounded-full hover:bg-red-500 transition-colors"><X size={14} /></button>
-                        </div>
-                    ) : (
-                        <label className={`flex items-center justify-center gap-2 w-full py-3 border border-dashed rounded-xl cursor-pointer transition-all bg-zinc-900/30 ${editTheme.uploadBorder} ${editTheme.icon}`}>
-                            <ImageIcon size={16} /> <span className="text-[10px] font-bold uppercase tracking-wider">Add Image</span>
-                            <input type="file" accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0], true); }} />
-                        </label>
-                    )}
-                </div>
-                <textarea 
-                    ref={editTextAreaRef}
-                    autoFocus 
-                    value={editNoteText} 
-                    onChange={(e) => setEditNoteText(e.target.value)} 
-                    onPaste={(e) => handlePaste(e, true)} 
-                    className={`w-full bg-transparent text-base resize-none focus:outline-none leading-relaxed ${editTheme.text} ${editTheme.placeholder}`} 
-                    placeholder="Type here..." 
-                    style={{ height: 'auto', minHeight: '40px' }}
-                />
-                <div className="flex gap-2 pt-2 border-t border-white/5 mt-auto">
-                    <button onClick={handleSaveEdit} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all ${editTheme.saveBtn}`}>
-                        <Check size={12} /> Save
-                    </button>
-                    <button onClick={() => setEditingNote(null)} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 border active:scale-95 transition-all ${editTheme.cancelBtn}`}>
-                        <X size={12} /> Cancel
-                    </button>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm overflow-hidden touch-none flex flex-col justify-center">
+            {/* ALIGNMENT WRAPPER: Matches feed layout (max-w-2xl, flex-col, getAlignmentClass) */}
+            <div className={`w-full max-w-2xl mx-auto flex flex-col justify-center p-4 h-full pointer-events-none ${getAlignmentClass()}`}>
+                <div 
+                    id={`edit-card-${editingNote.id}`}
+                    className={`
+                        pointer-events-auto
+                        ${editNoteImage ? 'w-full md:w-min' : 'w-full md:w-96'} 
+                        max-h-[85dvh] overscroll-y-none bg-zinc-900 border rounded-2xl p-3 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,0,0,0.5)] 
+                        ${isShortNote ? 'overflow-y-hidden touch-none' : 'overflow-y-auto touch-pan-y'} 
+                        ${editTheme.containerBorder}
+                    `}
+                >
+                    <div className="w-full">
+                        {editNoteImage ? (
+                            // MOBILE FIX: reduced max-h to 48 (12rem) on small screens, 80 on md+
+                            <div className={`relative mb-2 rounded-xl overflow-hidden border bg-zinc-950 flex justify-center group/img ${editTheme.uploadBorder}`}>
+                                {/* FIX: Ensure image is rigid (max-h set) and width adapts (w-auto), and remove constraints that reference parent (max-w-full) */}
+                                <img 
+                                    src={editNoteImage} 
+                                    className="max-h-48 md:max-h-96 w-auto max-w-[80vw] object-contain" 
+                                    alt="Editing" 
+                                />
+                                <button onClick={() => setEditNoteImage('')} className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur text-white rounded-full hover:bg-red-500 transition-colors"><X size={14} /></button>
+                            </div>
+                        ) : (
+                            <label className={`flex items-center justify-center gap-2 w-full py-3 border border-dashed rounded-xl cursor-pointer transition-all bg-zinc-900/30 ${editTheme.uploadBorder} ${editTheme.icon}`}>
+                                <ImageIcon size={16} /> <span className="text-[10px] font-bold uppercase tracking-wider">Add Image</span>
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0], true); }} />
+                            </label>
+                        )}
+                    </div>
+                    <textarea 
+                        ref={editTextAreaRef}
+                        autoFocus 
+                        value={editNoteText} 
+                        onChange={(e) => setEditNoteText(e.target.value)} 
+                        onPaste={(e) => handlePaste(e, true)} 
+                        className={`w-full bg-transparent text-base resize-none focus:outline-none leading-relaxed ${editTheme.text} ${editTheme.placeholder}`} 
+                        placeholder="Type here..." 
+                        style={{ height: 'auto', minHeight: '40px' }}
+                    />
+                    <div className="flex gap-2 pt-2 border-t border-white/5 mt-auto">
+                        <button onClick={handleSaveEdit} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all ${editTheme.saveBtn}`}>
+                            <Check size={12} /> Save
+                        </button>
+                        <button onClick={() => setEditingNote(null)} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 border active:scale-95 transition-all ${editTheme.cancelBtn}`}>
+                            <X size={12} /> Cancel
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -695,205 +705,6 @@ function App() {
                 </div>
             </div>
         </>
-      )}
-
-      {showSettings && (
-         <div className="fixed inset-0 z-[60] flex justify-center sm:items-center bg-black sm:bg-black/80 animate-in fade-in duration-200">
-             <div className="w-full h-full sm:h-auto sm:max-w-md bg-black sm:border border-zinc-800 sm:rounded-2xl p-4 pt-12 sm:pt-6 shadow-2xl relative flex flex-col">
-                <div className="flex justify-between items-center mb-6"><h2 className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 flex items-center gap-2">{t.config}</h2><button onClick={() => setShowSettings(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700 transition-all active:scale-95"><X size={16} /></button></div>
-                {settingsView === 'main' ? (
-                    <div className="flex flex-col gap-4">
-                        <div className="flex-1 overflow-y-auto space-y-2">{categories.map((cat) => (<button key={cat.id} onClick={() => { setEditingCatId(cat.id); setSettingsView('icons'); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg bg-zinc-900 border border-zinc-800"><div className="w-8 h-8 flex items-center justify-center rounded-full bg-black border border-zinc-800 text-sm grayscale">{cat.emoji}</div><p className="text-[11px] font-bold text-zinc-300">{getCategoryLabel(cat)}</p></button>))}</div>
-                        <div className="pt-4 border-t border-zinc-900 space-y-2">
-                          <button onClick={() => { const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(notes)); const a = document.createElement('a'); a.href = data; a.download = 'backup.json'; a.click(); }} className="w-full py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98]"><Download size={12} /> {t.backup}</button>
-                          <button onClick={() => signOut(auth)} className="w-full py-2.5 bg-orange-900/20 border border-orange-900/50 text-orange-500 hover:text-orange-400 hover:border-orange-700 hover:bg-orange-900/30 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98]"><LogOut size={12} /> {t.logout}</button>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-6 gap-2">{EMOJI_LIST.map(emoji => (<button key={emoji} onClick={() => { if(editingCatId) handleCategoryEdit(editingCatId, 'emoji', emoji); setSettingsView('main'); }} className="aspect-square flex items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800 text-base grayscale hover:grayscale-0">{emoji}</button>))}</div>
-                )}
-             </div>
-         </div>
-      )}
-
-      {showConfetti && !editingNote && (
-        <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
-             {Array.from({ length: 80 }).map((_, i) => {
-                 const style = {
-                     backgroundColor: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ff8800'][Math.floor(Math.random() * 7)],
-                     left: '50%',
-                     top: '50%',
-                     width: `${Math.random() * 6 + 4}px`, 
-                     height: `${Math.random() * 6 + 4}px`,
-                     '--end-x': `${(Math.random() - 0.5) * 150}vw`, 
-                     '--end-y': `${Math.random() * 100 + 50}vh`, 
-                     '--rot': `${Math.random() * 1080}deg`, 
-                     animation: `confettiGravity ${2.5 + Math.random() * 2}s cubic-bezier(0.25, 1, 0.5, 1) forwards`,
-                 } as React.CSSProperties;
-
-                 return <div key={i} className="absolute rounded-sm" style={style} />
-             })}
-        </div>
-      )}
-
-      {showSaveAnim && !editingNote && (
-        <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
-            {saveAnimType === 'brain' && Array.from({ length: 20 }).map((_, i) => (
-                <div 
-                    key={i} 
-                    className="absolute text-4xl"
-                    style={{
-                        left: `${Math.random() * 100}vw`,
-                        bottom: '-50px',
-                        fontSize: `${Math.random() * 25 + 15}px`,
-                        opacity: 0,
-                        animation: `brainFloat ${6 + Math.random() * 3}s linear forwards`,
-                        animationDelay: `${Math.random() * 2}s`
-                    }}
-                >
-                    🧠
-                </div>
-            ))}
-
-            {saveAnimType === 'lightning' && (
-                <>
-                    <div className="absolute inset-0 bg-white/10 animate-[lightningFlash_0.2s_ease-in-out_6]" />
-                    {Array.from({ length: 5 }).map((_, i) => (
-                        <div 
-                            key={i} 
-                            className="absolute text-6xl text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]"
-                            style={{
-                                left: `${Math.random() * 100}vw`,
-                                top: `${Math.random() * 90}vh`,
-                                animation: `boltStrike 0.3s ease-out forwards`,
-                                animationDelay: `${Math.random() * 1.5}s`
-                            }}
-                        >
-                            ⚡
-                        </div>
-                    ))}
-                </>
-            )}
-
-            {saveAnimType === 'money' && Array.from({ length: 30 }).map((_, i) => (
-                <div 
-                    key={i} 
-                    className="absolute text-4xl"
-                    style={{
-                        left: `${Math.random() * 100}vw`,
-                        top: '-50px',
-                        fontSize: `${Math.random() * 25 + 15}px`,
-                        opacity: 0,
-                        animation: `rainDown ${2 + Math.random() * 2}s linear forwards`,
-                        animationDelay: `${Math.random() * 1.5}s`
-                    }}
-                >
-                    💰
-                </div>
-            ))}
-
-            {saveAnimType === 'journal' && Array.from({ length: 20 }).map((_, i) => (
-                <div 
-                    key={i} 
-                    className="absolute text-4xl"
-                    style={{
-                        left: `${Math.random() * 100}vw`,
-                        bottom: '-50px',
-                        fontSize: `${Math.random() * 25 + 15}px`,
-                        opacity: 0,
-                        animation: `ghostFly ${3 + Math.random() * 2}s linear forwards`,
-                        animationDelay: `${Math.random() * 1.5}s`
-                    }}
-                >
-                    📝
-                </div>
-            ))}
-
-            {saveAnimType === 'fire' && Array.from({ length: 70 }).map((_, i) => (
-                <div 
-                    key={i} 
-                    className="absolute bottom-0"
-                    style={{
-                        left: `${Math.random() * 100}vw`,
-                        width: `${Math.random() * 40 + 20}px`,
-                        height: `${Math.random() * 40 + 20}px`,
-                        // White hot center -> Yellow -> Orange -> Transparent
-                        background: 'radial-gradient(circle, #ffffff 0%, #facc15 25%, #f97316 50%, transparent 70%)',
-                        mixBlendMode: 'screen', // THIS is what makes it look like fire
-                        filter: 'blur(4px)', // Blurs them into a single flame mass
-                        animation: `realFire ${0.5 + Math.random() * 0.7}s ease-out forwards`,
-                        animationDelay: `${Math.random() * 0.3}s`
-                    }}
-                />
-            ))}
-
-            {/* SAVE ANIM: MATRIX (Green Rain) */}
-            {saveAnimType === 'matrix' && Array.from({ length: 40 }).map((_, i) => (
-                <MatrixRainStream 
-                    key={i}
-                    style={{
-                        left: `${Math.random() * 100}vw`,
-                        top: '-20vh', 
-                        fontSize: `${Math.random() * 15 + 10}px`,
-                        animation: `matrixRain ${6 + Math.random() * 4}s linear forwards`,
-                        animationDelay: `${Math.random() * 3}s`
-                    }} 
-                />
-            ))}
-
-            {/* SAVE ANIM: GHOST (Red Ghosts) */}
-            {saveAnimType === 'ghost' && Array.from({ length: 15 }).map((_, i) => (
-                <div 
-                    key={i} 
-                    className="absolute text-4xl"
-                    style={{
-                        left: `${Math.random() * 100}vw`,
-                        bottom: '-50px',
-                        fontSize: `${Math.random() * 30 + 20}px`,
-                        opacity: 0,
-                        animation: `ghostFly ${6 + Math.random() * 4}s linear forwards`,
-                        animationDelay: `${Math.random() * 2}s`
-                    }}
-                >
-                    👻
-                </div>
-            ))}
-        </div>
-      )}
-
-      {showSecretAnim && !editingNote && (
-        <div className={`fixed inset-0 z-[60] pointer-events-none overflow-hidden ${secretAnimType === 'matrix' ? 'bg-black/80' : ''}`}>
-             
-             {secretAnimType === 'ghost' && Array.from({ length: 15 }).map((_, i) => (
-                <div 
-                    key={i} 
-                    className="absolute text-4xl"
-                    style={{
-                        left: `${Math.random() * 100}vw`,
-                        bottom: '-50px',
-                        fontSize: `${Math.random() * 30 + 20}px`,
-                        opacity: 0,
-                        animation: `ghostFly ${6 + Math.random() * 4}s linear forwards`,
-                        animationDelay: `${Math.random() * 2}s`
-                    }}
-                >
-                    👻
-                </div>
-             ))}
-
-             {secretAnimType === 'matrix' && Array.from({ length: 40 }).map((_, i) => (
-                <MatrixRainStream 
-                    key={i}
-                    style={{
-                        left: `${Math.random() * 100}vw`,
-                        top: '-20vh', 
-                        fontSize: `${Math.random() * 15 + 10}px`,
-                        animation: `matrixRain ${6 + Math.random() * 4}s linear forwards`,
-                        animationDelay: `${Math.random() * 3}s`
-                    }} 
-                />
-             ))}
-        </div>
       )}
 
       <style>{`

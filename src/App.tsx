@@ -1,66 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, Download, ArrowLeft, ChevronRight, Plus, ArrowUp, LayoutGrid, Cloud, LogOut, Image as ImageIcon, Check, EyeOff, Terminal } from 'lucide-react'; 
-import { signOut } from 'firebase/auth';
-import { auth } from './firebase';
+import { Search, X, Settings, ArrowUp, LayoutGrid, Cloud, Image as ImageIcon, Check, EyeOff, Terminal, Plus } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
 import { useFirebaseSync, useNotes } from './useFirebaseSync';
 import Auth from './components/Auth';
 
-const EMOJI_LIST = ['⚡', '💼', '🔥', '💡', '🎨', '🚀', '⭐', '📝', '📅', '🛒', '🏋️', '✈️', '🏠', '💰', '🍔', '🎵', '🎮', '❤️', '🧠', '⏰', '🔧', '👻', '💻']; 
-
 const TRANSLATIONS = { 
   en: { 
     search: "Search notes...", 
     all: "All", 
-    config: "Config", 
-    audioLabel: "Audio Voice", 
-    tagsLabel: "Categories", 
-    alignLabel: "Card Alignment", 
-    dataLabel: "Data", 
-    backup: "Download Backup", 
     typePlaceholder: "Type a note...", 
-    noVoices: "No Premium Voices Found", 
-    defaultVoice: "System Default", 
-    languageLabel: "Language", 
-    selectIcon: "Select Icon", 
-    syncing: "Syncing...", 
-    synced: "Synced", 
-    offline: "Offline", 
-    logout: "Logout", 
     cat_idea: "Idea", 
     cat_work: "Work", 
     cat_journal: "Journal", 
     cat_todo: "To-Do", 
     cat_secret: "Classified",
-    cat_hacker: "Anonymous", 
-    editNote: "Edit Note" 
+    cat_hacker: "Anonymous"
   }, 
   ru: { 
     search: "Поиск...", 
     all: "Все", 
-    config: "Настройки", 
-    audioLabel: "Голос", 
-    tagsLabel: "Категории", 
-    alignLabel: "Выравнивание", 
-    dataLabel: "Данные", 
-    backup: "Скачать бэкап", 
     typePlaceholder: "Введите заметку...", 
-    noVoices: "Голоса не найдены", 
-    defaultVoice: "По умолчанию", 
-    languageLabel: "Язык", 
-    selectIcon: "Выберите иконку", 
-    syncing: "Синхронизация...", 
-    synced: "Синхронизировано", 
-    offline: "Оффлайн", 
-    logout: "Выйти", 
     cat_idea: "Идея", 
     cat_work: "Работа", 
     cat_journal: "Дневник", 
     cat_todo: "Задачи",
     cat_secret: "Секретно",
-    cat_hacker: "Аноним",
-    editNote: "Редактировать" 
+    cat_hacker: "Аноним"
   } 
 };
 
@@ -173,7 +139,6 @@ function App() {
   
   const [showSettings, setShowSettings] = useState(false);
   const [settingsView, setSettingsView] = useState<'main' | 'icons'>('main'); 
-  const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
@@ -294,19 +259,13 @@ function App() {
 
   useEffect(() => {
     if (editingNote) {
+        // We now allow scrolling on the body container, so we don't lock overflow as aggressively
+        // or we handle it in the overlay.
         document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.width = '100%';
     } else {
         document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.width = '';
     }
-    return () => {
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.width = '';
-    };
+    return () => { document.body.style.overflow = ''; };
   }, [editingNote]);
 
   const getCategoryLabel = (cat: CategoryConfig) => {
@@ -434,6 +393,7 @@ function App() {
     try {
         await addNote({ text: transcript.trim(), date: Date.now(), category: selectedCategory, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
         
+        // --- RESTORED SAVE ANIMATION LOGIC ---
         if (selectedCategory === 'idea') {
             setSaveAnimType(Math.random() > 0.5 ? 'brain' : 'lightning');
             setShowSaveAnim(true);
@@ -512,56 +472,118 @@ function App() {
   return (
     <div className={`min-h-screen w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} overflow-x-hidden ${currentTheme.font}`}>
       
+      {/* --- RESTORED ANIMATION OVERLAYS --- */}
+      {showConfetti && (
+          <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
+              {Array.from({ length: 50 }).map((_, i) => (
+                  <div 
+                      key={i} 
+                      className="absolute top-0 w-2 h-2 rounded-sm"
+                      style={{
+                          backgroundColor: ['#ef4444', '#3b82f6', '#22c55e', '#eab308'][Math.floor(Math.random() * 4)],
+                          left: `${Math.random() * 100}vw`,
+                          animation: `confettiGravity ${2 + Math.random() * 2}s linear forwards`,
+                          '--end-x': `${(Math.random() - 0.5) * 50}vw`,
+                          '--end-y': `${100 + Math.random() * 20}vh`,
+                          '--rot': `${Math.random() * 720}deg`
+                      } as any}
+                  />
+              ))}
+          </div>
+      )}
+
+      {showSaveAnim && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
+              {saveAnimType === 'brain' && <div className="text-6xl animate-[brainFloat_6s_ease-out_forwards]">🧠</div>}
+              {saveAnimType === 'money' && <div className="text-6xl animate-[brainFloat_4.5s_ease-out_forwards]">💰</div>}
+              {saveAnimType === 'journal' && <div className="text-6xl animate-[brainFloat_4.5s_ease-out_forwards]">📔</div>}
+              {saveAnimType === 'fire' && <div className="text-6xl animate-[realFire_1s_ease-out_forwards]">🔥</div>}
+              {saveAnimType === 'lightning' && (
+                  <div className="fixed inset-0 animate-[lightningFlash_0.5s_ease-out_forwards] flex items-center justify-center">
+                       <div className="text-9xl text-yellow-400 animate-[boltStrike_0.4s_ease-out_forwards] drop-shadow-[0_0_50px_rgba(250,204,21,0.8)]">⚡</div>
+                  </div>
+              )}
+              {saveAnimType === 'matrix' && <div className="fixed inset-0 bg-black"><MatrixRainStream style={{ inset: 0 }} /></div>}
+              {saveAnimType === 'ghost' && <div className="text-6xl animate-[ghostFly_4s_ease-in-out_forwards]">👻</div>}
+          </div>
+      )}
+
+      {showSecretAnim && (
+          <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
+              {secretAnimType === 'matrix' ? (
+                   <div className="absolute inset-0 bg-black/90">
+                       {Array.from({ length: 20 }).map((_, i) => (
+                           <MatrixRainStream key={i} style={{ left: `${i * 5}%`, top: `-${Math.random() * 100}px`, fontSize: `${Math.random() * 10 + 10}px` }} />
+                       ))}
+                   </div>
+              ) : (
+                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                       <div className="text-9xl animate-[ghostFly_6s_ease-in-out_forwards]">👻</div>
+                  </div>
+              )}
+          </div>
+      )}
+
+      {/* --- EDIT CARD MODAL --- */}
       {editingNote ? (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm overflow-hidden touch-none flex flex-col justify-center">
-            {/* ALIGNMENT WRAPPER */}
-            <div className={`w-full max-w-2xl mx-auto flex flex-col justify-center p-4 h-full pointer-events-none ${getAlignmentClass()}`}>
-                <div 
-                    id={`edit-card-${editingNote.id}`}
-                    className={`
-                        pointer-events-auto
-                        /* MODIFIED HERE: md:w-96 (consistent width on laptop), but keep w-fit on mobile */
-                        ${editNoteImage ? 'w-fit mx-auto md:mx-0 md:w-96' : 'w-full md:w-96'} 
-                        max-h-[85dvh] overscroll-y-none bg-zinc-900 border rounded-2xl p-3 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,0,0,0.5)] 
-                        ${isShortNote ? 'overflow-y-hidden touch-none' : 'overflow-y-auto touch-pan-y'} 
-                        ${editTheme.containerBorder}
-                    `}
-                >
-                    <div className="w-full">
-                        {editNoteImage ? (
-                            <div className={`relative mb-2 rounded-xl overflow-hidden border bg-zinc-950 flex justify-center group/img ${editTheme.uploadBorder}`}>
-                                {/* KEEPS THE MOBILE FIX (max-h-[35vh]) */}
-                                <img 
-                                    src={editNoteImage} 
-                                    className="max-h-[35vh] md:max-h-96 w-auto max-w-full object-contain" 
-                                    alt="Editing" 
-                                />
-                                <button onClick={() => setEditNoteImage('')} className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur text-white rounded-full hover:bg-red-500 transition-colors"><X size={14} /></button>
-                            </div>
-                        ) : (
-                            <label className={`flex items-center justify-center gap-2 w-full py-3 border border-dashed rounded-xl cursor-pointer transition-all bg-zinc-900/30 ${editTheme.uploadBorder} ${editTheme.icon}`}>
-                                <ImageIcon size={16} /> <span className="text-[10px] font-bold uppercase tracking-wider">Add Image</span>
-                                <input type="file" accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0], true); }} />
-                            </label>
-                        )}
-                    </div>
-                    <textarea 
-                        ref={editTextAreaRef}
-                        autoFocus 
-                        value={editNoteText} 
-                        onChange={(e) => setEditNoteText(e.target.value)} 
-                        onPaste={(e) => handlePaste(e, true)} 
-                        className={`w-full bg-transparent text-base resize-none focus:outline-none leading-relaxed ${editTheme.text} ${editTheme.placeholder}`} 
-                        placeholder="Type here..." 
-                        style={{ height: 'auto', minHeight: '40px' }}
-                    />
-                    <div className="flex gap-2 pt-2 border-t border-white/5 mt-auto">
-                        <button onClick={handleSaveEdit} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all ${editTheme.saveBtn}`}>
-                            <Check size={12} /> Save
-                        </button>
-                        <button onClick={() => setEditingNote(null)} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 border active:scale-95 transition-all ${editTheme.cancelBtn}`}>
-                            <X size={12} /> Cancel
-                        </button>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden">
+            {/* 
+                SCROLL FIX:
+                - Removed 'justify-center' from parent to prevent clipping at the top.
+                - Added 'min-h-full py-8' to allow the card to sit in the middle if small, but scroll if tall.
+                - Added 'my-auto' to the flex column.
+            */}
+            <div className={`min-h-full w-full flex flex-col py-8 px-4 ${alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start'}`}>
+                <div className={`flex-grow flex flex-col justify-center w-full ${alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start'}`}>
+                    <div 
+                        id={`edit-card-${editingNote.id}`}
+                        className={`
+                            relative pointer-events-auto
+                            /* WIDTHS: Mobile=fit to image/content, Laptop=fixed standard width (w-96) */
+                            ${editNoteImage ? 'w-fit mx-auto md:mx-0 md:w-96' : 'w-full md:w-96'} 
+                            bg-zinc-900 border rounded-2xl p-3 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,0,0,0.5)] 
+                            ${editTheme.containerBorder}
+                        `}
+                    >
+                        <div className="w-full">
+                            {editNoteImage ? (
+                                <div className={`relative mb-2 rounded-xl overflow-hidden border bg-zinc-950 flex justify-center group/img ${editTheme.uploadBorder}`}>
+                                    {/* 
+                                        MOBILE IMAGE HEIGHT:
+                                        max-h-[35vh] ensures keyboard doesn't cover it completely.
+                                    */}
+                                    <img 
+                                        src={editNoteImage} 
+                                        className="max-h-[35vh] md:max-h-96 w-auto max-w-full object-contain" 
+                                        alt="Editing" 
+                                    />
+                                    <button onClick={() => setEditNoteImage('')} className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur text-white rounded-full hover:bg-red-500 transition-colors"><X size={14} /></button>
+                                </div>
+                            ) : (
+                                <label className={`flex items-center justify-center gap-2 w-full py-3 border border-dashed rounded-xl cursor-pointer transition-all bg-zinc-900/30 ${editTheme.uploadBorder} ${editTheme.icon}`}>
+                                    <ImageIcon size={16} /> <span className="text-[10px] font-bold uppercase tracking-wider">Add Image</span>
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0], true); }} />
+                                </label>
+                            )}
+                        </div>
+                        <textarea 
+                            ref={editTextAreaRef}
+                            autoFocus 
+                            value={editNoteText} 
+                            onChange={(e) => setEditNoteText(e.target.value)} 
+                            onPaste={(e) => handlePaste(e, true)} 
+                            className={`w-full bg-transparent text-base resize-none focus:outline-none leading-relaxed ${editTheme.text} ${editTheme.placeholder}`} 
+                            placeholder="Type here..." 
+                            style={{ height: 'auto', minHeight: '40px' }}
+                        />
+                        <div className="flex gap-2 pt-2 border-t border-white/5 mt-auto">
+                            <button onClick={handleSaveEdit} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all ${editTheme.saveBtn}`}>
+                                <Check size={12} /> Save
+                            </button>
+                            <button onClick={() => setEditingNote(null)} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 border active:scale-95 transition-all ${editTheme.cancelBtn}`}>
+                                <X size={12} /> Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

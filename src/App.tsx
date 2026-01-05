@@ -520,7 +520,7 @@ function App() {
                     id={`edit-card-${editingNote.id}`}
                     className={`
                         pointer-events-auto
-                        ${editNoteImage ? 'w-full md:w-min' : 'w-full md:w-96'} 
+                        ${editNoteImage ? 'w-fit mx-auto md:w-min' : 'w-full md:w-96'} 
                         max-h-[85dvh] overscroll-y-none bg-zinc-900 border rounded-2xl p-3 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,0,0,0.5)] 
                         ${isShortNote ? 'overflow-y-hidden touch-none' : 'overflow-y-auto touch-pan-y'} 
                         ${editTheme.containerBorder}

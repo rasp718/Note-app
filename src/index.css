@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 :root {
-  background-color: #000000; /* Forces the browser background to be black */
+  background-color: #000000;
 }
 
 body {
   background-color: #000000;
-  overscroll-behavior-y: none; /* This prevents the "bounce" effect entirely if you prefer */
+  overscroll-behavior-y: none;
 }

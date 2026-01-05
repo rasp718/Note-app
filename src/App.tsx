@@ -214,7 +214,7 @@ function App() {
             return {
                 containerBorder: 'border-green-900/50', 
                 uploadBorder: 'border-green-500/30',
-                text: 'text-white font-mono', // Changed from text-green-400 to text-white
+                text: 'text-white font-mono', 
                 placeholder: 'placeholder:text-green-700',
                 icon: 'text-zinc-500 hover:text-green-500',
                 saveBtn: 'bg-transparent border border-zinc-800 text-zinc-500 hover:border-green-500 hover:text-green-500',
@@ -225,7 +225,7 @@ function App() {
             return {
                 containerBorder: 'border-zinc-800',
                 uploadBorder: 'border-red-500/30',
-                text: 'text-white', // Changed from text-zinc-300 to text-white
+                text: 'text-white', 
                 placeholder: 'placeholder:text-red-800',
                 icon: 'text-zinc-500 hover:text-red-500',
                 saveBtn: 'bg-transparent border border-zinc-800 text-zinc-500 hover:border-red-500 hover:text-red-500',
@@ -237,7 +237,7 @@ function App() {
     return {
         containerBorder: 'border-zinc-800',
         uploadBorder: 'border-zinc-800',
-        text: 'text-white', // Changed from text-zinc-300 to text-white
+        text: 'text-white', 
         placeholder: 'placeholder:text-zinc-700',
         icon: 'text-zinc-500 hover:text-zinc-300',
         saveBtn: 'bg-transparent border border-zinc-800 text-zinc-500 hover:border-orange-500 hover:text-orange-500',
@@ -260,7 +260,8 @@ function App() {
                 bgHover: 'hover:bg-green-500',
                 shadow: 'shadow-green-900/20',
                 ring: 'focus:border-green-500/50',
-                font: 'font-mono'
+                font: 'font-mono',
+                selection: 'selection:bg-green-500/30 selection:text-green-200' 
             };
         } else {
             return {
@@ -272,7 +273,8 @@ function App() {
                 bgHover: 'hover:bg-red-500',
                 shadow: 'shadow-red-900/20',
                 ring: 'focus:border-red-500/50',
-                font: 'font-sans'
+                font: 'font-sans',
+                selection: 'selection:bg-red-500/30 selection:text-red-200' 
             };
         }
     }
@@ -285,7 +287,8 @@ function App() {
         bgHover: 'hover:bg-orange-500',
         shadow: 'shadow-[0_0_15px_rgba(234,88,12,0.5)]',
         ring: 'focus:border-white/10',
-        font: 'font-sans'
+        font: 'font-sans',
+        selection: 'selection:bg-orange-500/30 selection:text-orange-200' 
     };
   })();
 
@@ -555,11 +558,11 @@ function App() {
         </div>
       ) : (
         <>
-            <div className={`fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/5 transition-transform duration-1000 ease-in-out ${isInputFocused || showBars ? 'translate-y-0' : '-translate-y-full'}`}>
-                <header className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3">
+            <div className={`fixed top-0 left-0 right-0 z-40 transition-transform duration-1000 ease-in-out pointer-events-none ${isInputFocused || showBars ? 'translate-y-0' : '-translate-y-full'}`}>
+                <header className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3 pointer-events-auto">
                 <button 
                         onClick={handleSecretTrigger}
-                        className="flex-shrink-0 w-10 h-10 bg-zinc-900/80 border border-white/10 flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible"
+                        className="flex-shrink-0 w-10 h-10 bg-zinc-900/80 border border-white/10 flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible backdrop-blur-md"
                 >
                     {isStartup && (
                         <>
@@ -582,7 +585,7 @@ function App() {
                     )}
                 </button>
 
-                <div className="flex-1 relative group">
+                <div className="flex-1 relative group pointer-events-auto">
                     <Search className={`absolute left-3.5 top-2.5 text-zinc-500 group-focus-within:${currentTheme.text} transition-colors`} size={16} />
                     <input 
                         type="text" 
@@ -595,55 +598,56 @@ function App() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onFocus={() => { setIsInputFocused(true); setShowBars(true); }}
                         onBlur={() => setIsInputFocused(false)}
-                        className={`w-full bg-zinc-900/50 hover:bg-zinc-900 focus:bg-zinc-900 border border-transparent ${currentTheme.ring} rounded-xl py-2 pl-10 pr-4 text-zinc-200 placeholder:text-zinc-600 focus:outline-none text-base transition-all ${
+                        className={`w-full bg-zinc-900/80 backdrop-blur-md hover:bg-zinc-900 focus:bg-zinc-900 border border-transparent ${currentTheme.ring} rounded-xl py-2 pl-10 pr-4 text-zinc-200 placeholder:text-zinc-600 focus:outline-none text-base transition-all ${
                             activeFilter === 'secret' && secretAnimType === 'matrix' ? 'placeholder:text-green-800' : ''
                         }`}
                     />
                 </div>
-                <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
+                <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center pointer-events-auto">
                     <div className="flex items-center justify-center w-full h-full rounded-full">
                         {syncing ? <Cloud className={`${currentTheme.text} animate-pulse`} size={16} /> : <Cloud className={currentTheme.text} size={16} />}
                     </div>
                 </div>
                 <button 
                     onClick={() => { setShowSettings(true); setSettingsView('main'); }} 
-                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-900/50 border border-transparent hover:bg-zinc-900 hover:border-white/10 text-zinc-500 hover:text-zinc-200 transition-all active:scale-95"
+                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-900/80 backdrop-blur-md border border-transparent hover:bg-zinc-900 hover:border-white/10 text-zinc-500 hover:text-zinc-200 transition-all active:scale-95 pointer-events-auto"
                     >
                     <Settings size={18} />
                 </button>
                 </header>
 
-                <div className="max-w-2xl mx-auto grid grid-cols-5 w-full border-t border-white/5">
-                {activeFilter === 'secret' ? (
-                    <button className={`flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative col-span-5 ${currentTheme.text}`}>
-                        <span className="text-[12px]">{secretAnimType === 'matrix' ? '💻' : '👻'}</span>
-                        <span className="text-[10px] font-medium tracking-widest uppercase">
-                            {secretAnimType === 'matrix' ? 'Hacker Mode Active' : 'Secret Mode Active'}
-                        </span>
-                        
-                    </button>
-                ) : (
-                    <>
-                        <button 
-                            onClick={() => setActiveFilter('all')} 
-                            className={`flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative group transition-colors ${activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}`}
-                        >
-                            <LayoutGrid size={13} className={activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500'} />
-                            <span className="text-[10px] font-medium">{t.all}</span>
+                <div className="max-w-2xl mx-auto px-4 mt-2 pointer-events-auto">
+                    <div className="grid grid-cols-5 w-full bg-zinc-900/80 backdrop-blur-md rounded-2xl overflow-hidden border border-white/5">
+                    {activeFilter === 'secret' ? (
+                        <button className={`flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative col-span-5 ${currentTheme.text}`}>
+                            <span className="text-[12px]">{secretAnimType === 'matrix' ? '💻' : '👻'}</span>
+                            <span className="text-[10px] font-medium tracking-widest uppercase">
+                                {secretAnimType === 'matrix' ? 'Hacker Mode Active' : 'Secret Mode Active'}
+                            </span>
                         </button>
-                        
-                        {categories.map((cat, index) => (
+                    ) : (
+                        <>
                             <button 
-                                key={cat.id} 
-                                onClick={() => setActiveFilter(cat.id)} 
-                                className={`flex flex-row items-center justify-center gap-1.5 py-3 relative group transition-colors ${index !== categories.length - 1 ? 'border-r border-white/5' : ''} ${activeFilter === cat.id ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                onClick={() => setActiveFilter('all')} 
+                                className={`flex flex-row items-center justify-center gap-1.5 py-3 border-r border-white/5 relative group transition-colors ${activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}`}
                             >
-                                <span className={`text-[12px] leading-none ${activeFilter === cat.id ? 'grayscale-0' : 'grayscale opacity-70'}`}>{cat.emoji}</span>
-                                <span className="text-[10px] font-medium truncate">{getCategoryLabel(cat)}</span>
+                                <LayoutGrid size={13} className={activeFilter === 'all' ? 'text-orange-500' : 'text-zinc-500'} />
+                                <span className="text-[10px] font-medium">{t.all}</span>
                             </button>
-                        ))}
-                    </>
-                )}
+                            
+                            {categories.map((cat, index) => (
+                                <button 
+                                    key={cat.id} 
+                                    onClick={() => { setActiveFilter(cat.id); setSelectedCategory(cat.id); }} 
+                                    className={`flex flex-row items-center justify-center gap-1.5 py-3 relative group transition-colors ${index !== categories.length - 1 ? 'border-r border-white/5' : ''} ${activeFilter === cat.id ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                >
+                                    <span className={`text-[12px] leading-none ${activeFilter === cat.id ? 'grayscale-0' : 'grayscale opacity-70'}`}>{cat.emoji}</span>
+                                    <span className="text-[10px] font-medium truncate">{getCategoryLabel(cat)}</span>
+                                </button>
+                            ))}
+                        </>
+                    )}
+                    </div>
                 </div>
             </div>
 
@@ -665,12 +669,12 @@ function App() {
                 {filteredNotes.length === 0 && <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full"><LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} /><p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? (secretAnimType === 'matrix' ? 'System Clean' : 'No Secrets Yet') : 'Database Empty'}</p></div>}
             </div>
 
-            <div className={`fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-zinc-900 p-3 pb-6 md:pb-3 transition-transform duration-1000 ease-in-out ${isInputFocused || showBars ? 'translate-y-0' : 'translate-y-full'}`}>
-                <div className="max-w-2xl mx-auto flex items-end gap-2">
-                    <button onClick={cycleCategory} className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group">
+            <div className={`fixed bottom-0 left-0 right-0 z-40 p-3 pb-6 md:pb-3 transition-transform duration-1000 ease-in-out pointer-events-none ${isInputFocused || showBars ? 'translate-y-0' : 'translate-y-full'}`}>
+                <div className="max-w-2xl mx-auto flex items-end gap-2 pointer-events-auto">
+                    <button onClick={cycleCategory} className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group shadow-lg shadow-black/50">
                         <span className="text-xs grayscale-0 transition-all">{currentCategoryConfig.emoji}</span>
                     </button>
-                    <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3">
+                    <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3 shadow-lg shadow-black/50">
                         {imageUrl && <div className="relative flex-shrink-0 group/image"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"><X size={10} /></button></div>}
                         <textarea 
                             ref={textareaRef} 
@@ -687,7 +691,7 @@ function App() {
                         />
                     </div>
                     {/* DYNAMIC FOOTER BUTTON COLOR */}
-                    <button onClick={saveNote} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 ${transcript.trim() || imageUrl ? `${currentTheme.bg} ${currentTheme.shadow} text-white` : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}>{transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}</button>
+                    <button onClick={saveNote} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 shadow-lg shadow-black/50 ${transcript.trim() || imageUrl ? `${currentTheme.bg} ${currentTheme.shadow} text-white` : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}>{transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}</button>
                 </div>
             </div>
         </>
@@ -805,22 +809,21 @@ function App() {
                 </div>
             ))}
 
-{saveAnimType === 'fire' && Array.from({ length: 60 }).map((_, i) => (
+            {saveAnimType === 'fire' && Array.from({ length: 70 }).map((_, i) => (
                 <div 
                     key={i} 
-                    className="absolute rounded-full"
+                    className="absolute bottom-0"
                     style={{
-                        background: 'radial-gradient(circle, #fef08a 10%, #f97316 40%, #ef4444 100%)', // White-hot center to red edge
-                        boxShadow: '0 0 4px 1px rgba(249, 115, 22, 0.6)', // Orange glow
-                        width: `${Math.random() * 6 + 2}px`,
-                        height: `${Math.random() * 6 + 2}px`,
                         left: `${Math.random() * 100}vw`,
-                        bottom: '-20px',
-                        opacity: 0,
-                        animation: `emberRise ${2 + Math.random() * 3}s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
-                        animationDelay: `${Math.random() * 0.5}s`, // Faster start
-                        '--drift': `${(Math.random() - 0.5) * 150}px`
-                    } as React.CSSProperties}
+                        width: `${Math.random() * 40 + 20}px`,
+                        height: `${Math.random() * 40 + 20}px`,
+                        // White hot center -> Yellow -> Orange -> Transparent
+                        background: 'radial-gradient(circle, #ffffff 0%, #facc15 25%, #f97316 50%, transparent 70%)',
+                        mixBlendMode: 'screen', // THIS is what makes it look like fire
+                        filter: 'blur(4px)', // Blurs them into a single flame mass
+                        animation: `realFire ${0.5 + Math.random() * 0.7}s ease-out forwards`,
+                        animationDelay: `${Math.random() * 0.3}s`
+                    }}
                 />
             ))}
 
@@ -914,10 +917,11 @@ function App() {
             100% { transform: translateY(-110vh) scale(1); opacity: 0; } 
         }
 
-        @keyframes emberRise { 
-            0% { transform: translateY(0) translateX(0) scale(1); opacity: 0; } 
-            10% { opacity: 1; transform: translateY(-10vh) translateX(calc(var(--drift) * 0.1)) scale(1.2); } 
-            100% { transform: translateY(-110vh) translateX(var(--drift)) scale(0.2); opacity: 0; } 
+        @keyframes realFire { 
+            0% { transform: translateY(20px) scale(0.5); opacity: 0; } 
+            15% { opacity: 1; transform: translateY(-10px) scale(1.2); } 
+            100% { transform: translateY(-30vh) scale(0); opacity: 0; } 
+        }
         @keyframes lightningFlash { 0%, 100% { background-color: transparent; } 5%, 15% { background-color: rgba(255, 255, 255, 0.2); } 10% { background-color: transparent; } }
         @keyframes boltStrike { 0% { opacity: 0; transform: translateY(-100%) scale(0.5); } 10% { opacity: 1; transform: translateY(0) scale(1); } 30% { opacity: 1; } 100% { opacity: 0; } }
         

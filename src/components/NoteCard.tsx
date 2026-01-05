@@ -28,19 +28,27 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const category = categories.find(c => c.id === note.category) || categories[0];
   
   // --- THEME LOGIC ---
-  const isHacker = category.label === 'Hacker' || category.label === 'Anon'; // Handle both label possibilities
+  const isHacker = category.label === 'Hacker' || category.label === 'Anon';
   const isSecret = category.id === 'secret' && !isHacker; // "Classified" / Ghost mode
 
   // Define dynamic styles based on theme
   const themeStyles = {
     // Hover colors remain specific to the theme
     accentHover: isHacker ? 'hover:text-green-500' : isSecret ? 'hover:text-red-500' : 'hover:text-orange-500',
+    
+    // Used for active states (like Pinned icon)
     accentText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : 'text-orange-500',
-    // Body text matches App.tsx Edit Mode
-    bodyText: isHacker ? 'text-zinc-300 font-mono' : 'text-zinc-300',
-    dateText: isHacker ? 'text-green-600' : 'text-zinc-600',
-    // ICONS: Always gray by default now, even in hacker mode
+    
+    // Body text is always zinc/white now (per previous request)
+    bodyText: 'text-zinc-300',
+    
+    // Date/Timestamp matches the theme color (per current request)
+    dateText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : 'text-orange-500',
+    
+    // ICONS: Always gray by default
     iconColor: 'text-zinc-500', 
+    
+    // Border colors
     borderColor: isHacker ? 'border-green-900/50' : 'border-zinc-800'
   };
 
@@ -84,7 +92,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-black border hover:border-zinc-700 transition-all ${themeStyles.borderColor}`}
                 >
                   <span className="text-xs grayscale">{category.emoji}</span>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${themeStyles.accentText}`}>{category.label}</span>
+                  {/* Category Pill Text: Now neutral/zinc instead of colored */}
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-300">{category.label}</span>
                 </button>
              </div>
              <div className="flex items-center gap-3 md:gap-2">
@@ -117,6 +126,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 <div className="w-full">
                   <p className={`text-base leading-relaxed whitespace-pre-wrap break-words text-left inline-block w-full ${themeStyles.bodyText}`}>
                     {note.text}
+                    {/* Date Text: Now uses respective mode colors */}
                     <span className={`float-right ml-2 mt-1 text-[10px] uppercase tracking-wider select-none font-medium ${themeStyles.dateText}`}>
                       {formatDate(note.date)}
                     </span>

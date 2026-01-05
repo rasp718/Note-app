@@ -31,7 +31,7 @@ const TRANSLATIONS = {
     cat_idea: "Idea", 
     cat_work: "Work", 
     cat_journal: "Journal", 
-    cat_todo: "To-Do",
+    cat_todo: "To-Do", 
     cat_secret: "Classified",
     cat_hacker: "Anonymous", 
     editNote: "Edit Note" 
@@ -514,13 +514,14 @@ function App() {
       
       {editingNote ? (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm overflow-hidden touch-none flex flex-col justify-center">
-            {/* ALIGNMENT WRAPPER: Matches feed layout (max-w-2xl, flex-col, getAlignmentClass) */}
+            {/* ALIGNMENT WRAPPER */}
             <div className={`w-full max-w-2xl mx-auto flex flex-col justify-center p-4 h-full pointer-events-none ${getAlignmentClass()}`}>
                 <div 
                     id={`edit-card-${editingNote.id}`}
                     className={`
                         pointer-events-auto
-                        ${editNoteImage ? 'w-fit mx-auto md:w-min' : 'w-full md:w-96'} 
+                        /* MODIFIED HERE: md:w-96 (consistent width on laptop), but keep w-fit on mobile */
+                        ${editNoteImage ? 'w-fit mx-auto md:mx-0 md:w-96' : 'w-full md:w-96'} 
                         max-h-[85dvh] overscroll-y-none bg-zinc-900 border rounded-2xl p-3 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,0,0,0.5)] 
                         ${isShortNote ? 'overflow-y-hidden touch-none' : 'overflow-y-auto touch-pan-y'} 
                         ${editTheme.containerBorder}
@@ -528,12 +529,11 @@ function App() {
                 >
                     <div className="w-full">
                         {editNoteImage ? (
-                            // MOBILE FIX: reduced max-h to 48 (12rem) on small screens, 80 on md+
                             <div className={`relative mb-2 rounded-xl overflow-hidden border bg-zinc-950 flex justify-center group/img ${editTheme.uploadBorder}`}>
-                                {/* FIX: Ensure image is rigid (max-h set) and width adapts (w-auto), and remove constraints that reference parent (max-w-full) */}
+                                {/* KEEPS THE MOBILE FIX (max-h-[35vh]) */}
                                 <img 
                                     src={editNoteImage} 
-                                    className="max-h-48 md:max-h-96 w-auto max-w-[80vw] object-contain" 
+                                    className="max-h-[35vh] md:max-h-96 w-auto max-w-full object-contain" 
                                     alt="Editing" 
                                 />
                                 <button onClick={() => setEditNoteImage('')} className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur text-white rounded-full hover:bg-red-500 transition-colors"><X size={14} /></button>

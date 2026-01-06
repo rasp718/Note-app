@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Trash2, Pin, Volume2, Edit2, AlertCircle } from 'lucide-react';
+import { Trash2, Pin, Volume2, Edit2 } from 'lucide-react';
 import { Note, CategoryConfig, CategoryId } from '../types';
 
 interface NoteCardProps {
@@ -35,11 +35,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const isHacker = category.label === 'Hacker' || category.label === 'Anon';
   const isSecret = category.id === 'secret' && !isHacker;
 
+  // --- THEME CONFIG ---
+  const CLAUDE_ORANGE = '#da7756'; // Warm terracotta orange
+  
   const themeStyles = {
-    accentHover: isHacker ? 'hover:text-green-500' : isSecret ? 'hover:text-red-500' : 'hover:text-orange-500',
-    accentText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : 'text-orange-500',
+    // We use arbitrary values for the specific Claude Orange
+    accentHover: isHacker ? 'hover:text-green-500' : isSecret ? 'hover:text-red-500' : `hover:text-[${CLAUDE_ORANGE}]`,
+    accentText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : `text-[${CLAUDE_ORANGE}]`,
     bodyText: 'text-zinc-300',
-    dateText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : 'text-orange-500',
+    dateText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : `text-[${CLAUDE_ORANGE}]`,
     iconColor: 'text-zinc-500', 
     borderColor: isHacker ? 'border-green-900/50' : 'border-zinc-800'
   };
@@ -81,28 +85,21 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     const diffX = currentX - touchStartX.current;
     const diffY = currentY - touchStartY.current;
 
-    // Check if user is scrolling vertically (ignore swipe if so)
+    // Ignore vertical scrolling
     if (Math.abs(diffY) > Math.abs(diffX)) return;
 
-    // Check if swiping left (negative diffX)
+    // Swiping Left (Negative X)
     if (diffX < 0) {
-      // Prevent scrolling while swiping
       if (e.cancelable && Math.abs(diffX) > 10) e.preventDefault();
-      
       setIsSwiping(true);
-      // Cap the drag at -200px visually
       setSwipeOffset(Math.max(diffX, -200));
     }
   };
 
   const handleTouchEnd = () => {
     if (swipeOffset < -100) {
-      // Threshold passed: DELETE
-      // Add a visual exit animation delay if needed, or trigger immediately
       onDelete(note.id);
     }
-    
-    // Reset
     setSwipeOffset(0);
     setIsSwiping(false);
     touchStartX.current = null;
@@ -111,21 +108,23 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   const paddingClass = isCompact ? 'px-3 py-2' : 'p-3';
 
+  // Determine Background Color for Swipe Action
+  const deleteBgClass = isHacker ? 'bg-green-600' : `bg-[${CLAUDE_ORANGE}]`;
+
   return (
-    // Outer Wrapper acts as the track
-    <div className="relative w-full md:w-fit md:max-w-full overflow-hidden rounded-xl">
+    <div className="relative w-full md:w-fit md:max-w-full overflow-hidden rounded-xl group">
       
-      {/* Background Layer (Red Trash) - Visible when swiping */}
-      <div className={`absolute inset-0 bg-red-600 flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`}>
+      {/* Background Layer (Swipe Indicator) */}
+      <div className={`absolute inset-0 ${deleteBgClass} flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`}>
         <Trash2 className="text-white animate-pulse" size={24} />
       </div>
 
-      {/* Foreground Layer (The Card) - Moves with transform */}
+      {/* Foreground Layer (Card) */}
       <div 
         className={`bg-zinc-900 border rounded-xl ${paddingClass} hover:border-zinc-700 relative w-full ${themeStyles.borderColor}`}
         style={{ 
           transform: `translateX(${swipeOffset}px)`,
-          transition: isSwiping ? 'none' : 'transform 0.3s ease-out' // Smooth snap back
+          transition: isSwiping ? 'none' : 'transform 0.3s ease-out'
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -134,21 +133,23 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         {isExpanded ? (
           <div className="flex flex-col gap-2">
             {/* Header Line */}
-            <div className="flex items-center justify-between gap-2 w-full flex-shrink-0">
+            <div className="flex items-center justify-between gap-2 w-full flex-shrink-0 h-6">
                <div className="flex items-center gap-2">
                   <button onClick={() => onCategoryClick(note.category)} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-black border hover:border-zinc-700 transition-all ${themeStyles.borderColor}`}>
                     <span className="text-xs grayscale">{category.emoji}</span>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-300">{category.label}</span>
                   </button>
                </div>
-               <div className="flex items-center gap-3 md:gap-2">
+               
+               {/* Action Icons - Invisible until group hover */}
+               <div className="flex items-center gap-3 md:gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className={`${themeStyles.iconColor} ${themeStyles.accentHover} transition-all`} title="Edit"><Edit2 size={14} /></button>
                   <button onClick={handleSpeakNote} className={`${themeStyles.iconColor} ${themeStyles.accentHover} transition-all`} title="Speak"><Volume2 size={14} /></button>
                   <button onClick={() => onPin(note.id)} className={`transition-all ${note.isPinned ? themeStyles.accentText : `${themeStyles.iconColor} ${themeStyles.accentHover}`}`} title="Pin"><Pin size={14} fill={note.isPinned ? "currentColor" : "none"} /></button>
-                  {/* Trash icon kept for desktop or backup */}
                   <button onClick={() => onDelete(note.id)} className={`${themeStyles.iconColor} ${themeStyles.accentHover} transition-all`} title="Delete"><Trash2 size={14} /></button>
                </div>
             </div>
+
             {/* Content */}
             <div className="flex flex-col gap-2 items-start w-full">
                 {note.imageUrl && (

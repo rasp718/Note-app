@@ -35,15 +35,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const isHacker = category.label === 'Hacker' || category.label === 'Anon';
   const isSecret = category.id === 'secret' && !isHacker;
 
-  // --- THEME CONFIG ---
-  const CLAUDE_ORANGE = '#da7756'; // Warm terracotta orange
-  
+  // --- THEME ---
+  const CLAUDE_ORANGE = '#da7756';
+
   const themeStyles = {
-    // We use arbitrary values for the specific Claude Orange
-    accentHover: isHacker ? 'hover:text-green-500' : isSecret ? 'hover:text-red-500' : `hover:text-[${CLAUDE_ORANGE}]`,
-    accentText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : `text-[${CLAUDE_ORANGE}]`,
+    accentHover: isHacker ? 'hover:text-green-500' : isSecret ? 'hover:text-red-500' : 'hover:text-[#da7756]',
+    accentText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : 'text-[#da7756]',
     bodyText: 'text-zinc-300',
-    dateText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : `text-[${CLAUDE_ORANGE}]`,
+    dateText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : 'text-[#da7756]',
     iconColor: 'text-zinc-500', 
     borderColor: isHacker ? 'border-green-900/50' : 'border-zinc-800'
   };
@@ -85,10 +84,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     const diffX = currentX - touchStartX.current;
     const diffY = currentY - touchStartY.current;
 
-    // Ignore vertical scrolling
     if (Math.abs(diffY) > Math.abs(diffX)) return;
 
-    // Swiping Left (Negative X)
     if (diffX < 0) {
       if (e.cancelable && Math.abs(diffX) > 10) e.preventDefault();
       setIsSwiping(true);
@@ -108,14 +105,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   const paddingClass = isCompact ? 'px-3 py-2' : 'p-3';
 
-  // Determine Background Color for Swipe Action
-  const deleteBgClass = isHacker ? 'bg-green-600' : `bg-[${CLAUDE_ORANGE}]`;
-
   return (
     <div className="relative w-full md:w-fit md:max-w-full overflow-hidden rounded-xl group">
       
       {/* Background Layer (Swipe Indicator) */}
-      <div className={`absolute inset-0 ${deleteBgClass} flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`}>
+      <div 
+        className={`absolute inset-0 flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`}
+        style={{ backgroundColor: isHacker ? '#16a34a' : CLAUDE_ORANGE }} 
+      >
         <Trash2 className="text-white animate-pulse" size={24} />
       </div>
 
@@ -135,10 +132,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             {/* Header Line */}
             <div className="flex items-center justify-between gap-2 w-full flex-shrink-0 h-6">
                <div className="flex items-center gap-2">
-                  <button onClick={() => onCategoryClick(note.category)} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-black border hover:border-zinc-700 transition-all ${themeStyles.borderColor}`}>
+                  {/* CHANGED FROM BUTTON TO DIV: No longer clickable/linked to timeline */}
+                  <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-black border ${themeStyles.borderColor}`}>
                     <span className="text-xs grayscale">{category.emoji}</span>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-300">{category.label}</span>
-                  </button>
+                  </div>
                </div>
                
                {/* Action Icons - Invisible until group hover */}
@@ -173,9 +171,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           // Collapsed View
            isSingleLine ? (
               <div className="flex items-center justify-between gap-2">
-                 <button onClick={() => onCategoryClick(note.category)} className={`w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-black/50 border hover:border-zinc-700 transition-all ${themeStyles.borderColor}`}>
+                 {/* CHANGED FROM BUTTON TO DIV */}
+                 <div className={`w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-black/50 border ${themeStyles.borderColor}`}>
                     <span className="text-[10px] grayscale">{category.emoji}</span>
-                 </button>
+                 </div>
                  <div className="flex-1 min-w-0" onClick={() => onToggleExpand(note.id)}>
                     <p className={`text-base truncate cursor-pointer text-left ${themeStyles.bodyText}`}>{lines[0]}</p>
                  </div>
@@ -186,9 +185,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             ) : (
               <div className="flex gap-2">
                  <div className="flex flex-col justify-center">
-                   <button onClick={() => onCategoryClick(note.category)} className={`w-5 h-5 flex items-center justify-center rounded-full bg-black/50 border hover:border-zinc-700 transition-all ${themeStyles.borderColor}`}>
+                   {/* CHANGED FROM BUTTON TO DIV */}
+                   <div className={`w-5 h-5 flex items-center justify-center rounded-full bg-black/50 border ${themeStyles.borderColor}`}>
                      <span className="text-[10px] grayscale">{category.emoji}</span>
-                   </button>
+                   </div>
                  </div>
                  <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <div onClick={() => onToggleExpand(note.id)} className="cursor-pointer">

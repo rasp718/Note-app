@@ -77,6 +77,9 @@ function App() {
 
   const lastScrollY = useRef(0);
 
+  // --- KEYBOARD OFFSET STATE ---
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+
   const [secretTaps, setSecretTaps] = useState(0);
   const tapTimeoutRef = useRef<any>(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
@@ -164,6 +167,34 @@ function App() {
       }
     }
   };
+
+  // --- KEYBOARD / VIEWPORT HANDLING ---
+  useEffect(() => {
+    if (!window.visualViewport) return;
+
+    const handleResize = () => {
+      if (!window.visualViewport) return;
+      // Calculate how much the viewport has shrunk (keyboard height)
+      // On iOS, innerHeight remains large, visualViewport shrinks.
+      // On Android, innerHeight often shrinks too, making offset ~0, which is fine as bottom:0 works there.
+      const offset = window.innerHeight - window.visualViewport.height;
+      // We buffer small changes to avoid glitching on minor UI shifts
+      setKeyboardOffset(Math.max(0, offset));
+      
+      if (offset > 10) {
+          // Keyboard likely opened, ensure we see the bottom
+          scrollToBottom('auto');
+      }
+    };
+
+    window.visualViewport.addEventListener('resize', handleResize);
+    window.visualViewport.addEventListener('scroll', handleResize);
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('scroll', handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -406,11 +437,15 @@ function App() {
                   <p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'System Clean' : 'Start Typing...'}</p>
               </div>
           )}
-          <div ref={bottomRef} className="h-20 md:h-16 w-full shrink-0" />
+          {/* Bottom Spacer - dynamic based on keyboard */}
+          <div ref={bottomRef} className="h-20 md:h-16 w-full shrink-0" style={{ height: keyboardOffset > 0 ? `${keyboardOffset + 100}px` : undefined }} />
       </div>
 
-      {/* --- FIXED FOOTER --- */}
-      <div className={`fixed bottom-0 left-0 right-0 z-50 p-3 pb-6 md:pb-3 pointer-events-none translate-y-0`}>
+      {/* --- FIXED FOOTER (Input) --- */}
+      <div 
+        className={`fixed left-0 right-0 z-50 p-3 pb-2 md:pb-3 pointer-events-none transition-none`}
+        style={{ bottom: `${keyboardOffset}px` }} 
+      >
           <div className="max-w-2xl mx-auto pointer-events-auto flex flex-col gap-2">
             
             {/* Editing Context Bar (Transparent + Orange) */}
@@ -443,7 +478,7 @@ function App() {
                             <button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"><X size={10} /></button>
                         </div>
                     )}
-                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} placeholder={editingNote ? "Edit message..." : (activeFilter === 'secret' ? "Inject code..." : t.typePlaceholder)} rows={1} onFocus={() => { setIsNoteFocused(true); setShowBars(true); scrollToBottom(); }} onBlur={() => setIsNoteFocused(false)} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5 ${activeFilter === 'secret' ? 'font-mono text-green-500 placeholder:text-green-800' : ''}`} />
+                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} placeholder={editingNote ? "Edit message..." : (activeFilter === 'secret' ? "Inject code..." : t.typePlaceholder)} rows={1} onFocus={() => { setIsNoteFocused(true); setShowBars(true); scrollToBottom('auto'); }} onBlur={() => setIsNoteFocused(false)} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5 ${activeFilter === 'secret' ? 'font-mono text-green-500 placeholder:text-green-800' : ''}`} />
                     {!transcript && !editingNote && (
                          <label className="cursor-pointer text-zinc-500 hover:text-zinc-300"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>
                     )}

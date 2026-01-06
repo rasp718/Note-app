@@ -110,17 +110,18 @@ function App() {
             selection: 'selection:bg-green-500/30 selection:text-green-200' 
         };
     }
+    // Claude Orange Theme (#da7756)
     return {
-        text: 'text-orange-500',
+        text: 'text-[#da7756]',
         textDim: 'text-zinc-500',
-        border: 'border-orange-500/50',
+        border: 'border-[#da7756]/50',
         borderDim: 'border-zinc-800',
-        bg: 'bg-orange-600',
-        bgHover: 'hover:bg-orange-500',
-        shadow: 'shadow-[0_0_15px_rgba(234,88,12,0.5)]',
+        bg: 'bg-[#da7756]',
+        bgHover: 'hover:bg-[#da7756]/90',
+        shadow: 'shadow-[0_0_15px_rgba(218,119,86,0.5)]',
         ring: 'focus:border-white/10',
         font: 'font-sans',
-        selection: 'selection:bg-orange-500/30 selection:text-orange-200' 
+        selection: 'selection:bg-[#da7756]/30 selection:text-[#da7756]' 
     };
   })();
 
@@ -347,14 +348,14 @@ function App() {
                 <button onClick={handleSecretTrigger} className="w-10 h-10 bg-transparent flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible">
                     {isStartup && (
                         <>
-                            <div className="absolute inset-[-4px] border border-orange-500/50 rounded-xl animate-[spin_1s_linear_infinite] opacity-50" />
-                            <div className="absolute inset-0 bg-orange-500 rounded-xl animate-ping opacity-75" style={{ animationDuration: '4.5s' }} />
+                            <div className="absolute inset-[-4px] border border-[#da7756]/50 rounded-xl animate-[spin_1s_linear_infinite] opacity-50" />
+                            <div className="absolute inset-0 bg-[#da7756] rounded-xl animate-ping opacity-75" style={{ animationDuration: '4.5s' }} />
                         </>
                     )}
                     {activeFilter === 'secret' ? (
-                        <Terminal className="text-zinc-500 hover:text-orange-500 transition-colors" size={24} />
+                        <Terminal className="text-zinc-500 hover:text-[#da7756] transition-colors" size={24} />
                     ) : (
-                        <div className={`w-3 h-3 bg-orange-600 rounded-sm shadow-[0_0_10px_rgba(234,88,12,0.5)] relative z-10 ${isStartup ? 'animate-bounce' : ''}`} style={isStartup ? { animation: `${startupAnimName} 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` } : {}}></div>
+                        <div className={`w-3 h-3 bg-[#da7756] rounded-sm shadow-[0_0_10px_rgba(218,119,86,0.5)] relative z-10 ${isStartup ? 'animate-bounce' : ''}`} style={isStartup ? { animation: `${startupAnimName} 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` } : {}}></div>
                     )}
                 </button>
             </div>
@@ -363,13 +364,13 @@ function App() {
             <div className="flex items-center gap-2">
                 
                 {/* Settings */}
-                 <button onClick={() => { setShowSettings(true); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-orange-500 transition-all active:scale-95 ${isSearchExpanded ? 'w-0 opacity-0 overflow-hidden' : 'w-10 opacity-100'}`}>
+                 <button onClick={() => { setShowSettings(true); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-[#da7756] transition-all active:scale-95 ${isSearchExpanded ? 'w-0 opacity-0 overflow-hidden' : 'w-10 opacity-100'}`}>
                     <Settings size={20} />
                 </button>
 
                 {/* Search Area */}
                 <div className="relative flex items-center justify-end h-10">
-                    <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-orange-500 transition-all active:scale-95 absolute right-0 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}>
+                    <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-[#da7756] transition-all active:scale-95 absolute right-0 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}>
                         <Search size={20} />
                     </button>
                      <div className={`bg-zinc-900 border border-zinc-800 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg' : 'w-10 opacity-0 pointer-events-none'}`}>
@@ -380,7 +381,7 @@ function App() {
                 </div>
 
                 {/* Category Pill (Cycle) */}
-                <button onClick={cycleFilter} className={`flex items-center gap-2 px-3 h-10 rounded-full text-zinc-500 hover:text-orange-500 transition-colors active:scale-95 select-none ${isSearchExpanded ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto'}`}>
+                <button onClick={cycleFilter} className={`flex items-center gap-2 px-3 h-10 rounded-full text-zinc-500 hover:text-[#da7756] transition-colors active:scale-95 select-none ${isSearchExpanded ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto'}`}>
                     <span className="opacity-70 grayscale">{headerPill.icon}</span>
                     <span className="text-xs font-medium uppercase tracking-wider whitespace-nowrap">{headerPill.label}</span>
                 </button>
@@ -416,11 +417,11 @@ function App() {
             {editingNote && (
                 <div className="flex items-center justify-between px-4 py-2 mb-[-10px] mx-1 animate-in slide-in-from-bottom-5 fade-in duration-200">
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="text-orange-500">
+                        <div className="text-[#da7756]">
                             <PenLine size={12} />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">Editing Message</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#da7756]">Editing Message</span>
                             <span className="text-xs text-zinc-400 truncate max-w-[200px]">{editingNote.text}</span>
                         </div>
                     </div>

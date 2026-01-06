@@ -6,28 +6,11 @@ import { useFirebaseSync, useNotes } from './useFirebaseSync';
 import Auth from './components/Auth';
 
 const TRANSLATIONS = { 
-  en: { 
-    search: "Search notes...", 
-    all: "All", 
-    typePlaceholder: "Type a note...", 
-    cat_idea: "Idea", 
-    cat_work: "Work", 
-    cat_journal: "Journal", 
-    cat_todo: "To-Do", 
-    cat_secret: "Classified",
-    cat_hacker: "Anonymous"
-  }, 
-  ru: { 
-    search: "Поиск...", 
-    all: "Все", 
-    typePlaceholder: "Введите заметку...", 
-    cat_idea: "Идея", 
-    cat_work: "Работа", 
-    cat_journal: "Дневник", 
-    cat_todo: "Задачи",
-    cat_secret: "Секретно",
-    cat_hacker: "Аноним"
-  } 
+  search: "Search notes...", 
+  all: "All", 
+  typePlaceholder: "Message...", 
+  cat_secret: "Classified", 
+  cat_hacker: "Anonymous"
 };
 
 // --- SECRET CONFIGURATIONS ---
@@ -70,75 +53,29 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
-// --- HELPER COMPONENT: MATRIX RAIN STREAM ---
-const MatrixRainStream = ({ style }: { style: React.CSSProperties }) => {
-    const streamLen = useRef(Math.floor(Math.random() * 16) + 8);
-    const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
-    const chars = "ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ012345789:・.=*+-<>";
-
-    const getChar = () => chars[Math.floor(Math.random() * chars.length)];
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            charRefs.current.forEach((span) => {
-                if (span && Math.random() > 0.6) {
-                    span.innerText = getChar();
-                }
-            });
-        }, 50); 
-
-        return () => clearInterval(interval);
-    }, []);
-
-    return (
-        <div 
-            className="absolute flex flex-col items-center leading-none select-none"
-            style={style}
-        >
-            {Array.from({ length: streamLen.current }).map((_, index) => {
-                const isHead = index === streamLen.current - 1;
-                const opacity = Math.max(0.1, (index + 1) / streamLen.current);
-                
-                return (
-                    <span
-                        key={index}
-                        ref={(el) => (charRefs.current[index] = el)}
-                        className={`font-mono font-bold writing-vertical-rl ${isHead ? 'text-white' : 'text-green-500'}`}
-                        style={{
-                            opacity: isHead ? 1 : opacity,
-                            textShadow: isHead 
-                                ? '0 0 8px rgba(255, 255, 255, 0.9), 0 0 12px rgba(34, 197, 94, 0.9)'
-                                : '0 0 5px rgba(34, 197, 94, 0.6)',
-                            fontSize: 'inherit'
-                        }}
-                    >
-                        {getChar()}
-                    </span>
-                );
-            })}
-        </div>
-    );
-};
-
 function App() {
   const { user, loading: authLoading } = useFirebaseSync();
   const { notes, addNote, deleteNote: deleteNoteFromFirebase, updateNote, syncing } = useNotes(user?.uid || null);
   const [categories, setCategories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
-  const [lang, setLang] = useState<'en' | 'ru'>('en');
   const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
   const [transcript, setTranscript] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  
+  // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null); 
   const editTextAreaRef = useRef<HTMLTextAreaElement>(null); 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // TELEGRAM STYLE: Bottom Scroll Anchor
+  const bottomRef = useRef<HTMLDivElement>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all' | 'secret'>('all');
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'secret'>('idea');
   
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsView, setSettingsView] = useState<'main' | 'icons'>('main'); 
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
@@ -172,7 +109,7 @@ function App() {
 
   const activeSecretConfig = secretAnimType === 'matrix' ? HACKER_CONFIG : GHOST_CONFIG;
 
-  // --- DYNAMIC EDIT THEME CALCULATOR ---
+  // --- THEME & STYLES ---
   const getEditTheme = () => {
     if (editingNote?.category === 'secret') {
         if (secretAnimType === 'matrix') {
@@ -186,7 +123,6 @@ function App() {
                 cancelBtn: 'bg-transparent border border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-green-400'
             };
         } else {
-            // Ghost Mode
             return {
                 containerBorder: 'border-zinc-800',
                 uploadBorder: 'border-red-500/30',
@@ -198,7 +134,6 @@ function App() {
             };
         }
     }
-    // Default / Standard Notes
     return {
         containerBorder: 'border-zinc-800',
         uploadBorder: 'border-zinc-800',
@@ -212,7 +147,6 @@ function App() {
 
   const editTheme = getEditTheme();
 
-  // --- GLOBAL THEME ENGINE ---
   const currentTheme = (() => {
     if (activeFilter === 'secret' || editingNote?.category === 'secret') {
         if (secretAnimType === 'matrix') {
@@ -257,25 +191,11 @@ function App() {
     };
   })();
 
-  useEffect(() => {
-    if (editingNote) {
-        // We now allow scrolling on the body container, so we don't lock overflow as aggressively
-        // or we handle it in the overlay.
-        document.body.style.overflow = 'hidden';
-    } else {
-        document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [editingNote]);
-
   const getCategoryLabel = (cat: CategoryConfig) => {
     if (cat.id === 'secret') {
-        return secretAnimType === 'matrix' ? TRANSLATIONS[lang].cat_hacker : TRANSLATIONS[lang].cat_secret;
+        return secretAnimType === 'matrix' ? TRANSLATIONS.cat_hacker : TRANSLATIONS.cat_secret;
     }
-    const id = cat.id.toLowerCase();
-    const t = TRANSLATIONS[lang];
-    if (lang === 'ru') return { idea: t.cat_idea, work: t.cat_work, journal: t.cat_journal, 'to-do': t.cat_todo, todo: t.cat_todo }[id] || cat.label;
-    return { idea: t.cat_idea, work: t.cat_work, journal: t.cat_journal, 'to-do': t.cat_todo, todo: t.cat_todo }[id] || cat.label;
+    return cat.label;
   };
 
   const handleSecretTrigger = () => {
@@ -331,20 +251,23 @@ function App() {
       if (editingNote) return;
 
       const currentScrollY = window.scrollY;
-      if (currentScrollY < 10) { setShowBars(true); lastScrollY.current = currentScrollY; return; }
-      if (currentScrollY > lastScrollY.current) { setShowBars(false); } else { setShowBars(true); }
+      
+      if (currentScrollY < 10) { 
+          setShowBars(true); 
+          lastScrollY.current = currentScrollY; 
+          return; 
+      }
+      
+      if (currentScrollY > lastScrollY.current) { 
+          setShowBars(false); 
+      } else { 
+          setShowBars(true); 
+      }
       lastScrollY.current = currentScrollY;
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isInputFocused, editingNote]); 
-
-  useEffect(() => {
-    if (editingNote && editTextAreaRef.current) {
-        editTextAreaRef.current.style.height = 'auto';
-        editTextAreaRef.current.style.height = editTextAreaRef.current.scrollHeight + 'px';
-    }
-  }, [editingNote, editNoteText]); 
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -353,9 +276,18 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+      setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+      }, 100);
+  };
+
+  useEffect(() => {
+      scrollToBottom();
+  }, [activeFilter, selectedCategory, notes.length]);
+
   useEffect(() => {
     try {
-        const savedLang = localStorage.getItem('vibenotes_lang'); if(savedLang) setLang(savedLang as any);
         const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any);
         const savedCats = localStorage.getItem('vibenotes_categories'); if(savedCats) setCategories(JSON.parse(savedCats));
         const savedVoice = localStorage.getItem('vibenotes_voice'); if(savedVoice) setSelectedVoiceURI(savedVoice);
@@ -365,19 +297,22 @@ function App() {
   useEffect(() => {
     const loadVoices = () => {
         const all = window.speechSynthesis.getVoices();
-        setVoices(all.filter(v => v.lang.startsWith(lang === 'en' ? 'en' : 'ru')));
+        setVoices(all.filter(v => v.lang.startsWith('en')));
     };
     loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices;
-  }, [lang]);
+  }, []);
 
   useEffect(() => { if (selectedVoiceURI) setSelectedVoice(voices.find(v => v.voiceURI === selectedVoiceURI) || null); }, [selectedVoiceURI, voices]);
   useEffect(() => { localStorage.setItem('vibenotes_categories', JSON.stringify(categories)); }, [categories]);
-  useEffect(() => { localStorage.setItem('vibenotes_lang', lang); }, [lang]);
   useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
-  useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
-
-  const handleCategoryEdit = (id: CategoryId, field: 'label' | 'emoji' | 'colorClass', value: string) => setCategories(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
   
+  useEffect(() => { 
+      if (textareaRef.current) { 
+          textareaRef.current.style.height = 'auto'; 
+          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; 
+      } 
+  }, [transcript]);
+
   const cycleCategory = () => { 
       if (selectedCategory === 'secret') {
           setSelectedCategory(categories[0].id);
@@ -393,36 +328,25 @@ function App() {
     try {
         await addNote({ text: transcript.trim(), date: Date.now(), category: selectedCategory, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
         
-        // --- RESTORED SAVE ANIMATION LOGIC ---
         if (selectedCategory === 'idea') {
             setSaveAnimType(Math.random() > 0.5 ? 'brain' : 'lightning');
-            setShowSaveAnim(true);
-            setTimeout(() => setShowSaveAnim(false), 6000);
+            setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 6000);
         } else if (selectedCategory === 'work') {
             setSaveAnimType('money');
-            setShowSaveAnim(true);
-            setTimeout(() => setShowSaveAnim(false), 4500);
+            setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 4500);
         } else if (selectedCategory === 'journal') {
             setSaveAnimType('journal');
-            setShowSaveAnim(true);
-            setTimeout(() => setShowSaveAnim(false), 4500);
+            setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 4500);
         } else if (selectedCategory === 'to-do' || selectedCategory === 'todo') {
             setSaveAnimType('fire');
-            setShowSaveAnim(true);
-            setTimeout(() => setShowSaveAnim(false), 4500);
+            setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 4500);
         } else if (selectedCategory === 'secret') {
-            if (secretAnimType === 'matrix') {
-                setSaveAnimType('matrix');
-                setShowSaveAnim(true);
-                setTimeout(() => setShowSaveAnim(false), 6000);
-            } else {
-                setSaveAnimType('ghost');
-                setShowSaveAnim(true);
-                setTimeout(() => setShowSaveAnim(false), 6000);
-            }
+            setSaveAnimType(secretAnimType === 'matrix' ? 'matrix' : 'ghost');
+            setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 6000);
         }
 
         setTranscript(''); setImageUrl('');
+        scrollToBottom(); 
     } catch (e) { console.error(e); }
   };
 
@@ -444,8 +368,7 @@ function App() {
   const handleDeleteNote = async (id: string) => { 
       const noteToDelete = notes.find(n => n.id === id);
       if (noteToDelete && (noteToDelete.category === 'to-do' || noteToDelete.category === 'todo')) {
-          setShowConfetti(true);
-          setTimeout(() => setShowConfetti(false), 4500); 
+          setShowConfetti(true); setTimeout(() => setShowConfetti(false), 4500); 
       }
       await deleteNoteFromFirebase(id); 
   };
@@ -459,9 +382,12 @@ function App() {
       if (activeFilter === 'all') return n.category !== 'secret';
       if (activeFilter === 'secret') return n.category === 'secret';
       return n.category === activeFilter;
-  }).sort((a, b) => (a.isPinned === b.isPinned ? 0 : a.isPinned ? -1 : 1));
+  }).sort((a, b) => {
+      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+      return a.date - b.date;
+  });
 
-  const t = TRANSLATIONS[lang];
+  const t = TRANSLATIONS;
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
 
   const isShortNote = !editNoteImage && editNoteText.length < 150;
@@ -472,124 +398,56 @@ function App() {
   return (
     <div className={`min-h-screen w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} overflow-x-hidden ${currentTheme.font}`}>
       
-      {/* --- RESTORED ANIMATION OVERLAYS --- */}
-      {showConfetti && (
-          <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
-              {Array.from({ length: 50 }).map((_, i) => (
-                  <div 
-                      key={i} 
-                      className="absolute top-0 w-2 h-2 rounded-sm"
-                      style={{
-                          backgroundColor: ['#ef4444', '#3b82f6', '#22c55e', '#eab308'][Math.floor(Math.random() * 4)],
-                          left: `${Math.random() * 100}vw`,
-                          animation: `confettiGravity ${2 + Math.random() * 2}s linear forwards`,
-                          '--end-x': `${(Math.random() - 0.5) * 50}vw`,
-                          '--end-y': `${100 + Math.random() * 20}vh`,
-                          '--rot': `${Math.random() * 720}deg`
-                      } as any}
-                  />
-              ))}
-          </div>
-      )}
-
-      {showSaveAnim && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
-              {saveAnimType === 'brain' && <div className="text-6xl animate-[brainFloat_6s_ease-out_forwards]">🧠</div>}
-              {saveAnimType === 'money' && <div className="text-6xl animate-[brainFloat_4.5s_ease-out_forwards]">💰</div>}
-              {saveAnimType === 'journal' && <div className="text-6xl animate-[brainFloat_4.5s_ease-out_forwards]">📔</div>}
-              {saveAnimType === 'fire' && <div className="text-6xl animate-[realFire_1s_ease-out_forwards]">🔥</div>}
-              {saveAnimType === 'lightning' && (
-                  <div className="fixed inset-0 animate-[lightningFlash_0.5s_ease-out_forwards] flex items-center justify-center">
-                       <div className="text-9xl text-yellow-400 animate-[boltStrike_0.4s_ease-out_forwards] drop-shadow-[0_0_50px_rgba(250,204,21,0.8)]">⚡</div>
-                  </div>
-              )}
-              {saveAnimType === 'matrix' && <div className="fixed inset-0 bg-black"><MatrixRainStream style={{ inset: 0 }} /></div>}
-              {saveAnimType === 'ghost' && <div className="text-6xl animate-[ghostFly_4s_ease-in-out_forwards]">👻</div>}
-          </div>
-      )}
-
-      {showSecretAnim && (
-          <div className="fixed inset-0 z-[60] pointer-events-none overflow-hidden">
-              {secretAnimType === 'matrix' ? (
-                   <div className="absolute inset-0 bg-black/90">
-                       {Array.from({ length: 20 }).map((_, i) => (
-                           <MatrixRainStream key={i} style={{ left: `${i * 5}%`, top: `-${Math.random() * 100}px`, fontSize: `${Math.random() * 10 + 10}px` }} />
-                       ))}
-                   </div>
-              ) : (
-                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
-                       <div className="text-9xl animate-[ghostFly_6s_ease-in-out_forwards]">👻</div>
-                  </div>
-              )}
-          </div>
-      )}
-
-      {/* --- EDIT CARD MODAL --- */}
       {editingNote ? (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden">
-            {/* 
-                SCROLL FIX:
-                - Removed 'justify-center' from parent to prevent clipping at the top.
-                - Added 'min-h-full py-8' to allow the card to sit in the middle if small, but scroll if tall.
-                - Added 'my-auto' to the flex column.
-            */}
-            <div className={`min-h-full w-full flex flex-col py-8 px-4 ${alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start'}`}>
-                <div className={`flex-grow flex flex-col justify-center w-full ${alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start'}`}>
-                    <div 
-                        id={`edit-card-${editingNote.id}`}
-                        className={`
-                            relative pointer-events-auto
-                            /* WIDTHS: Mobile=fit to image/content, Laptop=fixed standard width (w-96) */
-                            ${editNoteImage ? 'w-fit mx-auto md:mx-0 md:w-96' : 'w-full md:w-96'} 
-                            bg-zinc-900 border rounded-2xl p-3 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,0,0,0.5)] 
-                            ${editTheme.containerBorder}
-                        `}
-                    >
-                        <div className="w-full">
-                            {editNoteImage ? (
-                                <div className={`relative mb-2 rounded-xl overflow-hidden border bg-zinc-950 flex justify-center group/img ${editTheme.uploadBorder}`}>
-                                    {/* 
-                                        MOBILE IMAGE HEIGHT:
-                                        max-h-[35vh] ensures keyboard doesn't cover it completely.
-                                    */}
-                                    <img 
-                                        src={editNoteImage} 
-                                        className="max-h-[35vh] md:max-h-96 w-auto max-w-full object-contain" 
-                                        alt="Editing" 
-                                    />
-                                    <button onClick={() => setEditNoteImage('')} className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur text-white rounded-full hover:bg-red-500 transition-colors"><X size={14} /></button>
-                                </div>
-                            ) : (
-                                <label className={`flex items-center justify-center gap-2 w-full py-3 border border-dashed rounded-xl cursor-pointer transition-all bg-zinc-900/30 ${editTheme.uploadBorder} ${editTheme.icon}`}>
-                                    <ImageIcon size={16} /> <span className="text-[10px] font-bold uppercase tracking-wider">Add Image</span>
-                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0], true); }} />
-                                </label>
-                            )}
-                        </div>
-                        <textarea 
-                            ref={editTextAreaRef}
-                            autoFocus 
-                            value={editNoteText} 
-                            onChange={(e) => setEditNoteText(e.target.value)} 
-                            onPaste={(e) => handlePaste(e, true)} 
-                            className={`w-full bg-transparent text-base resize-none focus:outline-none leading-relaxed ${editTheme.text} ${editTheme.placeholder}`} 
-                            placeholder="Type here..." 
-                            style={{ height: 'auto', minHeight: '40px' }}
-                        />
-                        <div className="flex gap-2 pt-2 border-t border-white/5 mt-auto">
-                            <button onClick={handleSaveEdit} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all ${editTheme.saveBtn}`}>
-                                <Check size={12} /> Save
-                            </button>
-                            <button onClick={() => setEditingNote(null)} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 border active:scale-95 transition-all ${editTheme.cancelBtn}`}>
-                                <X size={12} /> Cancel
-                            </button>
-                        </div>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm overflow-hidden touch-none flex flex-col justify-center">
+            <div className={`w-full max-w-2xl mx-auto flex flex-col justify-center p-4 h-full pointer-events-none ${getAlignmentClass()}`}>
+                <div 
+                    id={`edit-card-${editingNote.id}`}
+                    className={`
+                        pointer-events-auto
+                        ${editNoteImage ? 'w-fit mx-auto md:mx-0 md:w-96' : 'w-full md:w-96'} 
+                        max-h-[85dvh] overscroll-y-none bg-zinc-900 border rounded-2xl p-3 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,0,0,0.5)] 
+                        ${isShortNote ? 'overflow-y-hidden touch-none' : 'overflow-y-auto touch-pan-y'} 
+                        ${editTheme.containerBorder}
+                    `}
+                >
+                    <div className="w-full">
+                        {editNoteImage ? (
+                            <div className={`relative mb-2 rounded-xl overflow-hidden border bg-zinc-950 flex justify-center group/img ${editTheme.uploadBorder}`}>
+                                <img src={editNoteImage} className="max-h-[35vh] md:max-h-96 w-auto max-w-full object-contain" alt="Editing" />
+                                <button onClick={() => setEditNoteImage('')} className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur text-white rounded-full hover:bg-red-500 transition-colors"><X size={14} /></button>
+                            </div>
+                        ) : (
+                            <label className={`flex items-center justify-center gap-2 w-full py-3 border border-dashed rounded-xl cursor-pointer transition-all bg-zinc-900/30 ${editTheme.uploadBorder} ${editTheme.icon}`}>
+                                <ImageIcon size={16} /> <span className="text-[10px] font-bold uppercase tracking-wider">Add Image</span>
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0], true); }} />
+                            </label>
+                        )}
+                    </div>
+                    <textarea 
+                        ref={editTextAreaRef}
+                        autoFocus 
+                        value={editNoteText} 
+                        onChange={(e) => setEditNoteText(e.target.value)} 
+                        onPaste={(e) => handlePaste(e, true)} 
+                        className={`w-full bg-transparent text-base resize-none focus:outline-none leading-relaxed ${editTheme.text} ${editTheme.placeholder}`} 
+                        placeholder="Type here..." 
+                        style={{ height: 'auto', minHeight: '40px' }}
+                    />
+                    <div className="flex gap-2 pt-2 border-t border-white/5 mt-auto">
+                        <button onClick={handleSaveEdit} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all ${editTheme.saveBtn}`}>
+                            <Check size={12} /> Save
+                        </button>
+                        <button onClick={() => setEditingNote(null)} className={`flex-1 h-7 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 border active:scale-95 transition-all ${editTheme.cancelBtn}`}>
+                            <X size={12} /> Cancel
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
       ) : (
         <>
+            {/* --- SLIDING HEADER --- */}
             <div className={`fixed top-0 left-0 right-0 z-40 transition-transform duration-1000 ease-in-out pointer-events-none ${isInputFocused || showBars ? 'translate-y-0' : '-translate-y-full'}`}>
                 <header className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3 pointer-events-auto">
                 <button 
@@ -641,7 +499,7 @@ function App() {
                     </div>
                 </div>
                 <button 
-                    onClick={() => { setShowSettings(true); setSettingsView('main'); }} 
+                    onClick={() => { setShowSettings(true); }} 
                     className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-900/80 backdrop-blur-md border border-transparent hover:bg-zinc-900 hover:border-white/10 text-zinc-500 hover:text-zinc-200 transition-all active:scale-95 pointer-events-auto"
                     >
                     <Settings size={18} />
@@ -683,25 +541,43 @@ function App() {
                 </div>
             </div>
 
-            <div className={`pt-32 pb-32 px-4 max-w-2xl mx-auto flex flex-col gap-3 ${getAlignmentClass()}`}>
+            {/* --- LIST CONTAINER --- */}
+            <div className={`pt-32 pb-0 px-4 max-w-2xl mx-auto flex flex-col gap-3 ${getAlignmentClass()}`}>
+                
                 {filteredNotes.map(note => (
-                    <NoteCard 
+                    <div 
                         key={note.id} 
-                        note={note} 
-                        categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
-                        selectedVoice={selectedVoice} 
-                        onDelete={handleDeleteNote} 
-                        onPin={togglePin} 
-                        onCategoryClick={(cat) => setActiveFilter(cat)} 
-                        onEdit={() => handleEditClick(note)} 
-                        onToggleExpand={handleToggleExpand} 
-                    />
+                        onDoubleClick={() => handleToggleExpand(note.id)}
+                        className="select-none touch-manipulation transition-transform duration-200 active:scale-[0.99]"
+                    >
+                        <NoteCard 
+                            note={note} 
+                            categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
+                            selectedVoice={selectedVoice} 
+                            onDelete={handleDeleteNote} 
+                            onPin={togglePin} 
+                            onCategoryClick={(cat) => setActiveFilter(cat)} 
+                            onEdit={() => handleEditClick(note)} 
+                            onToggleExpand={handleToggleExpand} 
+                        />
+                    </div>
                 ))}
                 
-                {filteredNotes.length === 0 && <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full"><LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} /><p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? (secretAnimType === 'matrix' ? 'System Clean' : 'No Secrets Yet') : 'Database Empty'}</p></div>}
+                {filteredNotes.length === 0 && (
+                    <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full">
+                        <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
+                        <p className="text-zinc-700 text-xs font-mono uppercase">
+                            {activeFilter === 'secret' ? (secretAnimType === 'matrix' ? 'System Clean' : 'No Secrets Yet') : 'Start Typing...'}
+                        </p>
+                    </div>
+                )}
+                
+                {/* SCROLL ANCHOR - FIXED HEIGHT */}
+                <div ref={bottomRef} className="h-20 md:h-16 w-full shrink-0" />
             </div>
 
-            <div className={`fixed bottom-0 left-0 right-0 z-40 p-3 pb-6 md:pb-3 transition-transform duration-1000 ease-in-out pointer-events-none ${isInputFocused || showBars ? 'translate-y-0' : 'translate-y-full'}`}>
+            {/* --- FIXED FOOTER --- */}
+            <div className={`fixed bottom-0 left-0 right-0 z-40 p-3 pb-6 md:pb-3 pointer-events-none translate-y-0`}>
                 <div className="max-w-2xl mx-auto flex items-end gap-2 pointer-events-auto">
                     <button onClick={cycleCategory} className="flex-shrink-0 h-10 mb-0.5 px-3 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center gap-2 transition-all active:scale-95 group shadow-lg shadow-black/50">
                         <span className="text-xs grayscale-0 transition-all">{currentCategoryConfig.emoji}</span>
@@ -715,14 +591,13 @@ function App() {
                             onPaste={(e) => handlePaste(e)} 
                             placeholder={activeFilter === 'secret' ? (secretAnimType === 'matrix' ? "Inject code..." : "Whisper a secret...") : t.typePlaceholder} 
                             rows={1} 
-                            onFocus={() => { setIsInputFocused(true); setShowBars(true); }}
+                            onFocus={() => { setIsInputFocused(true); setShowBars(true); scrollToBottom(); }}
                             onBlur={() => setIsInputFocused(false)}
                             className={`w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5 ${
                                 activeFilter === 'secret' && secretAnimType === 'matrix' ? 'font-mono text-green-500 placeholder:text-green-800' : ''
                             }`} 
                         />
                     </div>
-                    {/* DYNAMIC FOOTER BUTTON COLOR */}
                     <button onClick={saveNote} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 mb-0.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 shadow-lg shadow-black/50 ${transcript.trim() || imageUrl ? `${currentTheme.bg} ${currentTheme.shadow} text-white` : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}>{transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />}</button>
                 </div>
             </div>

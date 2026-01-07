@@ -3,7 +3,6 @@ import { Trash2, Pin, Volume2, Edit2 } from 'lucide-react';
 import { Note, CategoryConfig, CategoryId } from '../types';
 
 // --- HELPER COMPONENT FOR ICONS ---
-// This ensures hover states work reliably for each icon individually
 const NoteActionButton = ({ 
   onClick, 
   icon: Icon, 
@@ -28,7 +27,6 @@ const NoteActionButton = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className="transition-colors duration-200"
-      // Default is zinc-500 (#71717a). On hover or active, use the accent color.
       style={{ color: isHovered || isActive ? accentColor : '#71717a' }} 
       title={label}
     >
@@ -76,9 +74,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const HACKER_GREEN = '#4ade80';
 
   const accentColor = isHacker ? HACKER_GREEN : isSecret ? '#ef4444' : CLAUDE_ORANGE;
-  
-  // FIXED: Used RGBA for Hacker mode to make the border look thinner/subtler (opacity 0.2)
-  // instead of a solid dark green which looked "thick".
   const borderColor = isHacker ? 'rgba(74, 222, 128, 0.2)' : '#27272a'; 
 
   const isExpanded = note.isExpanded !== false;
@@ -87,7 +82,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const isCompact = lines.length === 1 && !note.imageUrl;
 
   const handleSpeakNote = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card expansion
+    e.stopPropagation(); 
     if ('speechSynthesis' in window) {
       if (isSpeaking) { window.speechSynthesis.cancel(); setIsSpeaking(false); return; }
       const utterance = new SpeechSynthesisUtterance(note.text);
@@ -141,7 +136,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   return (
     <div 
-      className="relative w-full md:w-fit md:max-w-full overflow-hidden rounded-xl group"
+      className="relative w-fit max-w-[88%] md:max-w-full overflow-hidden rounded-xl group"
       onMouseEnter={() => setIsCardHovered(true)}
       onMouseLeave={() => setIsCardHovered(false)}
     >
@@ -177,7 +172,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   </div>
                </div>
                
-               {/* Action Icons - Now using NoteActionButton for reliable hover states */}
+               {/* Action Icons */}
                <div className="flex items-center gap-3 md:gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   <NoteActionButton onClick={onEdit} icon={Edit2} label="Edit" accentColor={accentColor} />
                   <NoteActionButton onClick={handleSpeakNote} icon={Volume2} label="Speak" accentColor={accentColor} />

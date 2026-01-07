@@ -12,11 +12,15 @@ const TRANSLATIONS = {
   cat_hacker: "Hacker Mode"
 };
 
+// --- THEME CONSTANTS ---
+const CLAUDE_ORANGE = '#da7756';
+const HACKER_GREEN = '#4ade80';
+
 const HACKER_CONFIG: CategoryConfig = {
     id: 'secret', 
     label: 'Anon', 
     emoji: '💻',
-    colorClass: 'bg-green-500'
+    colorClass: 'bg-green-500' 
 };
 
 // --- UTILS ---
@@ -61,6 +65,7 @@ function App() {
   const textareaRef = useRef<HTMLTextAreaElement>(null); 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -76,9 +81,6 @@ function App() {
   const [isNoteFocused, setIsNoteFocused] = useState(false);   
 
   const lastScrollY = useRef(0);
-
-  // --- KEYBOARD OFFSET STATE ---
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   const [secretTaps, setSecretTaps] = useState(0);
   const tapTimeoutRef = useRef<any>(null);
@@ -97,36 +99,15 @@ function App() {
   const [saveAnimType, setSaveAnimType] = useState<'brain' | 'lightning' | 'money' | 'journal' | 'fire' | 'matrix' | null>(null);
 
   const activeSecretConfig = HACKER_CONFIG;
+  const isHackerMode = activeFilter === 'secret' || editingNote?.category === 'secret';
 
-  const currentTheme = (() => {
-    if (activeFilter === 'secret' || editingNote?.category === 'secret') {
-        return {
-            text: 'text-green-500',
-            textDim: 'text-green-500/50',
-            border: 'border-green-500/50',
-            borderDim: 'border-green-500/30',
-            bg: 'bg-green-600',
-            bgHover: 'hover:bg-green-500',
-            shadow: 'shadow-green-900/20',
-            ring: 'focus:border-green-500/50',
-            font: 'font-mono',
-            selection: 'selection:bg-green-500/30 selection:text-green-200' 
-        };
-    }
-    // Claude Orange Theme (#da7756)
-    return {
-        text: 'text-[#da7756]',
-        textDim: 'text-zinc-500',
-        border: 'border-[#da7756]/50',
-        borderDim: 'border-zinc-800',
-        bg: 'bg-[#da7756]',
-        bgHover: 'hover:bg-[#da7756]/90',
-        shadow: 'shadow-[0_0_15px_rgba(218,119,86,0.5)]',
-        ring: 'focus:border-white/10',
-        font: 'font-sans',
-        selection: 'selection:bg-[#da7756]/30 selection:text-[#da7756]' 
-    };
-  })();
+  // --- THEME LOGIC ---
+  const accentColor = isHackerMode ? HACKER_GREEN : CLAUDE_ORANGE;
+  
+  const currentTheme = {
+    font: isHackerMode ? 'font-mono' : 'font-sans',
+    selection: isHackerMode ? 'selection:bg-green-500/30 selection:text-green-400' : 'selection:bg-[#da7756]/30 selection:text-[#da7756]'
+  };
 
   const handleSecretTrigger = () => {
     setSecretTaps(prev => prev + 1);
@@ -168,47 +149,24 @@ function App() {
     }
   };
 
-  // --- KEYBOARD / VIEWPORT HANDLING ---
+  // --- SCROLL LOGIC ---
   useEffect(() => {
-    if (!window.visualViewport) return;
+    const container = listRef.current;
+    if (!container) return;
 
-    const handleResize = () => {
-      if (!window.visualViewport) return;
-      // Calculate how much the viewport has shrunk (keyboard height)
-      // On iOS, innerHeight remains large, visualViewport shrinks.
-      // On Android, innerHeight often shrinks too, making offset ~0, which is fine as bottom:0 works there.
-      const offset = window.innerHeight - window.visualViewport.height;
-      // We buffer small changes to avoid glitching on minor UI shifts
-      setKeyboardOffset(Math.max(0, offset));
-      
-      if (offset > 10) {
-          // Keyboard likely opened, ensure we see the bottom
-          scrollToBottom('auto');
-      }
-    };
-
-    window.visualViewport.addEventListener('resize', handleResize);
-    window.visualViewport.addEventListener('scroll', handleResize);
-
-    return () => {
-      window.visualViewport?.removeEventListener('resize', handleResize);
-      window.visualViewport?.removeEventListener('scroll', handleResize);
-    };
-  }, []);
-
-  useEffect(() => {
     const handleScroll = () => {
       if (isNoteFocused || isSearchExpanded) {
         setShowBars(true);
         return;
       }
-      const currentScrollY = window.scrollY;
+      const currentScrollY = container.scrollTop;
       if (currentScrollY < 10) { setShowBars(true); lastScrollY.current = currentScrollY; return; }
+      
       if (currentScrollY > lastScrollY.current) { setShowBars(false); } else { setShowBars(true); }
       lastScrollY.current = currentScrollY;
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
   }, [isNoteFocused, isSearchExpanded]); 
 
   useEffect(() => {
@@ -216,7 +174,7 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // --- COOL MATRIX EFFECT (CANVAS) ---
+  // --- MATRIX EFFECT ---
   useEffect(() => {
     if (!showSecretAnim) return;
     const canvas = canvasRef.current;
@@ -368,95 +326,102 @@ function App() {
   if (!user) return <Auth />;
 
   return (
-    <div className={`min-h-screen w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} overflow-x-hidden ${currentTheme.font}`}>
+    // MAIN LAYOUT
+    <div className={`h-[100dvh] w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
-      {/* --- HEADER (Single Row, Icons Right, Grayscale) --- */}
+      {/* --- HEADER --- */}
       <div className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] pointer-events-none ${!isNoteFocused && (showBars || isSearchExpanded) ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}`}>
         <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 pointer-events-auto relative">
             
-            {/* 1. Left: App Icon */}
-            <div className={`transition-all duration-300 flex-shrink-0 ${isSearchExpanded ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'}`}>
-                <button onClick={handleSecretTrigger} className="w-10 h-10 bg-transparent flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible">
+            {/* LEFT SIDE: Logo -> Settings -> Category */}
+            <div className="flex items-center gap-3">
+                
+                {/* 1. Logo (Always Colored) */}
+                <button onClick={handleSecretTrigger} className="w-10 h-10 bg-transparent flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible group/logo">
+                    {/* Startup animations */}
                     {isStartup && (
                         <>
-                            <div className="absolute inset-[-4px] border border-[#da7756]/50 rounded-xl animate-[spin_1s_linear_infinite] opacity-50" />
-                            <div className="absolute inset-0 bg-[#da7756] rounded-xl animate-ping opacity-75" style={{ animationDuration: '4.5s' }} />
+                            <div className="absolute inset-[-4px] border rounded-xl animate-[spin_1s_linear_infinite] opacity-50" style={{ borderColor: `${accentColor}80` }} />
+                            <div className="absolute inset-0 rounded-xl animate-ping opacity-75" style={{ backgroundColor: accentColor, animationDuration: '4.5s' }} />
                         </>
                     )}
                     {activeFilter === 'secret' ? (
-                        <Terminal className="text-zinc-500 hover:text-[#da7756] transition-colors" size={24} />
+                        <Terminal className="text-zinc-500 transition-colors" style={{ color: isStartup ? undefined : HACKER_GREEN }} size={24} />
                     ) : (
-                        <div className={`w-3 h-3 bg-[#da7756] rounded-sm shadow-[0_0_10px_rgba(218,119,86,0.5)] relative z-10 ${isStartup ? 'animate-bounce' : ''}`} style={isStartup ? { animation: `${startupAnimName} 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` } : {}}></div>
+                        // Always colored square
+                        <div 
+                          className={`w-3 h-3 rounded-sm relative z-10 transition-all duration-300 ${isStartup ? 'animate-bounce' : ''}`} 
+                          style={{ 
+                            backgroundColor: accentColor, 
+                            boxShadow: `0 0 10px ${accentColor}80`,
+                            animation: isStartup ? `${startupAnimName} 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` : undefined 
+                          }}
+                        />
                     )}
                 </button>
-            </div>
 
-            {/* 2. Right: Controls Row [Settings] [Search] [Category] */}
-            <div className="flex items-center gap-2">
-                
-                {/* Settings */}
-                 <button onClick={() => { setShowSettings(true); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-[#da7756] transition-all active:scale-95 ${isSearchExpanded ? 'w-0 opacity-0 overflow-hidden' : 'w-10 opacity-100'}`}>
+                {/* 2. Settings */}
+                <button onClick={() => { setShowSettings(true); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95 ${isSearchExpanded ? 'w-0 opacity-0 overflow-hidden' : 'w-10 opacity-100'}`} style={{ color: undefined }} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>
                     <Settings size={20} />
                 </button>
 
-                {/* Search Area */}
-                <div className="relative flex items-center justify-end h-10">
-                    <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-[#da7756] transition-all active:scale-95 absolute right-0 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}>
-                        <Search size={20} />
-                    </button>
-                     <div className={`bg-zinc-900 border border-zinc-800 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg' : 'w-10 opacity-0 pointer-events-none'}`}>
-                        <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
-                        <input ref={searchInputRef} type="text" placeholder={t.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
-                        <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
-                    </div>
-                </div>
-
-                {/* Category Pill (Cycle) */}
-                <button onClick={cycleFilter} className={`flex items-center gap-2 px-3 h-10 rounded-full text-zinc-500 hover:text-[#da7756] transition-colors active:scale-95 select-none ${isSearchExpanded ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto'}`}>
+                {/* 3. Category Pill */}
+                <button onClick={cycleFilter} className={`flex items-center gap-2 px-3 h-10 rounded-full text-zinc-500 transition-colors active:scale-95 select-none ${isSearchExpanded ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto'}`} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>
                     <span className="opacity-70 grayscale">{headerPill.icon}</span>
                     <span className="text-xs font-medium uppercase tracking-wider whitespace-nowrap">{headerPill.label}</span>
                 </button>
-
             </div>
+
+            {/* RIGHT SIDE: Search */}
+            <div className="relative flex items-center justify-end h-10">
+                <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95 absolute right-0 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>
+                    <Search size={20} />
+                </button>
+                 <div className={`bg-zinc-900 border border-zinc-800 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg' : 'w-10 opacity-0 pointer-events-none'}`}>
+                    <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
+                    <input ref={searchInputRef} type="text" placeholder={t.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
+                    <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
+                </div>
+            </div>
+
         </header>
       </div>
 
-      {/* --- MATRIX EFFECT LAYER --- */}
+      {/* --- MATRIX EFFECT --- */}
       {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-50 pointer-events-none" />}
 
-      {/* --- LIST CONTAINER --- */}
-      <div className={`pt-20 pb-0 px-4 max-w-2xl mx-auto flex flex-col gap-3 ${getAlignmentClass()}`}>
-          {filteredNotes.map(note => (
-              <div key={note.id} onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none touch-manipulation transition-all duration-300 active:scale-[0.99] ${editingNote?.id === note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
-                  <NoteCard note={note} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onToggleExpand={handleToggleExpand} />
-              </div>
-          ))}
-          {filteredNotes.length === 0 && (
-              <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg col-span-full opacity-50 w-full">
-                  <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
-                  <p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'System Clean' : 'Start Typing...'}</p>
-              </div>
-          )}
-          {/* Bottom Spacer - dynamic based on keyboard */}
-          <div ref={bottomRef} className="h-20 md:h-16 w-full shrink-0" style={{ height: keyboardOffset > 0 ? `${keyboardOffset + 100}px` : undefined }} />
+      {/* --- SCROLLABLE LIST (Flex-1) --- */}
+      <div ref={listRef} className={`flex-1 overflow-y-auto overflow-x-hidden relative w-full`}>
+          {/* Inner container with min-h-full to force bottom justification */}
+          <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${getAlignmentClass()}`}>
+            {filteredNotes.map(note => (
+                <div key={note.id} onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none touch-manipulation transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote?.id === note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
+                    <NoteCard note={note} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onToggleExpand={handleToggleExpand} />
+                </div>
+            ))}
+            {filteredNotes.length === 0 && (
+                <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg w-full opacity-50 mb-auto mt-20">
+                    <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
+                    <p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'System Clean' : 'Start Typing...'}</p>
+                </div>
+            )}
+            <div ref={bottomRef} className="h-0 w-full shrink-0" />
+          </div>
       </div>
 
-      {/* --- FIXED FOOTER (Input) --- */}
-      <div 
-        className={`fixed left-0 right-0 z-50 p-3 pb-2 md:pb-3 pointer-events-none transition-none`}
-        style={{ bottom: `${keyboardOffset}px` }} 
-      >
-          <div className="max-w-2xl mx-auto pointer-events-auto flex flex-col gap-2">
+      {/* --- FOOTER (Static & Transparent) --- */}
+      <div className={`flex-none w-full p-3 pb-6 md:pb-3 bg-transparent z-50`}>
+          <div className="max-w-2xl mx-auto flex flex-col gap-2">
             
-            {/* Editing Context Bar (Transparent + Orange) */}
+            {/* Editing Context */}
             {editingNote && (
                 <div className="flex items-center justify-between px-4 py-2 mb-[-10px] mx-1 animate-in slide-in-from-bottom-5 fade-in duration-200">
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="text-[#da7756]">
+                        <div style={{ color: accentColor }}>
                             <PenLine size={12} />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#da7756]">Editing Message</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: accentColor }}>Editing Message</span>
                             <span className="text-xs text-zinc-400 truncate max-w-[200px]">{editingNote.text}</span>
                         </div>
                     </div>
@@ -468,8 +433,9 @@ function App() {
 
             {/* Input Bar */}
             <div className="flex items-end gap-2 bg-black/50 backdrop-blur-sm rounded-3xl p-1">
+                {/* Left Category Icon: GRAYSCALE default, COLOR on hover */}
                 <button onClick={cycleInputCategory} className="flex-shrink-0 h-10 w-10 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center justify-center transition-all active:scale-95 group shadow-lg shadow-black/50">
-                    <span className="text-xs grayscale-0 transition-all">{currentCategoryConfig.emoji}</span>
+                    <span className="text-xs grayscale group-hover:grayscale-0 transition-all">{currentCategoryConfig.emoji}</span>
                 </button>
                 <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3 shadow-lg shadow-black/50 relative">
                     {imageUrl && (
@@ -478,12 +444,12 @@ function App() {
                             <button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"><X size={10} /></button>
                         </div>
                     )}
-                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} placeholder={editingNote ? "Edit message..." : (activeFilter === 'secret' ? "Inject code..." : t.typePlaceholder)} rows={1} onFocus={() => { setIsNoteFocused(true); setShowBars(true); scrollToBottom('auto'); }} onBlur={() => setIsNoteFocused(false)} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5 ${activeFilter === 'secret' ? 'font-mono text-green-500 placeholder:text-green-800' : ''}`} />
+                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} placeholder={editingNote ? "Edit message..." : (activeFilter === 'secret' ? "Inject code..." : t.typePlaceholder)} rows={1} onFocus={() => { setIsNoteFocused(true); setShowBars(true); scrollToBottom('auto'); }} onBlur={() => setIsNoteFocused(false)} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
                     {!transcript && !editingNote && (
                          <label className="cursor-pointer text-zinc-500 hover:text-zinc-300"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>
                     )}
                 </div>
-                <button onClick={handleMainAction} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 shadow-lg shadow-black/50 ${transcript.trim() || imageUrl ? `${currentTheme.bg} ${currentTheme.shadow} text-white` : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}>
+                <button onClick={handleMainAction} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 shadow-lg shadow-black/50`} style={transcript.trim() || imageUrl ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: '#18181b', borderColor: '#27272a', borderWidth: '1px', color: '#52525b' }}>
                     {editingNote ? <Check size={20} strokeWidth={3} /> : (transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />)}
                 </button>
             </div>
@@ -497,11 +463,6 @@ function App() {
         @keyframes logoHeartbeat { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
         @keyframes logoGlitch { 0% { transform: translate(0); } 20% { transform: translate(-3px, 3px); } 40% { transform: translate(-3px, -3px); } 60% { transform: translate(3px, 3px); } 80% { transform: translate(3px, -3px); } 100% { transform: translate(0); } }
         @keyframes logoWobble { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg) scale(1.1); } 75% { transform: rotate(15deg) scale(1.1); } }
-        @keyframes brainFloat { 0% { transform: translateY(0) scale(1); opacity: 0; } 15% { opacity: 1; transform: translateY(-15vh) scale(1.4); } 100% { transform: translateY(-110vh) scale(1); opacity: 0; } }
-        @keyframes realFire { 0% { transform: translateY(20px) scale(0.5); opacity: 0; } 15% { opacity: 1; transform: translateY(-10px) scale(1.2); } 100% { transform: translateY(-30vh) scale(0); opacity: 0; } }
-        @keyframes lightningFlash { 0%, 100% { background-color: transparent; } 5%, 15% { background-color: rgba(255, 255, 255, 0.2); } 10% { background-color: transparent; } }
-        @keyframes boltStrike { 0% { opacity: 0; transform: translateY(-100%) scale(0.5); } 10% { opacity: 1; transform: translateY(0) scale(1); } 30% { opacity: 1; } 100% { opacity: 0; } }
-        @keyframes confettiGravity { 0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.5); opacity: 1; } 15% { transform: translate(calc(-50% + (var(--end-x) * 0.2)), calc(-50% - 20vh)) rotate(90deg) scale(1.2); opacity: 1; } 100% { transform: translate(calc(-50% + var(--end-x)), calc(-50% + var(--end-y))) rotate(var(--rot)) scale(0.5); opacity: 0; } }
       `}</style>
     </div>
   );

@@ -2,6 +2,41 @@ import React, { useState, useRef } from 'react';
 import { Trash2, Pin, Volume2, Edit2 } from 'lucide-react';
 import { Note, CategoryConfig, CategoryId } from '../types';
 
+// --- HELPER COMPONENT FOR ICONS ---
+// This ensures hover states work reliably for each icon individually
+const NoteActionButton = ({ 
+  onClick, 
+  icon: Icon, 
+  label, 
+  accentColor, 
+  isActive = false 
+}: { 
+  onClick: (e: React.MouseEvent) => void, 
+  icon: React.ElementType, 
+  label: string, 
+  accentColor: string, 
+  isActive?: boolean 
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick(e);
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="transition-colors duration-200"
+      // Default is zinc-500 (#71717a). On hover or active, use the accent color.
+      style={{ color: isHovered || isActive ? accentColor : '#71717a' }} 
+      title={label}
+    >
+      <Icon size={14} fill={isActive ? "currentColor" : "none"} />
+    </button>
+  );
+};
+
 interface NoteCardProps {
   note: Note;
   categories: CategoryConfig[];
@@ -24,6 +59,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   onToggleExpand
 }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isCardHovered, setIsCardHovered] = useState(false);
   
   // --- SWIPE LOGIC STATE ---
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -37,15 +73,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   // --- THEME ---
   const CLAUDE_ORANGE = '#da7756';
+  const HACKER_GREEN = '#4ade80';
 
-  const themeStyles = {
-    accentHover: isHacker ? 'hover:text-green-500' : isSecret ? 'hover:text-red-500' : 'hover:text-[#da7756]',
-    accentText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : 'text-[#da7756]',
-    bodyText: 'text-zinc-300',
-    dateText: isHacker ? 'text-green-500' : isSecret ? 'text-red-500' : 'text-[#da7756]',
-    iconColor: 'text-zinc-500', 
-    borderColor: isHacker ? 'border-green-900/50' : 'border-zinc-800'
-  };
+  const accentColor = isHacker ? HACKER_GREEN : isSecret ? '#ef4444' : CLAUDE_ORANGE;
+  
+  // FIXED: Used RGBA for Hacker mode to make the border look thinner/subtler (opacity 0.2)
+  // instead of a solid dark green which looked "thick".
+  const borderColor = isHacker ? 'rgba(74, 222, 128, 0.2)' : '#27272a'; 
 
   const isExpanded = note.isExpanded !== false;
   const lines = note.text.split('\n');
@@ -53,7 +87,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const isCompact = lines.length === 1 && !note.imageUrl;
 
   const handleSpeakNote = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent card expansion
     if ('speechSynthesis' in window) {
       if (isSpeaking) { window.speechSynthesis.cancel(); setIsSpeaking(false); return; }
       const utterance = new SpeechSynthesisUtterance(note.text);
@@ -106,7 +140,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const paddingClass = isCompact ? 'px-3 py-2' : 'p-3';
 
   return (
-    <div className="relative w-full md:w-fit md:max-w-full overflow-hidden rounded-xl group">
+    <div 
+      className="relative w-full md:w-fit md:max-w-full overflow-hidden rounded-xl group"
+      onMouseEnter={() => setIsCardHovered(true)}
+      onMouseLeave={() => setIsCardHovered(false)}
+    >
       
       {/* Background Layer (Swipe Indicator) */}
       <div 
@@ -118,8 +156,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
       {/* Foreground Layer (Card) */}
       <div 
-        className={`bg-zinc-900 border rounded-xl ${paddingClass} hover:border-zinc-700 relative w-full ${themeStyles.borderColor}`}
+        className={`bg-zinc-900 border rounded-xl ${paddingClass} hover:border-zinc-700 relative w-full`}
         style={{ 
+          borderColor: borderColor,
           transform: `translateX(${swipeOffset}px)`,
           transition: isSwiping ? 'none' : 'transform 0.3s ease-out'
         }}
@@ -132,34 +171,33 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             {/* Header Line */}
             <div className="flex items-center justify-between gap-2 w-full flex-shrink-0 h-6">
                <div className="flex items-center gap-2">
-                  {/* CHANGED FROM BUTTON TO DIV: No longer clickable/linked to timeline */}
-                  <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-black border ${themeStyles.borderColor}`}>
+                  <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-black border" style={{ borderColor: borderColor }}>
                     <span className="text-xs grayscale">{category.emoji}</span>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-300">{category.label}</span>
                   </div>
                </div>
                
-               {/* Action Icons - Invisible until group hover */}
+               {/* Action Icons - Now using NoteActionButton for reliable hover states */}
                <div className="flex items-center gap-3 md:gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className={`${themeStyles.iconColor} ${themeStyles.accentHover} transition-all`} title="Edit"><Edit2 size={14} /></button>
-                  <button onClick={handleSpeakNote} className={`${themeStyles.iconColor} ${themeStyles.accentHover} transition-all`} title="Speak"><Volume2 size={14} /></button>
-                  <button onClick={() => onPin(note.id)} className={`transition-all ${note.isPinned ? themeStyles.accentText : `${themeStyles.iconColor} ${themeStyles.accentHover}`}`} title="Pin"><Pin size={14} fill={note.isPinned ? "currentColor" : "none"} /></button>
-                  <button onClick={() => onDelete(note.id)} className={`${themeStyles.iconColor} ${themeStyles.accentHover} transition-all`} title="Delete"><Trash2 size={14} /></button>
+                  <NoteActionButton onClick={onEdit} icon={Edit2} label="Edit" accentColor={accentColor} />
+                  <NoteActionButton onClick={handleSpeakNote} icon={Volume2} label="Speak" accentColor={accentColor} />
+                  <NoteActionButton onClick={() => onPin(note.id)} icon={Pin} label="Pin" accentColor={accentColor} isActive={note.isPinned} />
+                  <NoteActionButton onClick={() => onDelete(note.id)} icon={Trash2} label="Delete" accentColor={accentColor} />
                </div>
             </div>
 
             {/* Content */}
             <div className="flex flex-col gap-2 items-start w-full">
                 {note.imageUrl && (
-                  <div className={`mb-1 rounded-lg overflow-hidden border bg-zinc-950 flex justify-center max-w-full self-end ${themeStyles.borderColor}`}>
+                  <div className="mb-1 rounded-lg overflow-hidden border bg-zinc-950 flex justify-center max-w-full self-end" style={{ borderColor: borderColor }}>
                     <img src={note.imageUrl} alt="Note attachment" className="w-full md:w-auto h-auto md:max-h-96 object-contain" />
                   </div>
                 )}
                 {note.text && (
                   <div className="w-full">
-                    <p className={`text-base leading-relaxed whitespace-pre-wrap break-words text-left inline-block w-full ${themeStyles.bodyText}`}>
+                    <p className="text-base leading-relaxed whitespace-pre-wrap break-words text-left inline-block w-full text-zinc-300">
                       {note.text}
-                      <span className={`float-right ml-2 mt-1 text-[10px] uppercase tracking-wider select-none font-medium ${themeStyles.dateText}`}>
+                      <span className="float-right ml-2 mt-1 text-[10px] uppercase tracking-wider select-none font-medium" style={{ color: accentColor }}>
                         {formatDate(note.date)}
                       </span>
                     </p>
@@ -171,40 +209,38 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           // Collapsed View
            isSingleLine ? (
               <div className="flex items-center justify-between gap-2">
-                 {/* CHANGED FROM BUTTON TO DIV */}
-                 <div className={`w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-black/50 border ${themeStyles.borderColor}`}>
+                 <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-black/50 border" style={{ borderColor: borderColor }}>
                     <span className="text-[10px] grayscale">{category.emoji}</span>
                  </div>
                  <div className="flex-1 min-w-0" onClick={() => onToggleExpand(note.id)}>
-                    <p className={`text-base truncate cursor-pointer text-left ${themeStyles.bodyText}`}>{lines[0]}</p>
+                    <p className="text-base truncate cursor-pointer text-left text-zinc-300">{lines[0]}</p>
                  </div>
                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`text-[10px] uppercase tracking-wider font-medium ${themeStyles.dateText}`}>{formatDate(note.date)}</span>
+                    <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: accentColor }}>{formatDate(note.date)}</span>
                  </div>
               </div>
             ) : (
               <div className="flex gap-2">
                  <div className="flex flex-col justify-center">
-                   {/* CHANGED FROM BUTTON TO DIV */}
-                   <div className={`w-5 h-5 flex items-center justify-center rounded-full bg-black/50 border ${themeStyles.borderColor}`}>
+                   <div className="w-5 h-5 flex items-center justify-center rounded-full bg-black/50 border" style={{ borderColor: borderColor }}>
                      <span className="text-[10px] grayscale">{category.emoji}</span>
                    </div>
                  </div>
                  <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <div onClick={() => onToggleExpand(note.id)} className="cursor-pointer">
-                       <p className={`text-base leading-tight truncate mb-1 text-left ${themeStyles.bodyText}`}>
+                       <p className="text-base leading-tight truncate mb-1 text-left text-zinc-300">
                          {lines[0] || <span className="italic opacity-50">Attachment</span>}
                        </p>
-                       {lines.length > 1 && <p className={`text-sm leading-snug truncate text-left opacity-70 ${themeStyles.bodyText}`}>{lines[1]}</p>}
+                       {lines.length > 1 && <p className="text-sm leading-snug truncate text-left opacity-70 text-zinc-300">{lines[1]}</p>}
                     </div>
                  </div>
                  {note.imageUrl && (
-                   <div className={`flex-shrink-0 w-12 h-10 rounded bg-zinc-800 border overflow-hidden ${themeStyles.borderColor}`}>
+                   <div className="flex-shrink-0 w-12 h-10 rounded bg-zinc-800 border overflow-hidden" style={{ borderColor: borderColor }}>
                      <img src={note.imageUrl} alt="" className="w-full h-full object-cover" />
                    </div>
                  )}
                  <div className="flex flex-col justify-center items-end gap-1 flex-shrink-0">
-                    <span className={`text-[10px] uppercase tracking-wider font-medium ${themeStyles.dateText}`}>{formatDate(note.date)}</span>
+                    <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: accentColor }}>{formatDate(note.date)}</span>
                  </div>
               </div>
             )

@@ -69,15 +69,15 @@ function App() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Consolidated state: activeFilter determines both what we see AND where we post
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all' | 'secret'>('all');
-  const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'secret'>('idea');
   
   const [showSettings, setShowSettings] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
 
-  const [showBars, setShowBars] = useState(true);
+  const [showBars, setShowBars] = useState(true); 
   const [isNoteFocused, setIsNoteFocused] = useState(false);   
 
   const lastScrollY = useRef(0);
@@ -116,7 +116,6 @@ function App() {
 
     if (secretTaps + 1 >= 5) {
         setActiveFilter('secret');
-        setSelectedCategory('secret');
         setSecretTaps(0);
         setSecretAnimType('matrix');
         setShowSecretAnim(true);
@@ -125,7 +124,13 @@ function App() {
     }
   };
 
-  const currentCategoryConfig = selectedCategory === 'secret' ? activeSecretConfig : categories.find(c => c.id === selectedCategory) || categories[0];
+  // Helper to get current config for icons/labels
+  const getCurrentConfig = () => {
+      if (activeFilter === 'secret') return activeSecretConfig;
+      if (activeFilter === 'all') return null; // Special case for All
+      return categories.find(c => c.id === activeFilter) || categories[0];
+  };
+  const currentConfig = getCurrentConfig();
 
   const handleImageUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) return alert('Please select an image file');
@@ -148,26 +153,6 @@ function App() {
       }
     }
   };
-
-  // --- SCROLL LOGIC ---
-  useEffect(() => {
-    const container = listRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      if (isNoteFocused || isSearchExpanded) {
-        setShowBars(true);
-        return;
-      }
-      const currentScrollY = container.scrollTop;
-      if (currentScrollY < 10) { setShowBars(true); lastScrollY.current = currentScrollY; return; }
-      
-      if (currentScrollY > lastScrollY.current) { setShowBars(false); } else { setShowBars(true); }
-      lastScrollY.current = currentScrollY;
-    };
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [isNoteFocused, isSearchExpanded]); 
 
   useEffect(() => {
     const timer = setTimeout(() => { setIsStartup(false); }, 4500);
@@ -215,7 +200,7 @@ function App() {
       setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100);
   };
 
-  useEffect(() => { scrollToBottom(); }, [activeFilter, selectedCategory]);
+  useEffect(() => { scrollToBottom(); }, [activeFilter]);
 
   useEffect(() => {
     try {
@@ -244,28 +229,31 @@ function App() {
       } 
   }, [transcript]);
 
+  // Cycles through: All -> Cat1 -> Cat2... -> Secret -> All
   const cycleFilter = () => {
       if (activeFilter === 'secret') {
           setActiveFilter('all');
-          setSelectedCategory(categories[0].id);
           return;
       }
       const order: (CategoryId | 'all')[] = ['all', ...categories.map(c => c.id)];
       const currentIndex = order.indexOf(activeFilter as any);
-      const nextIndex = (currentIndex + 1) % order.length;
-      const nextFilter = order[nextIndex];
-      setActiveFilter(nextFilter);
-      if (nextFilter !== 'all' && nextFilter !== 'secret') { setSelectedCategory(nextFilter); }
-  };
+      
+      // If current is not in list (e.g. invalid), default to All
+      if (currentIndex === -1) {
+          setActiveFilter('all');
+          return;
+      }
 
-  const cycleInputCategory = () => { 
-      if (selectedCategory === 'secret') { setSelectedCategory(categories[0].id); return; }
-      const i = categories.findIndex(c => c.id === selectedCategory); 
-      setSelectedCategory(categories[(i + 1) % categories.length].id); 
+      const nextIndex = (currentIndex + 1) % order.length;
+      setActiveFilter(order[nextIndex]);
   };
   
   const handleMainAction = async () => {
     if (!transcript.trim() && !imageUrl) return;
+    
+    // Cannot add notes when in "All" mode
+    if (activeFilter === 'all' && !editingNote) return;
+
     try {
         if (editingNote) {
             const updates: Partial<Note> = { text: transcript.trim() };
@@ -273,12 +261,16 @@ function App() {
             await updateNote(editingNote.id, updates);
             setEditingNote(null);
         } else {
-            await addNote({ text: transcript.trim(), date: Date.now(), category: selectedCategory, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
-            if (selectedCategory === 'idea') { setSaveAnimType(Math.random() > 0.5 ? 'brain' : 'lightning'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 6000); }
-            else if (selectedCategory === 'work') { setSaveAnimType('money'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 4500); }
-            else if (selectedCategory === 'journal') { setSaveAnimType('journal'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 4500); }
-            else if (selectedCategory === 'to-do' || selectedCategory === 'todo') { setSaveAnimType('fire'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 4500); }
-            else if (selectedCategory === 'secret') { setSaveAnimType('matrix'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 6000); }
+            // Force category to match the active filter
+            const categoryToUse = activeFilter as CategoryId; 
+            
+            await addNote({ text: transcript.trim(), date: Date.now(), category: categoryToUse, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
+            
+            if (categoryToUse === 'idea') { setSaveAnimType(Math.random() > 0.5 ? 'brain' : 'lightning'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 6000); }
+            else if (categoryToUse === 'work') { setSaveAnimType('money'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 4500); }
+            else if (categoryToUse === 'journal') { setSaveAnimType('journal'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 4500); }
+            else if (categoryToUse === 'to-do' || categoryToUse === 'todo') { setSaveAnimType('fire'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 4500); }
+            else if (categoryToUse === 'secret') { setSaveAnimType('matrix'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 6000); }
             scrollToBottom(); 
         }
         setTranscript(''); setImageUrl('');
@@ -313,15 +305,6 @@ function App() {
   const t = TRANSLATIONS;
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
 
-  const getHeaderPillDetails = () => {
-    if (activeFilter === 'secret') { return { label: 'Hacker Mode', icon: <Terminal size={14} /> }; }
-    if (activeFilter === 'all') { return { label: 'All', icon: <LayoutGrid size={14} /> }; }
-    const cat = categories.find(c => c.id === activeFilter);
-    return { label: cat?.label || 'Unknown', icon: <span className="text-sm leading-none">{cat?.emoji}</span> };
-  };
-
-  const headerPill = getHeaderPillDetails();
-
   if (authLoading) return <div className="min-h-screen bg-black" />;
   if (!user) return <Auth />;
 
@@ -329,11 +312,11 @@ function App() {
     // MAIN LAYOUT: FIXED INSET-0 (Locks viewport for Keyboard)
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
-      {/* --- HEADER --- */}
-      <div className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] pointer-events-none ${!isNoteFocused && (showBars || isSearchExpanded) ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}`}>
-        <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 pointer-events-auto relative">
+      {/* --- HEADER (Fixed Top) --- */}
+      <div className="fixed top-0 left-0 right-0 z-40">
+        <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative">
             
-            {/* LEFT SIDE: Logo -> Settings -> Category */}
+            {/* LEFT SIDE: Logo -> Settings -> Search */}
             <div className="flex items-center gap-3">
                 
                 {/* 1. Logo (Always Colored) */}
@@ -361,28 +344,26 @@ function App() {
                 </button>
 
                 {/* 2. Settings */}
-                <button onClick={() => { setShowSettings(true); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95 ${isSearchExpanded ? 'w-0 opacity-0 overflow-hidden' : 'w-10 opacity-100'}`} style={{ color: undefined }} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>
+                <button onClick={() => { setShowSettings(true); }} className="w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95" style={{ color: undefined }} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>
                     <Settings size={20} />
                 </button>
 
-                {/* 3. Category Pill */}
-                <button onClick={cycleFilter} className={`flex items-center gap-2 px-3 h-10 rounded-full text-zinc-500 transition-colors active:scale-95 select-none ${isSearchExpanded ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto'}`} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>
-                    <span className="opacity-70 grayscale">{headerPill.icon}</span>
-                    <span className="text-xs font-medium uppercase tracking-wider whitespace-nowrap">{headerPill.label}</span>
-                </button>
+                {/* 3. Search (Moved to Left Group) */}
+                <div className="relative flex items-center h-10">
+                    <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>
+                        <Search size={20} />
+                    </button>
+                    {/* Search Input Expanded */}
+                     <div className={`absolute left-0 bg-zinc-900 border border-zinc-800 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-left ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
+                        <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
+                        <input ref={searchInputRef} type="text" placeholder={t.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
+                        <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
+                    </div>
+                </div>
             </div>
 
-            {/* RIGHT SIDE: Search (Zoom fix: text-base on mobile) */}
-            <div className="relative flex items-center justify-end h-10">
-                <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95 absolute right-0 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>
-                    <Search size={20} />
-                </button>
-                 <div className={`bg-zinc-900 border border-zinc-800 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg' : 'w-10 opacity-0 pointer-events-none'}`}>
-                    <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
-                    {/* Fixed text-base for mobile to prevent zoom */}
-                    <input ref={searchInputRef} type="text" placeholder={t.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
-                    <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
-                </div>
+            {/* RIGHT SIDE: Empty for now (Spacer) */}
+            <div className="flex items-center gap-2">
             </div>
 
         </header>
@@ -403,14 +384,14 @@ function App() {
             {filteredNotes.length === 0 && (
                 <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg w-full opacity-50 mb-auto mt-20">
                     <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
-                    <p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'System Clean' : 'Start Typing...'}</p>
+                    <p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'System Clean' : (activeFilter === 'all' ? 'Select a Category' : 'Start Typing...')}</p>
                 </div>
             )}
             <div ref={bottomRef} className="h-0 w-full shrink-0" />
           </div>
       </div>
 
-      {/* --- FOOTER (Static & Transparent) --- */}
+      {/* --- FOOTER (Static & Transparent Wrapper) --- */}
       <div className={`flex-none w-full p-3 pb-6 md:pb-3 bg-transparent z-50`}>
           <div className="max-w-2xl mx-auto flex flex-col gap-2">
             
@@ -433,11 +414,17 @@ function App() {
             )}
 
             {/* Input Bar */}
-            <div className="flex items-end gap-2 bg-black/50 backdrop-blur-sm rounded-3xl p-1">
-                {/* Left Category Icon: GRAYSCALE default, COLOR on hover */}
-                <button onClick={cycleInputCategory} className="flex-shrink-0 h-10 w-10 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center justify-center transition-all active:scale-95 group shadow-lg shadow-black/50">
-                    <span className="text-xs grayscale group-hover:grayscale-0 transition-all">{currentCategoryConfig.emoji}</span>
+            <div className="flex items-end gap-2 p-1">
+                {/* Left Category Icon */}
+                <button onClick={cycleFilter} className="flex-shrink-0 h-10 w-10 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center justify-center transition-all active:scale-95 group shadow-lg shadow-black/50">
+                    {activeFilter === 'all' ? (
+                       <LayoutGrid size={16} className="text-zinc-500 group-hover:text-white transition-colors" />
+                    ) : (
+                       <span className="text-xs grayscale group-hover:grayscale-0 transition-all">{currentConfig?.emoji}</span>
+                    )}
                 </button>
+                
+                {/* Input Field Container */}
                 <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3 shadow-lg shadow-black/50 relative">
                     {imageUrl && (
                         <div className="relative flex-shrink-0 group/image">
@@ -445,13 +432,29 @@ function App() {
                             <button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"><X size={10} /></button>
                         </div>
                     )}
-                    {/* Fixed text-base for mobile to prevent zoom */}
-                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} placeholder={editingNote ? "Edit message..." : (activeFilter === 'secret' ? "Inject code..." : t.typePlaceholder)} rows={1} onFocus={() => { setIsNoteFocused(true); setShowBars(true); scrollToBottom('auto'); }} onBlur={() => setIsNoteFocused(false)} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
-                    {!transcript && !editingNote && (
+                    
+                    {/* ENABLED in All, but sending is disabled */}
+                    <textarea 
+                        ref={textareaRef} 
+                        value={transcript} 
+                        onChange={(e) => setTranscript(e.target.value)} 
+                        onPaste={(e) => handlePaste(e)} 
+                        placeholder={editingNote ? "Edit message..." : (activeFilter === 'all' ? "Select category to send..." : `${currentConfig?.label}...`)} 
+                        rows={1} 
+                        onFocus={() => { setIsNoteFocused(true); setShowBars(true); scrollToBottom('auto'); }} 
+                        onBlur={() => setIsNoteFocused(false)} 
+                        className={`w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5 ${isHackerMode ? 'font-mono' : ''}`} 
+                        style={isHackerMode ? { color: HACKER_GREEN } : undefined} 
+                    />
+
+                    {/* Image Upload Icon (Visible always) */}
+                    {(!transcript && !editingNote) && (
                          <label className="cursor-pointer text-zinc-500 hover:text-zinc-300"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>
                     )}
                 </div>
-                <button onClick={handleMainAction} disabled={!transcript.trim() && !imageUrl} className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 shadow-lg shadow-black/50`} style={transcript.trim() || imageUrl ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: '#18181b', borderColor: '#27272a', borderWidth: '1px', color: '#52525b' }}>
+
+                {/* Send Button */}
+                <button onClick={handleMainAction} disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote)} className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 shadow-lg shadow-black/50`} style={(transcript.trim() || imageUrl) && activeFilter !== 'all' ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: '#18181b', borderColor: '#27272a', borderWidth: '1px', color: '#52525b' }}>
                     {editingNote ? <Check size={20} strokeWidth={3} /> : (transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />)}
                 </button>
             </div>

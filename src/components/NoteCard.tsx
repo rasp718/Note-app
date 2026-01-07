@@ -166,9 +166,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             {/* Header Line */}
             <div className="flex items-center justify-between gap-2 w-full flex-shrink-0 h-6">
                <div className="flex items-center gap-2">
-                  <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-black border" style={{ borderColor: borderColor }}>
-                    <span className="text-xs grayscale">{category.emoji}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-300">{category.label}</span>
+                  {/* Category Pill - Icon Only now */}
+                  <div className="w-5 h-5 flex items-center justify-center rounded-full bg-black border" style={{ borderColor: borderColor }}>
+                    <span className="text-[10px] grayscale">{category.emoji}</span>
                   </div>
                </div>
                

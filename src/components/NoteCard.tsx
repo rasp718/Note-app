@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2, Pin, Volume2, Edit2, CornerUpRight, Copy } from 'lucide-react';
+import { Trash2, Pin, Volume2, Edit2, CornerUpRight } from 'lucide-react';
 import { Note, CategoryConfig, CategoryId } from '../types';
 
 // --- HELPER: WEB HAPTIC FEEDBACK ---
@@ -41,20 +41,20 @@ const ContextMenuItem = ({
   );
 };
 
-// --- HEADER ICON BUTTON ---
-const NoteActionButton = ({ onClick, icon: Icon, label, accentColor, isActive = false }: { onClick: (e: React.MouseEvent) => void, icon: React.ElementType, label: string, accentColor: string, isActive?: boolean }) => {
+// --- INLINE ACTION BUTTON (Updated: Gray by default, Color on Hover) ---
+const InlineActionButton = ({ onClick, icon: Icon, accentColor }: { onClick: (e: React.MouseEvent) => void, icon: React.ElementType, accentColor: string }) => {
   const [isHovered, setIsHovered] = useState(false);
+  
   return (
     <button
       type="button"
       onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="transition-colors duration-200"
-      style={{ color: isHovered || isActive ? accentColor : '#71717a' }} 
-      title={label}
+      className="p-1 rounded-full transition-colors active:scale-90"
+      style={{ color: isHovered ? accentColor : '#71717a' }} // Gray default, Accent on hover
     >
-      <Icon size={14} fill={isActive ? "currentColor" : "none"} />
+      <Icon size={12} />
     </button>
   );
 };
@@ -130,7 +130,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     setContextMenu({ x, y });
   };
 
-  // --- UPDATED TIME FORMATTER (Shows Time Only) ---
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
@@ -163,69 +162,71 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     setSwipeOffset(0); setIsSwiping(false); touchStartX.current = null; touchStartY.current = null;
   };
 
-  const paddingClass = isCompact ? 'px-3 py-2' : 'p-3';
+  const paddingClass = isCompact ? 'px-3 py-2' : 'p-2'; 
 
   return (
     <>
       <div className="relative w-fit max-w-[88%] md:max-w-full overflow-visible rounded-xl group" onContextMenu={handleContextMenu}>
+        
+        {/* Swipe Indicator */}
         <div className={`absolute inset-0 flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: isHacker ? '#16a34a' : CLAUDE_ORANGE }}>
           <Trash2 className="text-white animate-pulse" size={24} />
         </div>
+
         <div className={`bg-zinc-900 border rounded-xl ${paddingClass} hover:border-zinc-700 relative w-full`} style={{ borderColor: borderColor, transform: `translateX(${swipeOffset}px)`, transition: isSwiping ? 'none' : 'transform 0.3s ease-out' }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           {isExpanded ? (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2 w-full flex-shrink-0 h-6">
-                 <div className="flex items-center gap-2">
-                    <button onClick={handleCategoryClick} className="w-5 h-5 flex items-center justify-center rounded-full bg-black border active:scale-90 transition-transform cursor-pointer" style={{ borderColor: borderColor }}>
-                      <span className="text-[10px] grayscale">{category.emoji}</span>
-                    </button>
-                 </div>
-                 <div className="flex items-center gap-3 md:gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <NoteActionButton onClick={onEdit} icon={Edit2} label="Edit" accentColor={accentColor} />
-                    <NoteActionButton onClick={handleSpeakNote} icon={Volume2} label="Speak" accentColor={accentColor} />
-                    <NoteActionButton onClick={() => onPin(note.id)} icon={Pin} label="Pin" accentColor={accentColor} isActive={note.isPinned} />
-                    <NoteActionButton onClick={() => onDelete(note.id)} icon={Trash2} label="Delete" accentColor={accentColor} />
-                 </div>
-              </div>
-              <div className="flex flex-col gap-2 items-start w-full">
-                  {note.imageUrl && (
-                    <div className="mb-1 rounded-lg overflow-hidden border bg-zinc-950 flex justify-center max-w-full self-end" style={{ borderColor: borderColor }}>
-                      <img src={note.imageUrl} alt="Note attachment" className="w-full md:w-auto h-auto md:max-h-96 object-contain" />
-                    </div>
-                  )}
+            // EXPANDED VIEW
+            <div className="flex flex-col gap-1">
+              {note.imageUrl && (
+                <div className="mb-1 rounded-lg overflow-hidden border bg-zinc-950 flex justify-center max-w-full" style={{ borderColor: borderColor }}>
+                  <img src={note.imageUrl} alt="Note attachment" className="w-full md:w-auto h-auto md:max-h-96 object-contain" />
+                </div>
+              )}
+
+              {/* Flex Container to allow wrapping: Text Left, Icons/Time Right */}
+              <div className="flex flex-wrap items-end justify-between gap-x-2 w-full">
+                  {/* Text */}
                   {note.text && (
-                    <div className="w-full">
-                      <p className="text-base leading-relaxed whitespace-pre-wrap break-words text-left inline-block w-full text-zinc-300">
-                        {note.text}
-                        <span className="float-right ml-2 mt-1 text-[10px] uppercase tracking-wider select-none font-medium" style={{ color: accentColor }}>
-                          {/* UPDATED TO SHOW TIME */}
-                          {formatTime(note.date)}
-                        </span>
-                      </p>
-                    </div>
+                    <p className="text-base leading-snug whitespace-pre-wrap break-words text-left text-zinc-300">
+                      {note.text}
+                    </p>
                   )}
+
+                  {/* Footer Row: [Edit] [Play] [Time] [Category] - Floats right or stays inline */}
+                  <div className="flex items-center gap-1 ml-auto pb-0.5">
+                      <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={accentColor} />
+                      <InlineActionButton onClick={handleSpeakNote} icon={Volume2} accentColor={accentColor} />
+                      
+                      {/* Timestamp */}
+                      <span className="text-[10px] uppercase tracking-wider font-medium ml-1" style={{ color: accentColor }}>
+                        {formatTime(note.date)}
+                      </span>
+
+                      {/* Category Icon */}
+                      <button onClick={handleCategoryClick} className="w-4 h-4 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer ml-1" style={{ borderColor: borderColor }}>
+                        <span className="text-[9px] grayscale">{category.emoji}</span>
+                      </button>
+                  </div>
               </div>
             </div>
           ) : (
              isSingleLine ? (
+                // Compact Single Line
                 <div className="flex items-center justify-between gap-2">
-                   <button onClick={handleCategoryClick} className="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer" style={{ borderColor: borderColor }}>
-                      <span className="text-[10px] grayscale">{category.emoji}</span>
-                   </button>
                    <div className="flex-1 min-w-0" onClick={() => onToggleExpand(note.id)}>
                       <p className="text-base truncate cursor-pointer text-left text-zinc-300">{lines[0]}</p>
                    </div>
+                   
                    <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: accentColor }}>{formatTime(note.date)}</span>
+                      <button onClick={handleCategoryClick} className="w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer" style={{ borderColor: borderColor }}>
+                          <span className="text-[9px] grayscale">{category.emoji}</span>
+                       </button>
                    </div>
                 </div>
               ) : (
+                // Compact Multi Line
                 <div className="flex gap-2">
-                   <div className="flex flex-col justify-center">
-                     <button onClick={handleCategoryClick} className="w-5 h-5 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer" style={{ borderColor: borderColor }}>
-                       <span className="text-[10px] grayscale">{category.emoji}</span>
-                     </button>
-                   </div>
                    <div className="flex-1 min-w-0 flex flex-col justify-center">
                       <div onClick={() => onToggleExpand(note.id)} className="cursor-pointer">
                          <p className="text-base leading-tight truncate mb-1 text-left text-zinc-300">
@@ -239,8 +240,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                        <img src={note.imageUrl} alt="" className="w-full h-full object-cover" />
                      </div>
                    )}
+                   
                    <div className="flex flex-col justify-center items-end gap-1 flex-shrink-0">
                       <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: accentColor }}>{formatTime(note.date)}</span>
+                      <button onClick={handleCategoryClick} className="w-4 h-4 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer" style={{ borderColor: borderColor }}>
+                         <span className="text-[9px] grayscale">{category.emoji}</span>
+                      </button>
                    </div>
                 </div>
               )

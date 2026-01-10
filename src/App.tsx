@@ -285,7 +285,8 @@ function App() {
 
       {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-50 pointer-events-none" />}
 
-      <div ref={listRef} className={`flex-1 overflow-y-auto overflow-x-hidden relative w-full`}>
+      {/* Added no-scrollbar to main list */}
+      <div ref={listRef} className={`flex-1 overflow-y-auto relative w-full no-scrollbar`}>
           <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${getAlignmentClass()}`}>
             {filteredNotes.map((note, index) => {
                 const prevNote = filteredNotes[index - 1];
@@ -295,7 +296,6 @@ function App() {
                     <React.Fragment key={note.id}>
                          {showHeader && (
                              <div className="flex justify-center my-4 opacity-70 w-full select-none">
-                                {/* MODIFIED DATE PILL: Removed background and border, kept text */}
                                 <span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest">
                                     {getDateLabel(note.date)}
                                 </span>
@@ -320,7 +320,8 @@ function App() {
           </div>
       </div>
 
-      <div className={`flex-none w-full p-3 pb-6 md:pb-3 bg-transparent z-50`}>
+      {/* Updated footer background for fade effect */}
+      <div className={`flex-none w-full p-3 pb-6 md:pb-3 z-50 bg-gradient-to-t from-black via-black/80 to-transparent`}>
           <div className="max-w-2xl mx-auto flex flex-col gap-2">
             {editingNote && (
                 <div className="flex items-center justify-between px-4 py-2 mb-[-10px] mx-1 animate-in slide-in-from-bottom-5 fade-in duration-200">

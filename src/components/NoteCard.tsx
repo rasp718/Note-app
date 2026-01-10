@@ -41,7 +41,7 @@ const ContextMenuItem = ({
   );
 };
 
-// --- INLINE ACTION BUTTON (Updated: Gray by default, Color on Hover) ---
+// --- INLINE ACTION BUTTON ---
 const InlineActionButton = ({ onClick, icon: Icon, accentColor }: { onClick: (e: React.MouseEvent) => void, icon: React.ElementType, accentColor: string }) => {
   const [isHovered, setIsHovered] = useState(false);
   
@@ -51,8 +51,8 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor }: { onClick: (e:
       onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="p-1 rounded-full transition-colors active:scale-90"
-      style={{ color: isHovered ? accentColor : '#71717a' }} // Gray default, Accent on hover
+      className="p-1 rounded-full transition-colors active:scale-90 align-middle"
+      style={{ color: isHovered ? accentColor : '#71717a' }}
     >
       <Icon size={12} />
     </button>
@@ -183,27 +183,25 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                 </div>
               )}
 
-              {/* Flex Container to allow wrapping: Text Left, Icons/Time Right */}
-              <div className="flex flex-wrap items-end justify-between gap-x-2 w-full">
-                  {/* Text */}
-                  {note.text && (
-                    <p className="text-base leading-snug whitespace-pre-wrap break-words text-left text-zinc-300">
-                      {note.text}
-                    </p>
-                  )}
+              {/* Block Layout to allow float-right behavior */}
+              <div className="block w-full">
+                  {/* Text Content */}
+                  <span className="text-base leading-snug whitespace-pre-wrap break-words text-zinc-300">
+                    {note.text}
+                  </span>
 
-                  {/* Footer Row: [Edit] [Play] [Time] [Category] - Floats right or stays inline */}
-                  <div className="flex items-center gap-1 ml-auto pb-0.5">
+                  {/* Footer (Float Right) - Sits on same line if space permits */}
+                  <div className="float-right ml-2 mt-1 flex items-center gap-1.5 align-bottom">
                       <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={accentColor} />
                       <InlineActionButton onClick={handleSpeakNote} icon={Volume2} accentColor={accentColor} />
                       
                       {/* Timestamp */}
-                      <span className="text-[10px] uppercase tracking-wider font-medium ml-1" style={{ color: accentColor }}>
+                      <span className="text-[10px] uppercase tracking-wider font-medium ml-0.5 select-none" style={{ color: accentColor }}>
                         {formatTime(note.date)}
                       </span>
 
                       {/* Category Icon */}
-                      <button onClick={handleCategoryClick} className="w-4 h-4 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer ml-1" style={{ borderColor: borderColor }}>
+                      <button onClick={handleCategoryClick} className="w-4 h-4 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer ml-0.5" style={{ borderColor: borderColor }}>
                         <span className="text-[9px] grayscale">{category.emoji}</span>
                       </button>
                   </div>

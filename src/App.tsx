@@ -320,8 +320,8 @@ function App() {
           </div>
       </div>
 
-      {/* Updated footer background for fade effect */}
-      <div className={`flex-none w-full p-3 pb-6 md:pb-3 z-50 bg-gradient-to-t from-black via-black/80 to-transparent`}>
+      {/* CHANGED: Footer background is now transparent so pills float */}
+      <div className={`flex-none w-full p-3 pb-6 md:pb-3 z-50 bg-transparent`}>
           <div className="max-w-2xl mx-auto flex flex-col gap-2">
             {editingNote && (
                 <div className="flex items-center justify-between px-4 py-2 mb-[-10px] mx-1 animate-in slide-in-from-bottom-5 fade-in duration-200">

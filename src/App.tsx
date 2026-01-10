@@ -23,14 +23,6 @@ const HACKER_CONFIG: CategoryConfig = {
     colorClass: 'bg-green-500' 
 };
 
-// --- BACKGROUND IMAGES ---
-// References the files in your 'public' folder
-const BACKGROUND_IMAGES = [
-  "/bg1.jpg", 
-  "/bg2.jpg", 
-  "/bg3.jpg"  
-];
-
 // --- HELPER: DATE HEADERS ---
 const isSameDay = (d1: number, d2: number) => {
     const date1 = new Date(d1);
@@ -323,22 +315,38 @@ function App() {
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
       {/* 
-          === GRAFFITI WALLPAPER BACKGROUND === 
-          Opacity set to 30% and Brightness reduced to 40% (brightness-[0.4])
-          to ensure the background is dark and subtle.
+          === GRAFFITI COLLAGE BACKGROUND === 
+          Balanced Brightness: Opacity 30% + Brightness 50%
       */}
       <div className="fixed inset-0 z-0 pointer-events-none select-none overflow-hidden bg-black">
-        <div className="absolute inset-0 grid grid-cols-2 md:grid-cols-3">
-             {[...BACKGROUND_IMAGES, ...BACKGROUND_IMAGES].slice(0, 6).map((img, i) => (
-                 <div key={i} className="relative w-full h-full overflow-hidden">
-                     <img 
-                        src={img} 
-                        className="w-full h-full object-cover opacity-30 brightness-[0.4]"
-                        alt=""
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                     />
-                 </div>
-             ))}
+        <div className="absolute inset-0 flex flex-col md:flex-row">
+             {/* Image 1 */}
+             <div className="flex-1 relative overflow-hidden">
+                 <img 
+                    src="/bg1.jpg" 
+                    className="w-full h-full object-cover opacity-30 brightness-50"
+                    alt=""
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                 />
+             </div>
+             {/* Image 2 */}
+             <div className="flex-1 relative overflow-hidden">
+                 <img 
+                    src="/bg2.jpg" 
+                    className="w-full h-full object-cover opacity-30 brightness-50"
+                    alt=""
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                 />
+             </div>
+             {/* Image 3 */}
+             <div className="flex-1 relative overflow-hidden">
+                 <img 
+                    src="/bg3.jpg" 
+                    className="w-full h-full object-cover opacity-30 brightness-50"
+                    alt=""
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                 />
+             </div>
         </div>
       </div>
 

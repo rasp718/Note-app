@@ -295,7 +295,8 @@ function App() {
                     <React.Fragment key={note.id}>
                          {showHeader && (
                              <div className="flex justify-center my-4 opacity-70 w-full select-none">
-                                <span className="bg-zinc-800 text-zinc-400 text-[11px] px-3 py-1 rounded-full border border-zinc-700 font-medium uppercase tracking-wide shadow-sm">
+                                {/* MODIFIED DATE PILL: Removed background and border, kept text */}
+                                <span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest">
                                     {getDateLabel(note.date)}
                                 </span>
                              </div>

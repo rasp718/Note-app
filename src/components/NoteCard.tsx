@@ -3,6 +3,16 @@ import { createPortal } from 'react-dom';
 import { Trash2, Pin, Volume2, Edit2, CornerUpRight, Copy } from 'lucide-react';
 import { Note, CategoryConfig, CategoryId } from '../types';
 
+// --- HELPER: CAPACITOR HAPTIC FEEDBACK ---
+const triggerHaptic = async () => {
+  try {
+    // This triggers the heavy "Taptic" click on iPhone & Android
+    await Haptics.impact({ style: ImpactStyle.Light }); 
+  } catch (e) {
+    // Fallback or ignore if running in a standard browser without bridge
+  }
+};
+
 // --- TELEGRAM-STYLE MENU ITEM ---
 const ContextMenuItem = ({ 
   icon: Icon, 
@@ -17,19 +27,24 @@ const ContextMenuItem = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
+  // Wrapper to handle haptic + action
+  const handleAction = () => {
+    triggerHaptic();
+    onClick();
+  };
+
   return (
     <button
       type="button"
-      // Use onPointerDown to ensure immediate response on mobile before any ghost clicks
+      // onPointerDown ensures immediate mobile response
       onPointerDown={(e) => {
         e.preventDefault(); 
         e.stopPropagation();
-        onClick();
+        handleAction();
       }}
-      // Keep onClick for desktop/accessibility backup
       onClick={(e) => {
         e.stopPropagation();
-        onClick();
+        handleAction();
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -79,6 +94,7 @@ const NoteActionButton = ({
       type="button"
       onClick={(e) => {
         e.stopPropagation();
+        triggerHaptic();
         onClick(e);
       }}
       onMouseEnter={() => setIsHovered(true)}
@@ -114,7 +130,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   onToggleExpand
 }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isCardHovered, setIsCardHovered] = useState(false);
   
   // --- CONTEXT MENU STATE ---
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -125,7 +140,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-  const isLongPress = useRef(false); // Flag to prevent swipe after long press
+  const isLongPress = useRef(false); 
 
   const category = categories.find(c => c.id === note.category) || categories[0];
   const isHacker = category.label === 'Hacker' || category.label === 'Anon';
@@ -146,13 +161,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   // Close menu on click outside
   useEffect(() => {
     const closeMenu = (e: Event) => {
-      // Don't close if scrolling (optional, but good for mobile UX)
       if (e.type === 'scroll') return;
       setContextMenu(null);
     };
 
     if (contextMenu) {
-      // Timeout prevents the immediate touch event that opened the menu from closing it
       setTimeout(() => {
         window.addEventListener('click', closeMenu);
         window.addEventListener('touchstart', closeMenu);
@@ -197,17 +210,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   // --- OPEN MENU LOGIC ---
   const openMenu = (clientX: number, clientY: number) => {
-    // Attempt Haptic Feedback (Android only usually)
-    if (typeof navigator.vibrate === 'function') {
-        try { navigator.vibrate(50); } catch(e) {}
-    }
+    triggerHaptic(); // Haptic feedback on open
 
     const menuW = 200;
-    const menuH = 260; // Increased slighty
+    const menuH = 260; 
     let x = clientX;
     let y = clientY;
 
-    // Safety checks
     if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 20;
     if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 20;
     if (x < 10) x = 10;
@@ -221,9 +230,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  // --- CATEGORY CLICK HANDLER ---
+  const handleCategoryClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    triggerHaptic();
+    onCategoryClick(note.category);
+  };
+
   // --- TOUCH HANDLERS ---
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Only track single finger touches
     if (e.targetTouches.length !== 1) return;
 
     touchStartX.current = e.targetTouches[0].clientX;
@@ -234,7 +249,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     // Start Long Press Timer
     longPressTimer.current = setTimeout(() => {
         if (touchStartX.current && touchStartY.current) {
-            isLongPress.current = true; // Mark as long press so we don't click/swipe later
+            isLongPress.current = true; 
             openMenu(touchStartX.current, touchStartY.current);
         }
     }, 600); 
@@ -248,7 +263,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     const diffX = currentX - touchStartX.current;
     const diffY = currentY - touchStartY.current;
 
-    // If moved significantly, cancel long press
     if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) {
         if (longPressTimer.current) {
             clearTimeout(longPressTimer.current);
@@ -256,33 +270,32 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         }
     }
 
-    if (isLongPress.current) return; // Don't swipe if menu is open/opening
+    if (isLongPress.current) return; 
 
-    // Swipe Logic (Horizontal only)
     if (Math.abs(diffY) > Math.abs(diffX)) return;
 
     if (diffX < 0) {
-      // if (e.cancelable && Math.abs(diffX) > 10) e.preventDefault(); // Optional: lock scroll
       setIsSwiping(true);
       setSwipeOffset(Math.max(diffX, -200));
     }
   };
 
   const handleTouchEnd = () => {
-    // Clear long press timer
     if (longPressTimer.current) {
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
     }
 
-    // If it was a long press, don't do swipe actions or click actions
     if (isLongPress.current) {
         touchStartX.current = null;
         touchStartY.current = null;
         return;
     }
 
-    if (swipeOffset < -100) onDelete(note.id);
+    if (swipeOffset < -100) {
+      triggerHaptic(); // Haptic on delete
+      onDelete(note.id);
+    }
     setSwipeOffset(0);
     setIsSwiping(false);
     touchStartX.current = null;
@@ -295,8 +308,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     <>
       <div 
         className="relative w-fit max-w-[88%] md:max-w-full overflow-visible rounded-xl group"
-        onMouseEnter={() => setIsCardHovered(true)}
-        onMouseLeave={() => setIsCardHovered(false)}
         onContextMenu={handleContextMenu}
       >
         
@@ -325,9 +336,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               {/* Header Line */}
               <div className="flex items-center justify-between gap-2 w-full flex-shrink-0 h-6">
                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 flex items-center justify-center rounded-full bg-black border" style={{ borderColor: borderColor }}>
+                    {/* CLICKABLE CATEGORY PILL */}
+                    <button 
+                      onClick={handleCategoryClick}
+                      className="w-5 h-5 flex items-center justify-center rounded-full bg-black border active:scale-90 transition-transform cursor-pointer" 
+                      style={{ borderColor: borderColor }}
+                    >
                       <span className="text-[10px] grayscale">{category.emoji}</span>
-                    </div>
+                    </button>
                  </div>
                  
                  {/* Desktop Action Icons */}
@@ -361,9 +377,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           ) : (
              isSingleLine ? (
                 <div className="flex items-center justify-between gap-2">
-                   <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-black/50 border" style={{ borderColor: borderColor }}>
+                   {/* CLICKABLE CATEGORY PILL */}
+                   <button 
+                      onClick={handleCategoryClick}
+                      className="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer" 
+                      style={{ borderColor: borderColor }}
+                   >
                       <span className="text-[10px] grayscale">{category.emoji}</span>
-                   </div>
+                   </button>
+
                    <div className="flex-1 min-w-0" onClick={() => onToggleExpand(note.id)}>
                       <p className="text-base truncate cursor-pointer text-left text-zinc-300">{lines[0]}</p>
                    </div>
@@ -374,9 +396,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               ) : (
                 <div className="flex gap-2">
                    <div className="flex flex-col justify-center">
-                     <div className="w-5 h-5 flex items-center justify-center rounded-full bg-black/50 border" style={{ borderColor: borderColor }}>
+                     {/* CLICKABLE CATEGORY PILL */}
+                     <button 
+                       onClick={handleCategoryClick}
+                       className="w-5 h-5 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer" 
+                       style={{ borderColor: borderColor }}
+                     >
                        <span className="text-[10px] grayscale">{category.emoji}</span>
-                     </div>
+                     </button>
                    </div>
                    <div className="flex-1 min-w-0 flex flex-col justify-center">
                       <div onClick={() => onToggleExpand(note.id)} className="cursor-pointer">
@@ -407,10 +434,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           style={{ 
             top: contextMenu.y, 
             left: contextMenu.x,
-            backgroundColor: 'rgba(24, 24, 27, 0.95)', // Deep dark zinc
+            backgroundColor: 'rgba(24, 24, 27, 0.95)', 
             boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)'
           }}
-          // CRITICAL: Stop propagation here so touches inside menu don't trigger the window listener to close it
           onClick={(e) => e.stopPropagation()} 
           onTouchStart={(e) => e.stopPropagation()} 
         >

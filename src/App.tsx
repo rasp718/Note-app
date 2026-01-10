@@ -278,7 +278,13 @@ function App() {
   };
 
   const handleEditClick = (note: Note) => { 
-    setEditingNote(note); setTranscript(note.text); setImageUrl(note.imageUrl || ''); 
+    // Automatically switch to the note's category when editing
+    setActiveFilter(note.category);
+
+    setEditingNote(note); 
+    setTranscript(note.text); 
+    setImageUrl(note.imageUrl || ''); 
+    
     setTimeout(() => { textareaRef.current?.focus(); textareaRef.current?.select(); }, 50);
   };
 

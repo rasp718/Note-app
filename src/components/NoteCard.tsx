@@ -20,14 +20,20 @@ const ContextMenuItem = ({
   return (
     <button
       type="button"
+      // Use onPointerDown to ensure immediate response on mobile before any ghost clicks
+      onPointerDown={(e) => {
+        e.preventDefault(); 
+        e.stopPropagation();
+        onClick();
+      }}
+      // Keep onClick for desktop/accessibility backup
       onClick={(e) => {
-        e.preventDefault();
         e.stopPropagation();
         onClick();
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors duration-150 cursor-pointer select-none"
+      className="w-full flex items-center gap-3 px-3 py-3 text-sm transition-colors duration-150 cursor-pointer select-none active:bg-white/10"
       style={{ 
         backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent' 
       }}
@@ -119,6 +125,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const isLongPress = useRef(false); // Flag to prevent swipe after long press
 
   const category = categories.find(c => c.id === note.category) || categories[0];
   const isHacker = category.label === 'Hacker' || category.label === 'Anon';
@@ -136,17 +143,22 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const isSingleLine = lines.length === 1 && !note.imageUrl && !isExpanded;
   const isCompact = lines.length === 1 && !note.imageUrl;
 
-  // Close menu on click outside or scroll
+  // Close menu on click outside
   useEffect(() => {
-    const closeMenu = () => setContextMenu(null);
+    const closeMenu = (e: Event) => {
+      // Don't close if scrolling (optional, but good for mobile UX)
+      if (e.type === 'scroll') return;
+      setContextMenu(null);
+    };
+
     if (contextMenu) {
-      // Small timeout to prevent the initial click/touch from closing it immediately
+      // Timeout prevents the immediate touch event that opened the menu from closing it
       setTimeout(() => {
         window.addEventListener('click', closeMenu);
         window.addEventListener('touchstart', closeMenu);
         window.addEventListener('scroll', closeMenu, { capture: true });
         window.addEventListener('resize', closeMenu);
-      }, 100);
+      }, 200);
     }
     return () => {
       window.removeEventListener('click', closeMenu);
@@ -185,23 +197,23 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   // --- OPEN MENU LOGIC ---
   const openMenu = (clientX: number, clientY: number) => {
-    // Position calculation to keep menu inside viewport
+    // Attempt Haptic Feedback (Android only usually)
+    if (typeof navigator.vibrate === 'function') {
+        try { navigator.vibrate(50); } catch(e) {}
+    }
+
     const menuW = 200;
-    const menuH = 240;
+    const menuH = 260; // Increased slighty
     let x = clientX;
     let y = clientY;
 
-    // Boundary checks
-    if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 16;
-    if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 16;
-    // Mobile safety: ensure it's not off-screen left/top
+    // Safety checks
+    if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 20;
+    if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 20;
     if (x < 10) x = 10;
     if (y < 10) y = 10;
 
     setContextMenu({ x, y });
-    
-    // Haptic feedback for mobile
-    if (navigator.vibrate) navigator.vibrate(50);
   };
 
   const formatDate = (timestamp: number) => {
@@ -209,21 +221,23 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // --- TOUCH HANDLERS (Swipe + Long Press) ---
+  // --- TOUCH HANDLERS ---
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Only track single finger touches
+    if (e.targetTouches.length !== 1) return;
+
     touchStartX.current = e.targetTouches[0].clientX;
     touchStartY.current = e.targetTouches[0].clientY;
     setIsSwiping(false);
+    isLongPress.current = false;
 
     // Start Long Press Timer
     longPressTimer.current = setTimeout(() => {
         if (touchStartX.current && touchStartY.current) {
+            isLongPress.current = true; // Mark as long press so we don't click/swipe later
             openMenu(touchStartX.current, touchStartY.current);
-            // Reset touch refs so we don't trigger swipe/click after menu opens
-            touchStartX.current = null;
-            touchStartY.current = null;
         }
-    }, 500); // 500ms for long press
+    }, 600); 
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -234,7 +248,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     const diffX = currentX - touchStartX.current;
     const diffY = currentY - touchStartY.current;
 
-    // If moved more than 10px, cancel long press
+    // If moved significantly, cancel long press
     if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) {
         if (longPressTimer.current) {
             clearTimeout(longPressTimer.current);
@@ -242,11 +256,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         }
     }
 
+    if (isLongPress.current) return; // Don't swipe if menu is open/opening
+
     // Swipe Logic (Horizontal only)
     if (Math.abs(diffY) > Math.abs(diffX)) return;
 
     if (diffX < 0) {
-      if (e.cancelable && Math.abs(diffX) > 10) e.preventDefault();
+      // if (e.cancelable && Math.abs(diffX) > 10) e.preventDefault(); // Optional: lock scroll
       setIsSwiping(true);
       setSwipeOffset(Math.max(diffX, -200));
     }
@@ -257,6 +273,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     if (longPressTimer.current) {
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
+    }
+
+    // If it was a long press, don't do swipe actions or click actions
+    if (isLongPress.current) {
+        touchStartX.current = null;
+        touchStartY.current = null;
+        return;
     }
 
     if (swipeOffset < -100) onDelete(note.id);
@@ -387,7 +410,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             backgroundColor: 'rgba(24, 24, 27, 0.95)', // Deep dark zinc
             boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)'
           }}
-          onClick={(e) => e.stopPropagation()} // Prevent closing when clicking menu background
+          // CRITICAL: Stop propagation here so touches inside menu don't trigger the window listener to close it
+          onClick={(e) => e.stopPropagation()} 
+          onTouchStart={(e) => e.stopPropagation()} 
         >
           <ContextMenuItem 
             icon={CornerUpRight} 

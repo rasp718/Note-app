@@ -73,12 +73,23 @@ function App() {
   const { user, loading: authLoading } = useFirebaseSync();
   const { notes, addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
   
-  // --- CUSTOM ICONS ---
+  // --- CATEGORY INITIALIZATION (Handles Defaults + LocalStorage + Icon Overrides) ---
   const [categories, setCategories] = useState<CategoryConfig[]>(() => {
-    return DEFAULT_CATEGORIES.map(c => {
-      if (c.id === 'to-do' || c.id === 'todo') return { ...c, emoji: '🔥' }; 
-      if (c.id === 'idea') return { ...c, emoji: '⚡' }; 
-      if (c.id === 'journal') return { ...c, emoji: '✍️' }; 
+    // 1. Start with Defaults
+    let initial = DEFAULT_CATEGORIES;
+    
+    // 2. Try loading from Local Storage
+    try {
+        const saved = localStorage.getItem('vibenotes_categories');
+        if (saved) initial = JSON.parse(saved);
+    } catch(e) {}
+
+    // 3. Force apply the specific icons requested (Wrench, Lightning, etc)
+    return initial.map(c => {
+      if (c.id === 'idea') return { ...c, emoji: '⚡' };
+      if (c.id === 'work') return { ...c, emoji: '🔧' };
+      if (c.id === 'journal') return { ...c, emoji: '✍️' };
+      if (c.id === 'to-do' || c.id === 'todo') return { ...c, emoji: '🔥' };
       return c; 
     });
   });
@@ -188,7 +199,7 @@ function App() {
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
   useEffect(() => { scrollToBottom(); }, [activeFilter]);
-  useEffect(() => { try { const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any); const savedCats = localStorage.getItem('vibenotes_categories'); if(savedCats) setCategories(JSON.parse(savedCats)); const savedVoice = localStorage.getItem('vibenotes_voice'); if(savedVoice) setSelectedVoiceURI(savedVoice); } catch (e) {} }, []);
+  useEffect(() => { try { const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any); const savedVoice = localStorage.getItem('vibenotes_voice'); if(savedVoice) setSelectedVoiceURI(savedVoice); } catch (e) {} }, []);
   useEffect(() => { const loadVoices = () => { const all = window.speechSynthesis.getVoices(); setVoices(all.filter(v => v.lang.startsWith('en'))); }; loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }, []);
   useEffect(() => { if (selectedVoiceURI) setSelectedVoice(voices.find(v => v.voiceURI === selectedVoiceURI) || null); }, [selectedVoiceURI, voices]);
   useEffect(() => { localStorage.setItem('vibenotes_categories', JSON.stringify(categories)); }, [categories]);
@@ -320,7 +331,7 @@ function App() {
           </div>
       </div>
 
-      {/* CHANGED: Footer background is now transparent so pills float */}
+      {/* FOOTER WRAPPER: bg-transparent ensures area around pills is clear */}
       <div className={`flex-none w-full p-3 pb-6 md:pb-3 z-50 bg-transparent`}>
           <div className="max-w-2xl mx-auto flex flex-col gap-2">
             {editingNote && (

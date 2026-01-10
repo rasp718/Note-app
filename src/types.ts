@@ -21,6 +21,6 @@ export interface Note {
 export const DEFAULT_CATEGORIES: CategoryConfig[] = [
   { id: 'idea', label: 'Idea', emoji: '⚡', colorClass: 'text-yellow-500' },
   { id: 'work', label: 'Work', emoji: '🔧', colorClass: 'text-blue-500' },
-  { id: 'journal', label: 'Journal', emoji: '📝', colorClass: 'text-purple-500' },
+  { id: 'journal', label: 'Journal', emoji: '✍️', colorClass: 'text-purple-500' },
   { id: 'to-do', label: 'To-Do', emoji: '🔥', colorClass: 'text-green-500' },
 ];

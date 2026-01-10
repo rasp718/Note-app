@@ -23,6 +23,14 @@ const HACKER_CONFIG: CategoryConfig = {
     colorClass: 'bg-green-500' 
 };
 
+// --- BACKGROUND IMAGES ---
+// References the files in your 'public' folder
+const BACKGROUND_IMAGES = [
+  "/bg1.jpg", 
+  "/bg2.jpg", 
+  "/bg3.jpg"  
+];
+
 // --- HELPER: DATE HEADERS ---
 const isSameDay = (d1: number, d2: number) => {
     const date1 = new Date(d1);
@@ -80,7 +88,6 @@ function App() {
         const saved = localStorage.getItem('vibenotes_categories');
         if (saved) {
             const savedCats = JSON.parse(saved);
-            // MERGE: Keep saved order/ids but FORCE new emoji icons
             initial = savedCats.map((c: CategoryConfig) => {
                 if (c.id === 'idea') return { ...c, emoji: '⚡' };
                 if (c.id === 'work') return { ...c, emoji: '🔧' };
@@ -176,7 +183,7 @@ function App() {
 
   useEffect(() => { const timer = setTimeout(() => { setIsStartup(false); }, 4500); return () => clearTimeout(timer); }, []);
   
-  // --- MATRIX EFFECT: DATA STREAM (Solid Black Start + Buildup) ---
+  // --- MATRIX EFFECT: DATA STREAM ---
   useEffect(() => {
     if (!showSecretAnim) return;
     const canvas = canvasRef.current;
@@ -184,76 +191,54 @@ function App() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // =================================================================================
-    // 🎛️ VALUES
-    // =================================================================================
-    const FONT_SIZE      = 24;
-    const FADE_SPEED     = 0.1;   // 0.1 = Nice dark background with visible trails
-    const MASTER_SPEED   = 50;    // Speed of falling
+    const FONT_SIZE = 24;
+    const FADE_SPEED = 0.1;
+    const MASTER_SPEED = 50;
     const STUTTER_AMOUNT = 0.85;  
-    const RAIN_BUILDUP   = 300;   // Higher # = Slower start (more rain "waiting" above screen)
+    const RAIN_BUILDUP = 300;
     
-    const COLOR_HEAD     = '#FFF'; 
-    const COLOR_TRAIL    = '#0D0'; 
-    const GLOW_COLOR     = '#0F0'; 
+    const COLOR_HEAD = '#FFF'; 
+    const COLOR_TRAIL = '#0D0'; 
+    const GLOW_COLOR = '#0F0'; 
     const GLOW_INTENSITY = 10;     
 
     const binary = '010101010101'; 
-    const nums   = '0123456789';
-    const latin  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const nums = '0123456789';
+    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const rareKatakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ'; 
-    
     const alphabet = binary + nums + latin + rareKatakana;
-    // =================================================================================
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // 1. FORCE BLACK SCREEN IMMEDIATELY (Fixes the "Green Flash")
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const columns = canvas.width / FONT_SIZE;
-    
     const drops: number[] = [];
-    for(let x = 0; x < columns; x++) { 
-        // Initialize drops strictly ABOVE the screen (negative Y)
-        // This ensures the screen starts empty (Black) and rain falls in gradually
-        drops[x] = Math.floor(Math.random() * -RAIN_BUILDUP); 
-    }
+    for(let x = 0; x < columns; x++) { drops[x] = Math.floor(Math.random() * -RAIN_BUILDUP); }
 
     const draw = () => {
-        // Fade existing trails
         ctx.fillStyle = `rgba(0, 0, 0, ${FADE_SPEED})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
         ctx.font = `bold ${FONT_SIZE}px monospace`;
 
         for(let i = 0; i < drops.length; i++) {
             if (Math.random() > STUTTER_AMOUNT) continue;
-
             const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
             const x = i * FONT_SIZE;
             const y = drops[i] * FONT_SIZE;
 
-            // Only draw if the drop has entered the visible screen area
             if (y > 0) {
-                // Trail
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = COLOR_TRAIL; 
                 ctx.fillText(text, x, y - FONT_SIZE);
-
-                // Head
                 ctx.shadowColor = GLOW_COLOR;
                 ctx.shadowBlur = GLOW_INTENSITY;
                 ctx.fillStyle = COLOR_HEAD;
                 ctx.fillText(text, x, y);
             }
-
-            // Reset loop
-            if(y > canvas.height && Math.random() > 0.975) {
-                drops[i] = 0;
-            }
+            if(y > canvas.height && Math.random() > 0.975) { drops[i] = 0; }
             drops[i]++;
         }
     };
@@ -337,6 +322,26 @@ function App() {
   return (
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
+      {/* 
+          === GRAFFITI WALLPAPER BACKGROUND === 
+          Opacity set to 30% and Brightness reduced to 40% (brightness-[0.4])
+          to ensure the background is dark and subtle.
+      */}
+      <div className="fixed inset-0 z-0 pointer-events-none select-none overflow-hidden bg-black">
+        <div className="absolute inset-0 grid grid-cols-2 md:grid-cols-3">
+             {[...BACKGROUND_IMAGES, ...BACKGROUND_IMAGES].slice(0, 6).map((img, i) => (
+                 <div key={i} className="relative w-full h-full overflow-hidden">
+                     <img 
+                        src={img} 
+                        className="w-full h-full object-cover opacity-30 brightness-[0.4]"
+                        alt=""
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                     />
+                 </div>
+             ))}
+        </div>
+      </div>
+
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40">
         <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative">
@@ -364,7 +369,7 @@ function App() {
       {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-50 pointer-events-none" />}
 
       {/* Main List */}
-      <div ref={listRef} className={`flex-1 overflow-y-auto overflow-x-hidden relative w-full no-scrollbar`}>
+      <div ref={listRef} className={`flex-1 overflow-y-auto overflow-x-hidden relative z-10 w-full no-scrollbar`}>
           <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${getAlignmentClass()}`}>
             {filteredNotes.map((note, index) => {
                 const prevNote = filteredNotes[index - 1];
@@ -374,7 +379,7 @@ function App() {
                     <React.Fragment key={note.id}>
                          {showHeader && (
                              <div className="flex justify-center my-4 opacity-70 w-full select-none">
-                                <span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest">
+                                <span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">
                                     {getDateLabel(note.date)}
                                 </span>
                              </div>
@@ -389,7 +394,7 @@ function App() {
                 );
             })}
             {filteredNotes.length === 0 && (
-                <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg w-full opacity-50 mb-auto mt-20">
+                <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg w-full opacity-50 mb-auto mt-20 backdrop-blur-md bg-black/40">
                     <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
                     <p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'System Clean' : (activeFilter === 'all' ? 'Select a Category' : 'Start Typing...')}</p>
                 </div>

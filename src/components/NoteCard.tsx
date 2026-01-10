@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Trash2, Pin, Volume2, Edit2, CornerUpRight } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Trash2, Pin, Volume2, Edit2, CornerUpRight, Copy } from 'lucide-react';
 import { Note, CategoryConfig, CategoryId } from '../types';
 
-// --- TELEGRAM-STYLE MENU ITEM (Updated: No Red/Danger mode) ---
+// --- TELEGRAM-STYLE MENU ITEM ---
 const ContextMenuItem = ({ 
   icon: Icon, 
   label, 
@@ -18,22 +19,22 @@ const ContextMenuItem = ({
 
   return (
     <button
+      type="button"
       onClick={(e) => {
+        e.preventDefault();
         e.stopPropagation();
         onClick();
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors duration-150"
+      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors duration-150 cursor-pointer select-none"
       style={{ 
-        // Slight white tint on hover for the background row
         backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent' 
       }}
     >
       <Icon 
-        size={16} 
+        size={18} 
         style={{ 
-          // Icon turns Accent Color on hover, otherwise standard gray
           color: isHovered ? accentColor : '#a1a1aa',
           transition: 'color 0.15s ease'
         }} 
@@ -41,7 +42,6 @@ const ContextMenuItem = ({
       <span 
         className="font-medium"
         style={{ 
-          // Text turns Accent Color on hover, otherwise standard white
           color: isHovered ? accentColor : '#f4f4f5',
           transition: 'color 0.15s ease'
         }}
@@ -52,7 +52,7 @@ const ContextMenuItem = ({
   );
 };
 
-// --- HEADER ICON BUTTON (Existing) ---
+// --- HEADER ICON BUTTON ---
 const NoteActionButton = ({ 
   onClick, 
   icon: Icon, 
@@ -70,6 +70,7 @@ const NoteActionButton = ({
 
   return (
     <button
+      type="button"
       onClick={(e) => {
         e.stopPropagation();
         onClick(e);
@@ -112,11 +113,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   // --- CONTEXT MENU STATE ---
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
-  // --- SWIPE LOGIC STATE ---
+  // --- SWIPE & TOUCH LOGIC STATE ---
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   const category = categories.find(c => c.id === note.category) || categories[0];
   const isHacker = category.label === 'Hacker' || category.label === 'Anon';
@@ -138,12 +140,17 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   useEffect(() => {
     const closeMenu = () => setContextMenu(null);
     if (contextMenu) {
-      window.addEventListener('click', closeMenu);
-      window.addEventListener('scroll', closeMenu, { capture: true }); 
-      window.addEventListener('resize', closeMenu);
+      // Small timeout to prevent the initial click/touch from closing it immediately
+      setTimeout(() => {
+        window.addEventListener('click', closeMenu);
+        window.addEventListener('touchstart', closeMenu);
+        window.addEventListener('scroll', closeMenu, { capture: true });
+        window.addEventListener('resize', closeMenu);
+      }, 100);
     }
     return () => {
       window.removeEventListener('click', closeMenu);
+      window.removeEventListener('touchstart', closeMenu);
       window.removeEventListener('scroll', closeMenu, { capture: true });
       window.removeEventListener('resize', closeMenu);
     };
@@ -161,20 +168,40 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     }
   };
 
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(note.text);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  // --- RIGHT CLICK HANDLER (Laptop) ---
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault(); 
     e.stopPropagation();
-    
-    // Position calculation to keep menu inside viewport
-    const menuW = 180;
-    const menuH = 200;
-    let x = e.clientX;
-    let y = e.clientY;
+    openMenu(e.clientX, e.clientY);
+  };
 
-    if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 10;
-    if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 10;
+  // --- OPEN MENU LOGIC ---
+  const openMenu = (clientX: number, clientY: number) => {
+    // Position calculation to keep menu inside viewport
+    const menuW = 200;
+    const menuH = 240;
+    let x = clientX;
+    let y = clientY;
+
+    // Boundary checks
+    if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 16;
+    if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 16;
+    // Mobile safety: ensure it's not off-screen left/top
+    if (x < 10) x = 10;
+    if (y < 10) y = 10;
 
     setContextMenu({ x, y });
+    
+    // Haptic feedback for mobile
+    if (navigator.vibrate) navigator.vibrate(50);
   };
 
   const formatDate = (timestamp: number) => {
@@ -182,20 +209,42 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // --- TOUCH HANDLERS ---
+  // --- TOUCH HANDLERS (Swipe + Long Press) ---
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.targetTouches[0].clientX;
     touchStartY.current = e.targetTouches[0].clientY;
     setIsSwiping(false);
+
+    // Start Long Press Timer
+    longPressTimer.current = setTimeout(() => {
+        if (touchStartX.current && touchStartY.current) {
+            openMenu(touchStartX.current, touchStartY.current);
+            // Reset touch refs so we don't trigger swipe/click after menu opens
+            touchStartX.current = null;
+            touchStartY.current = null;
+        }
+    }, 500); // 500ms for long press
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchStartX.current || !touchStartY.current) return;
+
     const currentX = e.targetTouches[0].clientX;
     const currentY = e.targetTouches[0].clientY;
     const diffX = currentX - touchStartX.current;
     const diffY = currentY - touchStartY.current;
+
+    // If moved more than 10px, cancel long press
+    if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    }
+
+    // Swipe Logic (Horizontal only)
     if (Math.abs(diffY) > Math.abs(diffX)) return;
+
     if (diffX < 0) {
       if (e.cancelable && Math.abs(diffX) > 10) e.preventDefault();
       setIsSwiping(true);
@@ -204,6 +253,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   };
 
   const handleTouchEnd = () => {
+    // Clear long press timer
+    if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+    }
+
     if (swipeOffset < -100) onDelete(note.id);
     setSwipeOffset(0);
     setIsSwiping(false);
@@ -216,7 +271,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   return (
     <>
       <div 
-        className="relative w-fit max-w-[88%] md:max-w-full overflow-hidden rounded-xl group"
+        className="relative w-fit max-w-[88%] md:max-w-full overflow-visible rounded-xl group"
         onMouseEnter={() => setIsCardHovered(true)}
         onMouseLeave={() => setIsCardHovered(false)}
         onContextMenu={handleContextMenu}
@@ -322,21 +377,22 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         </div>
       </div>
 
-      {/* --- TELEGRAM STYLE DROPDOWN --- */}
-      {contextMenu && (
+      {/* --- TELEGRAM STYLE DROPDOWN (Rendered in Portal) --- */}
+      {contextMenu && createPortal(
         <div 
           className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10"
           style={{ 
             top: contextMenu.y, 
             left: contextMenu.x,
-            backgroundColor: 'rgba(24, 24, 27, 0.9)', // Deep dark zinc
+            backgroundColor: 'rgba(24, 24, 27, 0.95)', // Deep dark zinc
             boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)'
           }}
+          onClick={(e) => e.stopPropagation()} // Prevent closing when clicking menu background
         >
           <ContextMenuItem 
             icon={CornerUpRight} 
             label="Reply" 
-            onClick={() => { /* Reply placeholder */ setContextMenu(null); }} 
+            onClick={() => { handleCopy(); setContextMenu(null); }} 
             accentColor={accentColor} 
           />
           <ContextMenuItem 
@@ -363,9 +419,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             label="Delete" 
             onClick={() => { onDelete(note.id); setContextMenu(null); }} 
             accentColor={accentColor}
-            // Removed "danger" prop - now acts like other buttons
           />
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

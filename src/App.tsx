@@ -1,316 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, ArrowUp, LayoutGrid, Image as ImageIcon, Check, Terminal, Plus, PenLine, Zap, Bomb, Volume2, Trash2, Pin, Edit2, Smartphone } from 'lucide-react'; 
+import { Search, X, Settings, ArrowUp, LayoutGrid, Image as ImageIcon, Check, Terminal, Plus, PenLine } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
-// Note: You'll need to ensure your './types' and './useFirebaseSync' imports are still valid relative to where you paste this.
+import { NoteCard } from './components/NoteCard'; 
 import { useFirebaseSync, useNotes } from './useFirebaseSync';
 import Auth from './components/Auth';
 
-// --- TYPES ---
-interface AppSettings {
-  enableHaptics: boolean;
-  explosionType: 'none' | 'particles' | 'shredder' | 'fire';
-  themeColor: string;
-}
-
-// --- HELPER: PARTICLE SYSTEM ---
-class Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  alpha: number;
-  color: string;
-  size: number;
-  life: number;
-
-  constructor(x: number, y: number, color: string, type: 'particles' | 'fire') {
-    this.x = x;
-    this.y = y;
-    this.color = color;
-    this.alpha = 1;
-    
-    const angle = Math.random() * Math.PI * 2;
-    const speed = Math.random() * 8 + 2;
-    
-    this.vx = Math.cos(angle) * speed;
-    this.vy = Math.sin(angle) * speed;
-    
-    if (type === 'fire') {
-      this.vy = -Math.random() * 5 - 2; // Upward movement
-      this.vx = (Math.random() - 0.5) * 2;
-    }
-
-    this.size = Math.random() * 4 + 2;
-    this.life = 1.0;
-  }
-
-  update() {
-    this.x += this.vx;
-    this.y += this.vy;
-    this.vy += 0.2; // Gravity
-    this.life -= 0.02;
-    this.alpha = this.life;
-  }
-
-  draw(ctx: CanvasRenderingContext2D) {
-    ctx.globalAlpha = this.alpha;
-    ctx.fillStyle = this.color;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-}
-
-// --- HELPER COMPONENT FOR ICONS ---
-const NoteActionButton = ({ 
-  onClick, 
-  icon: Icon, 
-  label, 
-  accentColor, 
-  isActive = false 
-}: { 
-  onClick: (e: React.MouseEvent) => void, 
-  icon: React.ElementType, 
-  label: string, 
-  accentColor: string, 
-  isActive?: boolean 
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  return (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick(e);
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="transition-colors duration-200 p-1"
-      style={{ color: isHovered || isActive ? accentColor : '#71717a' }} 
-      title={label}
-    >
-      <Icon size={16} fill={isActive ? "currentColor" : "none"} strokeWidth={2} />
-    </button>
-  );
+const TRANSLATIONS = { 
+  search: "Search...", 
+  all: "All", 
+  typePlaceholder: "Message...", 
+  cat_hacker: "Hacker Mode"
 };
 
-// --- NOTE CARD COMPONENT ---
-interface NoteCardProps {
-  note: Note;
-  categories: CategoryConfig[];
-  selectedVoice: SpeechSynthesisVoice | null;
-  onDelete: (id: string, e?: React.MouseEvent | React.TouchEvent) => void;
-  onPin: (id: string) => void;
-  onCategoryClick: (category: CategoryId) => void;
-  onEdit: () => void;
-  onToggleExpand: (id: string) => void;
-  accentColorOverride?: string;
-}
-
-export const NoteCard: React.FC<NoteCardProps> = ({
-  note,
-  categories,
-  selectedVoice,
-  onDelete,
-  onPin,
-  onCategoryClick,
-  onEdit,
-  onToggleExpand,
-  accentColorOverride
-}) => {
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isCardHovered, setIsCardHovered] = useState(false);
-  
-  // --- SWIPE LOGIC STATE ---
-  const [swipeOffset, setSwipeOffset] = useState(0);
-  const [isSwiping, setIsSwiping] = useState(false);
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
-
-  const category = categories.find(c => c.id === note.category) || categories[0];
-  const isHacker = category.label === 'Hacker' || category.label === 'Anon';
-  const isSecret = category.id === 'secret' && !isHacker;
-
-  // Theme logic
-  const defaultOrange = '#da7756';
-  const hackerGreen = '#4ade80';
-  
-  // Use override if provided (from settings), otherwise defaults
-  const effectiveAccent = accentColorOverride || (isHacker ? hackerGreen : isSecret ? '#ef4444' : defaultOrange);
-  const borderColor = isHacker ? 'rgba(74, 222, 128, 0.2)' : '#27272a'; 
-
-  const isExpanded = note.isExpanded !== false;
-  const lines = note.text.split('\n');
-  const isSingleLine = lines.length === 1 && !note.imageUrl && !isExpanded;
-  const isCompact = lines.length === 1 && !note.imageUrl;
-
-  const handleSpeakNote = (e: React.MouseEvent) => {
-    e.stopPropagation(); 
-    if ('speechSynthesis' in window) {
-      if (isSpeaking) { window.speechSynthesis.cancel(); setIsSpeaking(false); return; }
-      const utterance = new SpeechSynthesisUtterance(note.text);
-      if (selectedVoice) utterance.voice = selectedVoice;
-      utterance.onend = () => setIsSpeaking(false);
-      setIsSpeaking(true);
-      window.speechSynthesis.speak(utterance);
-    }
-  };
-
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  // --- TOUCH HANDLERS ---
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.targetTouches[0].clientX;
-    touchStartY.current = e.targetTouches[0].clientY;
-    setIsSwiping(false);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStartX.current || !touchStartY.current) return;
-
-    const currentX = e.targetTouches[0].clientX;
-    const currentY = e.targetTouches[0].clientY;
-    const diffX = currentX - touchStartX.current;
-    const diffY = currentY - touchStartY.current;
-
-    if (Math.abs(diffY) > Math.abs(diffX)) return;
-
-    if (diffX < 0) {
-      if (e.cancelable && Math.abs(diffX) > 10) e.preventDefault();
-      setIsSwiping(true);
-      setSwipeOffset(Math.max(diffX, -200));
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (swipeOffset < -100) {
-      // Pass the touch event to get coordinates for explosion
-      onDelete(note.id, e);
-    }
-    setSwipeOffset(0);
-    setIsSwiping(false);
-    touchStartX.current = null;
-    touchStartY.current = null;
-  };
-
-  const paddingClass = isCompact ? 'px-3 py-2' : 'p-3';
-
-  return (
-    <div 
-      className="relative w-fit max-w-[95%] md:max-w-full overflow-hidden rounded-xl group transition-all duration-300"
-      onMouseEnter={() => setIsCardHovered(true)}
-      onMouseLeave={() => setIsCardHovered(false)}
-    >
-      
-      {/* Background Layer (Swipe Indicator) */}
-      <div 
-        className={`absolute inset-0 flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`}
-        style={{ backgroundColor: effectiveAccent }} 
-      >
-        <Trash2 className="text-white animate-pulse" size={24} />
-      </div>
-
-      {/* Foreground Layer (Card) */}
-      <div 
-        className={`bg-zinc-900 border rounded-xl ${paddingClass} relative w-full`}
-        style={{ 
-          borderColor: isCardHovered ? effectiveAccent : borderColor,
-          transform: `translateX(${swipeOffset}px)`,
-          transition: isSwiping ? 'none' : 'transform 0.3s ease-out, border-color 0.2s'
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        {isExpanded ? (
-          <div className="flex flex-col gap-2">
-            {/* Header Line */}
-            <div className="flex items-center justify-between gap-2 w-full flex-shrink-0 h-6">
-               <div className="flex items-center gap-2">
-                  {/* Category Pill */}
-                  <div className="w-5 h-5 flex items-center justify-center rounded-full bg-black border" style={{ borderColor: borderColor }}>
-                    <span className="text-[10px] grayscale">{category.emoji}</span>
-                  </div>
-               </div>
-               
-               {/* Action Icons */}
-               <div className="flex items-center gap-1 md:gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <NoteActionButton onClick={onEdit} icon={Edit2} label="Edit" accentColor={effectiveAccent} />
-                  <NoteActionButton onClick={handleSpeakNote} icon={Volume2} label="Speak" accentColor={effectiveAccent} />
-                  <NoteActionButton onClick={() => onPin(note.id)} icon={Pin} label="Pin" accentColor={effectiveAccent} isActive={note.isPinned} />
-                  <NoteActionButton onClick={(e) => onDelete(note.id, e)} icon={Trash2} label="Delete" accentColor={effectiveAccent} />
-               </div>
-            </div>
-
-            {/* Content */}
-            <div className="flex flex-col gap-2 items-start w-full">
-                {note.imageUrl && (
-                  <div className="mb-1 rounded-lg overflow-hidden border bg-zinc-950 flex justify-center max-w-full self-end" style={{ borderColor: borderColor }}>
-                    <img src={note.imageUrl} alt="Note attachment" className="w-full md:w-auto h-auto md:max-h-96 object-contain" />
-                  </div>
-                )}
-                {note.text && (
-                  <div className="w-full">
-                    <p className="text-base leading-relaxed whitespace-pre-wrap break-words text-left inline-block w-full text-zinc-300">
-                      {note.text}
-                      <span className="float-right ml-2 mt-1 text-[10px] uppercase tracking-wider select-none font-medium" style={{ color: effectiveAccent }}>
-                        {formatDate(note.date)}
-                      </span>
-                    </p>
-                  </div>
-                )}
-            </div>
-          </div>
-        ) : (
-          // Collapsed View
-           isSingleLine ? (
-              <div className="flex items-center justify-between gap-2">
-                 <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-black/50 border" style={{ borderColor: borderColor }}>
-                    <span className="text-[10px] grayscale">{category.emoji}</span>
-                 </div>
-                 <div className="flex-1 min-w-0" onClick={() => onToggleExpand(note.id)}>
-                    <p className="text-base truncate cursor-pointer text-left text-zinc-300">{lines[0]}</p>
-                 </div>
-                 <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: effectiveAccent }}>{formatDate(note.date)}</span>
-                 </div>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                 <div className="flex flex-col justify-center">
-                   <div className="w-5 h-5 flex items-center justify-center rounded-full bg-black/50 border" style={{ borderColor: borderColor }}>
-                     <span className="text-[10px] grayscale">{category.emoji}</span>
-                   </div>
-                 </div>
-                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <div onClick={() => onToggleExpand(note.id)} className="cursor-pointer">
-                       <p className="text-base leading-tight truncate mb-1 text-left text-zinc-300">
-                         {lines[0] || <span className="italic opacity-50">Attachment</span>}
-                       </p>
-                       {lines.length > 1 && <p className="text-sm leading-snug truncate text-left opacity-70 text-zinc-300">{lines[1]}</p>}
-                    </div>
-                 </div>
-                 {note.imageUrl && (
-                   <div className="flex-shrink-0 w-12 h-10 rounded bg-zinc-800 border overflow-hidden" style={{ borderColor: borderColor }}>
-                     <img src={note.imageUrl} alt="" className="w-full h-full object-cover" />
-                   </div>
-                 )}
-                 <div className="flex flex-col justify-center items-end gap-1 flex-shrink-0">
-                    <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: effectiveAccent }}>{formatDate(note.date)}</span>
-                 </div>
-              </div>
-            )
-        )}
-      </div>
-    </div>
-  );
-};
-
-// --- APP COMPONENT ---
+// --- THEME CONSTANTS ---
 const CLAUDE_ORANGE = '#da7756';
 const HACKER_GREEN = '#4ade80';
 
@@ -352,13 +54,6 @@ function App() {
   const [categories, setCategories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
   const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
   
-  // Settings State
-  const [appSettings, setAppSettings] = useState<AppSettings>({
-    enableHaptics: true,
-    explosionType: 'particles',
-    themeColor: CLAUDE_ORANGE
-  });
-  
   const [transcript, setTranscript] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -373,8 +68,8 @@ function App() {
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const explosionCanvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Consolidated state: activeFilter determines both what we see AND where we post
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all' | 'secret'>('all');
   
   const [showSettings, setShowSettings] = useState(false);
@@ -385,9 +80,12 @@ function App() {
   const [showBars, setShowBars] = useState(true); 
   const [isNoteFocused, setIsNoteFocused] = useState(false);   
 
+  const lastScrollY = useRef(0);
+
   const [secretTaps, setSecretTaps] = useState(0);
   const tapTimeoutRef = useRef<any>(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
+  const [secretAnimType, setSecretAnimType] = useState<'matrix'>('matrix');
 
   const [isStartup, setIsStartup] = useState(true);
   const [startupAnimName] = useState(() => {
@@ -400,19 +98,15 @@ function App() {
   const [showSaveAnim, setShowSaveAnim] = useState(false);
   const [saveAnimType, setSaveAnimType] = useState<'brain' | 'lightning' | 'money' | 'journal' | 'fire' | 'matrix' | null>(null);
 
-  // --- FX LOGIC ---
-  const [particles, setParticles] = useState<Particle[]>([]);
-  
   const activeSecretConfig = HACKER_CONFIG;
   const isHackerMode = activeFilter === 'secret' || editingNote?.category === 'secret';
 
   // --- THEME LOGIC ---
-  // If hacker mode is active, override user theme settings
-  const accentColor = isHackerMode ? HACKER_GREEN : appSettings.themeColor;
+  const accentColor = isHackerMode ? HACKER_GREEN : CLAUDE_ORANGE;
   
   const currentTheme = {
     font: isHackerMode ? 'font-mono' : 'font-sans',
-    selection: isHackerMode ? 'selection:bg-green-500/30 selection:text-green-400' : 'selection:bg-zinc-700/30 selection:text-zinc-200'
+    selection: isHackerMode ? 'selection:bg-green-500/30 selection:text-green-400' : 'selection:bg-[#da7756]/30 selection:text-[#da7756]'
   };
 
   const handleSecretTrigger = () => {
@@ -423,15 +117,17 @@ function App() {
     if (secretTaps + 1 >= 5) {
         setActiveFilter('secret');
         setSecretTaps(0);
+        setSecretAnimType('matrix');
         setShowSecretAnim(true);
         setTimeout(() => setShowSecretAnim(false), 8000);
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     }
   };
 
+  // Helper to get current config for icons/labels
   const getCurrentConfig = () => {
       if (activeFilter === 'secret') return activeSecretConfig;
-      if (activeFilter === 'all') return null; 
+      if (activeFilter === 'all') return null; // Special case for All
       return categories.find(c => c.id === activeFilter) || categories[0];
   };
   const currentConfig = getCurrentConfig();
@@ -462,41 +158,6 @@ function App() {
     const timer = setTimeout(() => { setIsStartup(false); }, 4500);
     return () => clearTimeout(timer);
   }, []);
-
-  // --- EXPLOSION LOOP ---
-  useEffect(() => {
-    if (particles.length === 0) return;
-
-    const canvas = explosionCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    let animationFrameId: number;
-
-    const render = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const activeParticles = particles.filter(p => p.life > 0);
-      
-      activeParticles.forEach(p => {
-        p.update();
-        p.draw(ctx);
-      });
-
-      if (activeParticles.length > 0) {
-        setParticles(activeParticles); // State update in loop is tricky, but simplified here
-        animationFrameId = requestAnimationFrame(render);
-      } else {
-        setParticles([]);
-      }
-    };
-
-    render();
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [particles.length > 0]); // Re-trigger when particles are added
 
   // --- MATRIX EFFECT ---
   useEffect(() => {
@@ -546,10 +207,6 @@ function App() {
         const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any);
         const savedCats = localStorage.getItem('vibenotes_categories'); if(savedCats) setCategories(JSON.parse(savedCats));
         const savedVoice = localStorage.getItem('vibenotes_voice'); if(savedVoice) setSelectedVoiceURI(savedVoice);
-        
-        // Load Settings
-        const savedSettings = localStorage.getItem('vibenotes_settings');
-        if(savedSettings) setAppSettings(JSON.parse(savedSettings));
     } catch (e) {}
   }, []);
 
@@ -564,7 +221,6 @@ function App() {
   useEffect(() => { if (selectedVoiceURI) setSelectedVoice(voices.find(v => v.voiceURI === selectedVoiceURI) || null); }, [selectedVoiceURI, voices]);
   useEffect(() => { localStorage.setItem('vibenotes_categories', JSON.stringify(categories)); }, [categories]);
   useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
-  useEffect(() => { localStorage.setItem('vibenotes_settings', JSON.stringify(appSettings)); }, [appSettings]);
   
   useEffect(() => { 
       if (textareaRef.current) { 
@@ -573,6 +229,7 @@ function App() {
       } 
   }, [transcript]);
 
+  // Cycles through: All -> Cat1 -> Cat2... -> Secret -> All
   const cycleFilter = () => {
       if (activeFilter === 'secret') {
           setActiveFilter('all');
@@ -580,17 +237,22 @@ function App() {
       }
       const order: (CategoryId | 'all')[] = ['all', ...categories.map(c => c.id)];
       const currentIndex = order.indexOf(activeFilter as any);
-      if (currentIndex === -1) { setActiveFilter('all'); return; }
+      
+      // If current is not in list (e.g. invalid), default to All
+      if (currentIndex === -1) {
+          setActiveFilter('all');
+          return;
+      }
+
       const nextIndex = (currentIndex + 1) % order.length;
       setActiveFilter(order[nextIndex]);
   };
   
   const handleMainAction = async () => {
     if (!transcript.trim() && !imageUrl) return;
+    
+    // Cannot add notes when in "All" mode
     if (activeFilter === 'all' && !editingNote) return;
-
-    // Haptic Feedback for Send
-    if (appSettings.enableHaptics && navigator.vibrate) navigator.vibrate(10);
 
     try {
         if (editingNote) {
@@ -599,7 +261,9 @@ function App() {
             await updateNote(editingNote.id, updates);
             setEditingNote(null);
         } else {
+            // Force category to match the active filter
             const categoryToUse = activeFilter as CategoryId; 
+            
             await addNote({ text: transcript.trim(), date: Date.now(), category: categoryToUse, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
             
             if (categoryToUse === 'idea') { setSaveAnimType(Math.random() > 0.5 ? 'brain' : 'lightning'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 6000); }
@@ -619,53 +283,11 @@ function App() {
   };
 
   const handleCancelEdit = () => { setEditingNote(null); setTranscript(''); setImageUrl(''); };
-  
-  // --- DELETE LOGIC WITH EXPLOSION ---
-  const handleDeleteNote = async (id: string, e?: React.MouseEvent | React.TouchEvent) => { 
-      
-      // 1. Calculate Explosion Origin
-      let originX = window.innerWidth / 2;
-      let originY = window.innerHeight / 2;
-
-      if (e) {
-        if ('touches' in e) {
-           originX = e.touches[0].clientX;
-           originY = e.touches[0].clientY;
-        } else if ('clientX' in e) {
-           originX = (e as React.MouseEvent).clientX;
-           originY = (e as React.MouseEvent).clientY;
-        }
-      }
-
-      // 2. Trigger Haptics
-      if (appSettings.enableHaptics && navigator.vibrate) {
-          if (appSettings.explosionType === 'particles') navigator.vibrate([50, 30, 50]); // Boom
-          else if (appSettings.explosionType === 'fire') navigator.vibrate([20, 20, 20, 20]); // Crackle
-          else navigator.vibrate(30); // Simple
-      }
-
-      // 3. Trigger Visuals
-      if (appSettings.explosionType !== 'none') {
-          const newParticles: Particle[] = [];
-          const count = 30;
-          for(let i=0; i<count; i++) {
-              newParticles.push(new Particle(originX, originY, accentColor, appSettings.explosionType === 'fire' ? 'fire' : 'particles'));
-          }
-          setParticles(prev => [...prev, ...newParticles]);
-      }
-
-      // 4. Actual Delete
+  const handleDeleteNote = async (id: string) => { 
       const noteToDelete = notes.find(n => n.id === id);
       if (noteToDelete && (noteToDelete.category === 'to-do' || noteToDelete.category === 'todo')) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 4500); }
-      
-      // Delay deletion slightly if explosion is on to let user see it, otherwise instant
-      const delay = appSettings.explosionType !== 'none' ? 150 : 0;
-      setTimeout(async () => {
-          await deleteNoteFromFirebase(id); 
-          if (editingNote?.id === id) handleCancelEdit();
-      }, delay);
+      await deleteNoteFromFirebase(id); if (editingNote?.id === id) handleCancelEdit();
   };
-
   const togglePin = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
   const handleToggleExpand = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
 
@@ -680,110 +302,26 @@ function App() {
       return a.date - b.date; 
   });
 
+  const t = TRANSLATIONS;
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
 
   if (authLoading) return <div className="min-h-screen bg-black" />;
   if (!user) return <Auth />;
 
   return (
-    // MAIN LAYOUT
+    // MAIN LAYOUT: FIXED INSET-0 (Locks viewport for Keyboard)
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
-      {/* --- CANVAS LAYERS --- */}
-      {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-50 pointer-events-none" />}
-      <canvas ref={explosionCanvasRef} className="fixed inset-0 z-[60] pointer-events-none" />
-
-      {/* --- SETTINGS MODAL --- */}
-      {showSettings && (
-        <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
-                <div className="flex items-center justify-between p-4 border-b border-zinc-800">
-                    <h2 className="text-lg font-bold flex items-center gap-2">
-                        <Settings size={18} color={accentColor} /> Settings
-                    </h2>
-                    <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-zinc-800 rounded-full"><X size={18} /></button>
-                </div>
-                
-                <div className="p-4 flex flex-col gap-6">
-                    
-                    {/* 1. THEME / ICONS */}
-                    <div>
-                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 block">Icon Style & Theme</label>
-                        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                             {[CLAUDE_ORANGE, '#3b82f6', '#8b5cf6', '#ec4899', '#eab308', '#ffffff'].map(c => (
-                                 <button 
-                                    key={c}
-                                    onClick={() => setAppSettings(prev => ({...prev, themeColor: c}))}
-                                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all ${appSettings.themeColor === c ? 'scale-110' : 'scale-100'}`}
-                                    style={{ borderColor: appSettings.themeColor === c ? c : '#27272a', backgroundColor: c }}
-                                 >
-                                    {appSettings.themeColor === c && <Check className="text-black/50" size={20} />}
-                                 </button>
-                             ))}
-                        </div>
-                    </div>
-
-                    {/* 2. EXPLOSION FX */}
-                    <div>
-                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 block">Deletion Effect</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button 
-                                onClick={() => setAppSettings(prev => ({...prev, explosionType: 'none'}))}
-                                className={`p-3 rounded-lg border text-sm font-medium transition-all ${appSettings.explosionType === 'none' ? 'bg-zinc-800 border-zinc-600 text-white' : 'border-zinc-800 text-zinc-500 hover:bg-zinc-800/50'}`}
-                            >
-                                Fade Out
-                            </button>
-                            <button 
-                                onClick={() => setAppSettings(prev => ({...prev, explosionType: 'particles'}))}
-                                className={`p-3 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${appSettings.explosionType === 'particles' ? 'bg-zinc-800 border-zinc-600 text-white' : 'border-zinc-800 text-zinc-500 hover:bg-zinc-800/50'}`}
-                            >
-                                <Bomb size={14} /> Dynamite
-                            </button>
-                             <button 
-                                onClick={() => setAppSettings(prev => ({...prev, explosionType: 'fire'}))}
-                                className={`p-3 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${appSettings.explosionType === 'fire' ? 'bg-zinc-800 border-zinc-600 text-white' : 'border-zinc-800 text-zinc-500 hover:bg-zinc-800/50'}`}
-                            >
-                                <Zap size={14} /> Incinerate
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* 3. HAPTICS & ALIGNMENT */}
-                    <div>
-                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 block">Interactions</label>
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <Smartphone size={18} className="text-zinc-400" />
-                                <span className="text-sm">Haptic Vibrations</span>
-                            </div>
-                            <button 
-                                onClick={() => setAppSettings(prev => ({...prev, enableHaptics: !prev.enableHaptics}))}
-                                className={`w-12 h-6 rounded-full relative transition-colors ${appSettings.enableHaptics ? 'bg-green-500' : 'bg-zinc-700'}`}
-                            >
-                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${appSettings.enableHaptics ? 'left-7' : 'left-1'}`} />
-                            </button>
-                        </div>
-                         <div className="flex items-center justify-between">
-                            <span className="text-sm text-zinc-400">Card Alignment</span>
-                            <div className="flex bg-zinc-800 rounded-lg p-1">
-                                <button onClick={() => setAlignment('left')} className={`p-1.5 rounded ${alignment === 'left' ? 'bg-zinc-600 text-white' : 'text-zinc-500'}`}><LayoutGrid size={14} /></button>
-                                <button onClick={() => setAlignment('center')} className={`p-1.5 rounded ${alignment === 'center' ? 'bg-zinc-600 text-white' : 'text-zinc-500'}`}><LayoutGrid size={14} /></button>
-                                <button onClick={() => setAlignment('right')} className={`p-1.5 rounded ${alignment === 'right' ? 'bg-zinc-600 text-white' : 'text-zinc-500'}`}><LayoutGrid size={14} /></button>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-      )}
-
-      {/* --- HEADER --- */}
+      {/* --- HEADER (Fixed Top) --- */}
       <div className="fixed top-0 left-0 right-0 z-40">
         <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative">
+            
+            {/* LEFT SIDE: Logo -> Settings -> Search */}
             <div className="flex items-center gap-3">
-                {/* Logo */}
+                
+                {/* 1. Logo (Always Colored) */}
                 <button onClick={handleSecretTrigger} className="w-10 h-10 bg-transparent flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible group/logo">
+                    {/* Startup animations */}
                     {isStartup && (
                         <>
                             <div className="absolute inset-[-4px] border rounded-xl animate-[spin_1s_linear_infinite] opacity-50" style={{ borderColor: `${accentColor}80` }} />
@@ -793,6 +331,7 @@ function App() {
                     {activeFilter === 'secret' ? (
                         <Terminal className="text-zinc-500 transition-colors" style={{ color: isStartup ? undefined : HACKER_GREEN }} size={24} />
                     ) : (
+                        // Always colored square
                         <div 
                           className={`w-3 h-3 rounded-sm relative z-10 transition-all duration-300 ${isStartup ? 'animate-bounce' : ''}`} 
                           style={{ 
@@ -804,42 +343,42 @@ function App() {
                     )}
                 </button>
 
-                {/* Settings Button */}
-                <button onClick={() => { setShowSettings(true); }} className="w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95 hover:bg-zinc-900 rounded-full" style={{ color: undefined }} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>
+                {/* 2. Settings */}
+                <button onClick={() => { setShowSettings(true); }} className="w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95" style={{ color: undefined }} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>
                     <Settings size={20} />
                 </button>
 
-                {/* Search */}
+                {/* 3. Search (Moved to Left Group) */}
                 <div className="relative flex items-center h-10">
                     <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>
                         <Search size={20} />
                     </button>
+                    {/* Search Input Expanded */}
                      <div className={`absolute left-0 bg-zinc-900 border border-zinc-800 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-left ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
                         <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
-                        <input ref={searchInputRef} type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
+                        <input ref={searchInputRef} type="text" placeholder={t.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
                         <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
                     </div>
                 </div>
             </div>
+
+            {/* RIGHT SIDE: Empty for now (Spacer) */}
+            <div className="flex items-center gap-2">
+            </div>
+
         </header>
       </div>
 
-      {/* --- SCROLLABLE LIST --- */}
+      {/* --- MATRIX EFFECT --- */}
+      {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-50 pointer-events-none" />}
+
+      {/* --- SCROLLABLE LIST (Flex-1) --- */}
       <div ref={listRef} className={`flex-1 overflow-y-auto overflow-x-hidden relative w-full`}>
+          {/* Inner container with min-h-full to force bottom justification */}
           <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${getAlignmentClass()}`}>
             {filteredNotes.map(note => (
                 <div key={note.id} onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none touch-manipulation transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote?.id === note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
-                    <NoteCard 
-                        note={note} 
-                        categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
-                        selectedVoice={selectedVoice} 
-                        onDelete={handleDeleteNote} 
-                        onPin={togglePin} 
-                        onCategoryClick={(cat) => setActiveFilter(cat)} 
-                        onEdit={() => handleEditClick(note)} 
-                        onToggleExpand={handleToggleExpand} 
-                        accentColorOverride={isHackerMode ? undefined : appSettings.themeColor}
-                    />
+                    <NoteCard note={note} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onToggleExpand={handleToggleExpand} />
                 </div>
             ))}
             {filteredNotes.length === 0 && (
@@ -852,7 +391,7 @@ function App() {
           </div>
       </div>
 
-      {/* --- FOOTER --- */}
+      {/* --- FOOTER (Static & Transparent Wrapper) --- */}
       <div className={`flex-none w-full p-3 pb-6 md:pb-3 bg-transparent z-50`}>
           <div className="max-w-2xl mx-auto flex flex-col gap-2">
             
@@ -876,6 +415,7 @@ function App() {
 
             {/* Input Bar */}
             <div className="flex items-end gap-2 p-1">
+                {/* Left Category Icon */}
                 <button onClick={cycleFilter} className="flex-shrink-0 h-10 w-10 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center justify-center transition-all active:scale-95 group shadow-lg shadow-black/50">
                     {activeFilter === 'all' ? (
                        <LayoutGrid size={16} className="text-zinc-500 group-hover:text-white transition-colors" />
@@ -884,6 +424,7 @@ function App() {
                     )}
                 </button>
                 
+                {/* Input Field Container */}
                 <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3 shadow-lg shadow-black/50 relative">
                     {imageUrl && (
                         <div className="relative flex-shrink-0 group/image">
@@ -892,6 +433,7 @@ function App() {
                         </div>
                     )}
                     
+                    {/* ENABLED in All, but sending is disabled */}
                     <textarea 
                         ref={textareaRef} 
                         value={transcript} 
@@ -905,11 +447,13 @@ function App() {
                         style={isHackerMode ? { color: HACKER_GREEN } : undefined} 
                     />
 
+                    {/* Image Upload Icon (Visible always) */}
                     {(!transcript && !editingNote) && (
                          <label className="cursor-pointer text-zinc-500 hover:text-zinc-300"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>
                     )}
                 </div>
 
+                {/* Send Button */}
                 <button onClick={handleMainAction} disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote)} className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 shadow-lg shadow-black/50`} style={(transcript.trim() || imageUrl) && activeFilter !== 'all' ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: '#18181b', borderColor: '#27272a', borderWidth: '1px', color: '#52525b' }}>
                     {editingNote ? <Check size={20} strokeWidth={3} /> : (transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />)}
                 </button>

@@ -1,38 +1,58 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Trash2, Pin, Volume2, Edit2 } from 'lucide-react';
+import { Trash2, Pin, Volume2, Edit2, CornerUpRight } from 'lucide-react';
 import { Note, CategoryConfig, CategoryId } from '../types';
 
-// --- HELPER: MENU ITEM ---
+// --- TELEGRAM-STYLE MENU ITEM (Updated: No Red/Danger mode) ---
 const ContextMenuItem = ({ 
   icon: Icon, 
   label, 
   onClick, 
-  color,
-  danger = false
+  accentColor
 }: { 
   icon: React.ElementType, 
   label: string, 
   onClick: () => void, 
-  color: string,
-  danger?: boolean
-}) => (
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      onClick();
-    }}
-    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-zinc-800/50 group first:rounded-t-lg last:rounded-b-lg`}
-  >
-    <Icon 
-      size={16} 
-      className={danger ? "text-red-500" : "text-zinc-400 group-hover:text-zinc-200"} 
-      style={!danger ? { color: undefined } : undefined}
-    />
-    <span className={danger ? "text-red-500" : "text-zinc-200"}>{label}</span>
-  </button>
-);
+  accentColor: string
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
 
-// --- HELPER COMPONENT FOR HEADER ICONS ---
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors duration-150"
+      style={{ 
+        // Slight white tint on hover for the background row
+        backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent' 
+      }}
+    >
+      <Icon 
+        size={16} 
+        style={{ 
+          // Icon turns Accent Color on hover, otherwise standard gray
+          color: isHovered ? accentColor : '#a1a1aa',
+          transition: 'color 0.15s ease'
+        }} 
+      />
+      <span 
+        className="font-medium"
+        style={{ 
+          // Text turns Accent Color on hover, otherwise standard white
+          color: isHovered ? accentColor : '#f4f4f5',
+          transition: 'color 0.15s ease'
+        }}
+      >
+        {label}
+      </span>
+    </button>
+  );
+};
+
+// --- HEADER ICON BUTTON (Existing) ---
 const NoteActionButton = ({ 
   onClick, 
   icon: Icon, 
@@ -114,16 +134,18 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const isSingleLine = lines.length === 1 && !note.imageUrl && !isExpanded;
   const isCompact = lines.length === 1 && !note.imageUrl;
 
-  // --- CLOSE MENU ON OUTSIDE CLICK ---
+  // Close menu on click outside or scroll
   useEffect(() => {
-    const handleClickOutside = () => setContextMenu(null);
+    const closeMenu = () => setContextMenu(null);
     if (contextMenu) {
-      window.addEventListener('click', handleClickOutside);
-      window.addEventListener('scroll', handleClickOutside);
+      window.addEventListener('click', closeMenu);
+      window.addEventListener('scroll', closeMenu, { capture: true }); 
+      window.addEventListener('resize', closeMenu);
     }
     return () => {
-      window.removeEventListener('click', handleClickOutside);
-      window.removeEventListener('scroll', handleClickOutside);
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('scroll', closeMenu, { capture: true });
+      window.removeEventListener('resize', closeMenu);
     };
   }, [contextMenu]);
 
@@ -140,17 +162,17 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent default browser menu
+    e.preventDefault(); 
     e.stopPropagation();
     
-    // Calculate position to keep menu on screen
-    const menuWidth = 160;
-    const menuHeight = 180;
+    // Position calculation to keep menu inside viewport
+    const menuW = 180;
+    const menuH = 200;
     let x = e.clientX;
     let y = e.clientY;
 
-    if (x + menuWidth > window.innerWidth) x = x - menuWidth;
-    if (y + menuHeight > window.innerHeight) y = y - menuHeight;
+    if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 10;
+    if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 10;
 
     setContextMenu({ x, y });
   };
@@ -169,14 +191,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchStartX.current || !touchStartY.current) return;
-
     const currentX = e.targetTouches[0].clientX;
     const currentY = e.targetTouches[0].clientY;
     const diffX = currentX - touchStartX.current;
     const diffY = currentY - touchStartY.current;
-
     if (Math.abs(diffY) > Math.abs(diffX)) return;
-
     if (diffX < 0) {
       if (e.cancelable && Math.abs(diffX) > 10) e.preventDefault();
       setIsSwiping(true);
@@ -185,9 +204,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   };
 
   const handleTouchEnd = () => {
-    if (swipeOffset < -100) {
-      onDelete(note.id);
-    }
+    if (swipeOffset < -100) onDelete(note.id);
     setSwipeOffset(0);
     setIsSwiping(false);
     touchStartX.current = null;
@@ -202,7 +219,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         className="relative w-fit max-w-[88%] md:max-w-full overflow-hidden rounded-xl group"
         onMouseEnter={() => setIsCardHovered(true)}
         onMouseLeave={() => setIsCardHovered(false)}
-        onContextMenu={handleContextMenu} // <--- Right click handler
+        onContextMenu={handleContextMenu}
       >
         
         {/* Background Layer (Swipe Indicator) */}
@@ -230,13 +247,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               {/* Header Line */}
               <div className="flex items-center justify-between gap-2 w-full flex-shrink-0 h-6">
                  <div className="flex items-center gap-2">
-                    {/* Category Pill - Icon Only */}
                     <div className="w-5 h-5 flex items-center justify-center rounded-full bg-black border" style={{ borderColor: borderColor }}>
                       <span className="text-[10px] grayscale">{category.emoji}</span>
                     </div>
                  </div>
                  
-                 {/* Action Icons (Desktop Hover) */}
+                 {/* Desktop Action Icons */}
                  <div className="flex items-center gap-3 md:gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <NoteActionButton onClick={onEdit} icon={Edit2} label="Edit" accentColor={accentColor} />
                     <NoteActionButton onClick={handleSpeakNote} icon={Volume2} label="Speak" accentColor={accentColor} />
@@ -265,7 +281,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               </div>
             </div>
           ) : (
-            // Collapsed View
              isSingleLine ? (
                 <div className="flex items-center justify-between gap-2">
                    <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-black/50 border" style={{ borderColor: borderColor }}>
@@ -307,37 +322,48 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         </div>
       </div>
 
-      {/* --- TELEGRAM STYLE CONTEXT MENU --- */}
+      {/* --- TELEGRAM STYLE DROPDOWN --- */}
       {contextMenu && (
         <div 
-          className="fixed z-[100] min-w-[180px] bg-zinc-900/90 backdrop-blur-md border border-zinc-700/50 rounded-lg shadow-xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
+          className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10"
+          style={{ 
+            top: contextMenu.y, 
+            left: contextMenu.x,
+            backgroundColor: 'rgba(24, 24, 27, 0.9)', // Deep dark zinc
+            boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)'
+          }}
         >
+          <ContextMenuItem 
+            icon={CornerUpRight} 
+            label="Reply" 
+            onClick={() => { /* Reply placeholder */ setContextMenu(null); }} 
+            accentColor={accentColor} 
+          />
           <ContextMenuItem 
             icon={Edit2} 
             label="Edit" 
             onClick={() => { onEdit(); setContextMenu(null); }} 
-            color={accentColor} 
+            accentColor={accentColor} 
           />
           <ContextMenuItem 
             icon={Pin} 
             label={note.isPinned ? "Unpin" : "Pin"} 
             onClick={() => { onPin(note.id); setContextMenu(null); }} 
-            color={accentColor} 
+            accentColor={accentColor} 
           />
           <ContextMenuItem 
             icon={Volume2} 
-            label="Speak" 
+            label="Play" 
             onClick={() => { handleSpeakNote(); setContextMenu(null); }} 
-            color={accentColor} 
+            accentColor={accentColor} 
           />
-          <div className="h-px bg-zinc-800 my-1 mx-2" />
+          <div className="h-px bg-white/10 mx-3 my-1" />
           <ContextMenuItem 
             icon={Trash2} 
             label="Delete" 
             onClick={() => { onDelete(note.id); setContextMenu(null); }} 
-            color={accentColor}
-            danger
+            accentColor={accentColor}
+            // Removed "danger" prop - now acts like other buttons
           />
         </div>
       )}

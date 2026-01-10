@@ -176,7 +176,7 @@ function App() {
 
   useEffect(() => { const timer = setTimeout(() => { setIsStartup(false); }, 4500); return () => clearTimeout(timer); }, []);
   
-  // --- MATRIX EFFECT: DATA STREAM (Binary + Glowing Head) ---
+  // --- MATRIX EFFECT: VARIABLE SPEEDS & CUSTOM MIX ---
   useEffect(() => {
     if (!showSecretAnim) return;
     const canvas = canvasRef.current;
@@ -187,35 +187,45 @@ function App() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const chars = '01'; // Binary look
-    const fontSize = 14;
+    // 1. Custom Mix: Heavy on Binary/Nums, Light on Japanese
+    const binary = '010101010101'; 
+    const nums = '0123456789';
+    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    // Reduced Katakana set so they feel special/rare
+    const rareKatakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ'; 
+    const alphabet = binary + nums + latin + rareKatakana;
+
+    const fontSize = 22;
     const columns = canvas.width / fontSize;
     
-    // Initialize drops
     const drops: number[] = [];
     for(let x = 0; x < columns; x++) { drops[x] = 1; }
 
     const draw = () => {
-        // Heavy fade for background to make trails linger nicely
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        // 2. Faster Fade (0.16) = Shorter Trails
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.06)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         ctx.font = `bold ${fontSize}px monospace`;
 
         for(let i = 0; i < drops.length; i++) {
-            const text = chars.charAt(Math.floor(Math.random() * chars.length));
+            // 3. Random Speed Variation
+            // 15% chance to "stutter" (skip update) this frame -> makes columns move at different rates
+            if (Math.random() > 0.65) continue;
+
+            const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
             const x = i * fontSize;
             const y = drops[i] * fontSize;
 
-            // 1. Draw TRAIL (Previous character repainted Green, no glow)
-            ctx.shadowBlur = 0; 
+            // Trail: Dark Green
+            ctx.shadowBlur = 10;
             ctx.fillStyle = '#0D0'; 
             ctx.fillText(text, x, y - fontSize);
 
-            // 2. Draw HEAD (Current character White, Neon Green Glow)
-            ctx.shadowColor = '#0F0'; 
-            ctx.shadowBlur = 10;      
-            ctx.fillStyle = '#FFF';   
+            // Head: White + Glow
+            ctx.shadowColor = '#0F0';
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = '#FFF';
             ctx.fillText(text, x, y);
 
             // Reset drop
@@ -226,8 +236,8 @@ function App() {
         }
     };
     
-    // Smooth speed
-    const interval = setInterval(draw, 50);
+    // 4. Base interval 40ms (Speed variance handled inside loop)
+    const interval = setInterval(draw, 40);
     return () => clearInterval(interval);
   }, [showSecretAnim]);
 
@@ -304,10 +314,9 @@ function App() {
   if (!user) return <Auth />;
 
   return (
-    // STANDARD FLEX LAYOUT (Best for Mobile Keyboard)
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
-      {/* Header - Fixed Top */}
+      {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40">
         <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative">
             <div className="flex items-center gap-3">
@@ -368,7 +377,7 @@ function App() {
           </div>
       </div>
 
-      {/* Footer - Black Background (Stable Mobile Layout) */}
+      {/* Footer */}
       <div className={`flex-none w-full p-3 pb-6 md:pb-3 bg-black z-50`}>
           <div className="max-w-2xl mx-auto flex flex-col gap-2">
             {editingNote && (

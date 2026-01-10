@@ -175,25 +175,60 @@ function App() {
   };
 
   useEffect(() => { const timer = setTimeout(() => { setIsStartup(false); }, 4500); return () => clearTimeout(timer); }, []);
+  
+  // --- MATRIX EFFECT: DATA STREAM (Binary + Glowing Head) ---
   useEffect(() => {
     if (!showSecretAnim) return;
-    const canvas = canvasRef.current; if (!canvas) return;
-    const ctx = canvas.getContext('2d'); if (!ctx) return;
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-    const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
-    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; const nums = '01'; const alphabet = katakana + latin + nums;
-    const fontSize = 16; const columns = canvas.width / fontSize;
-    const drops: number[] = []; for(let x = 0; x < columns; x++) { drops[x] = 1; }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const chars = '01'; // Binary look
+    const fontSize = 14;
+    const columns = canvas.width / fontSize;
+    
+    // Initialize drops
+    const drops: number[] = [];
+    for(let x = 0; x < columns; x++) { drops[x] = 1; }
+
     const draw = () => {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#0F0'; ctx.font = fontSize + 'px monospace';
+        // Heavy fade for background to make trails linger nicely
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.font = `bold ${fontSize}px monospace`;
+
         for(let i = 0; i < drops.length; i++) {
-            const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-            if(drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0; drops[i]++;
+            const text = chars.charAt(Math.floor(Math.random() * chars.length));
+            const x = i * fontSize;
+            const y = drops[i] * fontSize;
+
+            // 1. Draw TRAIL (Previous character repainted Green, no glow)
+            ctx.shadowBlur = 0; 
+            ctx.fillStyle = '#0D0'; 
+            ctx.fillText(text, x, y - fontSize);
+
+            // 2. Draw HEAD (Current character White, Neon Green Glow)
+            ctx.shadowColor = '#0F0'; 
+            ctx.shadowBlur = 10;      
+            ctx.fillStyle = '#FFF';   
+            ctx.fillText(text, x, y);
+
+            // Reset drop
+            if(y > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
         }
     };
-    const interval = setInterval(draw, 30); return () => clearInterval(interval);
+    
+    // Smooth speed
+    const interval = setInterval(draw, 50);
+    return () => clearInterval(interval);
   }, [showSecretAnim]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
@@ -269,7 +304,7 @@ function App() {
   if (!user) return <Auth />;
 
   return (
-    // REVERTED TO STANDARD FLEX-COL LAYOUT (Best for Mobile Keyboard)
+    // STANDARD FLEX LAYOUT (Best for Mobile Keyboard)
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
       {/* Header - Fixed Top */}
@@ -298,7 +333,7 @@ function App() {
 
       {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-50 pointer-events-none" />}
 
-      {/* Main List (Flex 1) */}
+      {/* Main List */}
       <div ref={listRef} className={`flex-1 overflow-y-auto overflow-x-hidden relative w-full no-scrollbar`}>
           <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${getAlignmentClass()}`}>
             {filteredNotes.map((note, index) => {
@@ -333,7 +368,7 @@ function App() {
           </div>
       </div>
 
-      {/* Footer - Flex None - Stacked properly for mobile */}
+      {/* Footer - Black Background (Stable Mobile Layout) */}
       <div className={`flex-none w-full p-3 pb-6 md:pb-3 bg-black z-50`}>
           <div className="max-w-2xl mx-auto flex flex-col gap-2">
             {editingNote && (

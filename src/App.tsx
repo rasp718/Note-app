@@ -316,7 +316,9 @@ function App() {
       
       {/* 
           === GRAFFITI COLLAGE BACKGROUND === 
-          Balanced Brightness: Opacity 30% + Brightness 50%
+          Adjustment: 5% Darker
+          Opacity: 30%
+          Brightness: 45% (brightness-[0.45])
       */}
       <div className="fixed inset-0 z-0 pointer-events-none select-none overflow-hidden bg-black">
         <div className="absolute inset-0 flex flex-col md:flex-row">
@@ -324,7 +326,7 @@ function App() {
              <div className="flex-1 relative overflow-hidden">
                  <img 
                     src="/bg1.jpg" 
-                    className="w-full h-full object-cover opacity-30 brightness-50"
+                    className="w-full h-full object-cover opacity-25 brightness-[0.30]"
                     alt=""
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                  />
@@ -333,7 +335,7 @@ function App() {
              <div className="flex-1 relative overflow-hidden">
                  <img 
                     src="/bg2.jpg" 
-                    className="w-full h-full object-cover opacity-30 brightness-50"
+                    className="w-full h-full object-cover opacity-25 brightness-[0.30]"
                     alt=""
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                  />
@@ -342,7 +344,7 @@ function App() {
              <div className="flex-1 relative overflow-hidden">
                  <img 
                     src="/bg3.jpg" 
-                    className="w-full h-full object-cover opacity-30 brightness-50"
+                    className="w-full h-full object-cover opacity-25 brightness-[0.30]"
                     alt=""
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                  />

@@ -18,7 +18,6 @@ export interface Note {
   imageUrl?: string;
 }
 
-// Updated Default Icons
 export const DEFAULT_CATEGORIES: CategoryConfig[] = [
   { id: 'idea', label: 'Idea', emoji: '⚡', colorClass: 'text-yellow-500' },
   { id: 'work', label: 'Work', emoji: '🔧', colorClass: 'text-blue-500' },

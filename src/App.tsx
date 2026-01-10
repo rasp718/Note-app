@@ -269,7 +269,7 @@ function App() {
   if (!user) return <Auth />;
 
   return (
-    // REVERTED: flex-col layout ensures footer is pushed up by keyboard naturally
+    // MAIN LAYOUT: Keep standard flex column to support keyboard resizing
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
       {/* Header */}
@@ -298,76 +298,88 @@ function App() {
 
       {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-50 pointer-events-none" />}
 
-      {/* Main List */}
-      <div ref={listRef} className={`flex-1 overflow-y-auto overflow-x-hidden relative w-full no-scrollbar`}>
-          <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${getAlignmentClass()}`}>
-            {filteredNotes.map((note, index) => {
-                const prevNote = filteredNotes[index - 1];
-                const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
-                
-                return (
-                    <React.Fragment key={note.id}>
-                         {showHeader && (
-                             <div className="flex justify-center my-4 opacity-70 w-full select-none">
-                                <span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest">
-                                    {getDateLabel(note.date)}
-                                </span>
-                             </div>
-                         )}
-                        <div 
-                          onDoubleClick={() => handleToggleExpand(note.id)} 
-                          className={`select-none touch-manipulation transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}
-                        >
-                            <NoteCard note={note} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onToggleExpand={handleToggleExpand} />
+      {/* 
+         OVERLAY CONTAINER:
+         We use `flex-1 relative` so this specific area shrinks when keyboard opens.
+         Inside, we position List and Footer absolutely on top of each other.
+      */}
+      <div className="flex-1 relative w-full overflow-hidden">
+          
+          {/* LAYER 1: List (Background) */}
+          {/* inset-0 makes it fill the container. pb-20 ensures last item clears footer. */}
+          <div ref={listRef} className="absolute inset-0 overflow-y-auto no-scrollbar pb-24">
+              <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 px-4 ${getAlignmentClass()}`}>
+                {filteredNotes.map((note, index) => {
+                    const prevNote = filteredNotes[index - 1];
+                    const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
+                    
+                    return (
+                        <React.Fragment key={note.id}>
+                             {showHeader && (
+                                 <div className="flex justify-center my-4 opacity-70 w-full select-none">
+                                    <span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest">
+                                        {getDateLabel(note.date)}
+                                    </span>
+                                 </div>
+                             )}
+                            <div 
+                              onDoubleClick={() => handleToggleExpand(note.id)} 
+                              className={`select-none touch-manipulation transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}
+                            >
+                                <NoteCard note={note} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onToggleExpand={handleToggleExpand} />
+                            </div>
+                        </React.Fragment>
+                    );
+                })}
+                {filteredNotes.length === 0 && (
+                    <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg w-full opacity-50 mb-auto mt-20">
+                        <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
+                        <p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'System Clean' : (activeFilter === 'all' ? 'Select a Category' : 'Start Typing...')}</p>
+                    </div>
+                )}
+                <div ref={bottomRef} className="h-0 w-full shrink-0" />
+              </div>
+          </div>
+
+          {/* LAYER 2: Footer (Foreground) */}
+          {/* absolute bottom-0 aligns it to the bottom of the visible area (above keyboard) */}
+          {/* Gradient background creates transparency at top, readability at bottom */}
+          <div className="absolute bottom-0 w-full p-3 pb-6 md:pb-3 z-50 bg-gradient-to-t from-black via-black/80 to-transparent">
+              <div className="max-w-2xl mx-auto flex flex-col gap-2">
+                {editingNote && (
+                    <div className="flex items-center justify-between px-4 py-2 mb-[-10px] mx-1 animate-in slide-in-from-bottom-5 fade-in duration-200">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <div style={{ color: accentColor }}><PenLine size={12} /></div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: accentColor }}>Editing Message</span>
+                                <span className="text-xs text-zinc-400 truncate max-w-[200px]">{editingNote.text}</span>
+                            </div>
                         </div>
-                    </React.Fragment>
-                );
-            })}
-            {filteredNotes.length === 0 && (
-                <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg w-full opacity-50 mb-auto mt-20">
-                    <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
-                    <p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'System Clean' : (activeFilter === 'all' ? 'Select a Category' : 'Start Typing...')}</p>
+                        <button onClick={handleCancelEdit} className="p-1 hover:bg-zinc-800/50 rounded-full text-zinc-500 hover:text-white transition-colors"><X size={16} /></button>
+                    </div>
+                )}
+                <div className="flex items-end gap-2 p-1">
+                    <button onClick={cycleFilter} className="flex-shrink-0 h-10 w-10 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center justify-center transition-all active:scale-95 group shadow-lg shadow-black/50">
+                        {activeFilter === 'all' ? (<LayoutGrid size={16} className="text-zinc-500 group-hover:text-white transition-colors" />) : (<span className="text-xs grayscale group-hover:grayscale-0 transition-all">{currentConfig?.emoji}</span>)}
+                    </button>
+                    <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3 shadow-lg shadow-black/50 relative">
+                        {imageUrl && (
+                            <div className="relative flex-shrink-0 group/image">
+                                <div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div>
+                                <button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"><X size={10} /></button>
+                            </div>
+                        )}
+                        <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} placeholder={editingNote ? "Edit message..." : (activeFilter === 'all' ? "Select category to send..." : `${currentConfig?.label}...`)} rows={1} onFocus={() => { setIsNoteFocused(true); setShowBars(true); scrollToBottom('auto'); }} onBlur={() => setIsNoteFocused(false)} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
+                        {(!transcript && !editingNote) && (<label className="cursor-pointer text-zinc-500 hover:text-zinc-300"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>)}
+                    </div>
+                    <button onClick={handleMainAction} disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote)} className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 shadow-lg shadow-black/50`} style={(transcript.trim() || imageUrl) && activeFilter !== 'all' ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: '#18181b', borderColor: '#27272a', borderWidth: '1px', color: '#52525b' }}>
+                        {editingNote ? <Check size={20} strokeWidth={3} /> : (transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />)}
+                    </button>
                 </div>
-            )}
-            <div ref={bottomRef} className="h-0 w-full shrink-0" />
+              </div>
           </div>
       </div>
 
-      {/* Footer - Transparent Background */}
-      <div className={`flex-none w-full p-3 pb-6 md:pb-3 bg-transparent z-50`}>
-          <div className="max-w-2xl mx-auto flex flex-col gap-2">
-            {editingNote && (
-                <div className="flex items-center justify-between px-4 py-2 mb-[-10px] mx-1 animate-in slide-in-from-bottom-5 fade-in duration-200">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                        <div style={{ color: accentColor }}><PenLine size={12} /></div>
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: accentColor }}>Editing Message</span>
-                            <span className="text-xs text-zinc-400 truncate max-w-[200px]">{editingNote.text}</span>
-                        </div>
-                    </div>
-                    <button onClick={handleCancelEdit} className="p-1 hover:bg-zinc-800/50 rounded-full text-zinc-500 hover:text-white transition-colors"><X size={16} /></button>
-                </div>
-            )}
-            <div className="flex items-end gap-2 p-1">
-                <button onClick={cycleFilter} className="flex-shrink-0 h-10 w-10 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center justify-center transition-all active:scale-95 group shadow-lg shadow-black/50">
-                    {activeFilter === 'all' ? (<LayoutGrid size={16} className="text-zinc-500 group-hover:text-white transition-colors" />) : (<span className="text-xs grayscale group-hover:grayscale-0 transition-all">{currentConfig?.emoji}</span>)}
-                </button>
-                <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3 shadow-lg shadow-black/50 relative">
-                    {imageUrl && (
-                        <div className="relative flex-shrink-0 group/image">
-                            <div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div>
-                            <button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"><X size={10} /></button>
-                        </div>
-                    )}
-                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} placeholder={editingNote ? "Edit message..." : (activeFilter === 'all' ? "Select category to send..." : `${currentConfig?.label}...`)} rows={1} onFocus={() => { setIsNoteFocused(true); setShowBars(true); scrollToBottom('auto'); }} onBlur={() => setIsNoteFocused(false)} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
-                    {(!transcript && !editingNote) && (<label className="cursor-pointer text-zinc-500 hover:text-zinc-300"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>)}
-                </div>
-                <button onClick={handleMainAction} disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote)} className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 shadow-lg shadow-black/50`} style={(transcript.trim() || imageUrl) && activeFilter !== 'all' ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: '#18181b', borderColor: '#27272a', borderWidth: '1px', color: '#52525b' }}>
-                    {editingNote ? <Check size={20} strokeWidth={3} /> : (transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />)}
-                </button>
-            </div>
-          </div>
-      </div>
       <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } @keyframes logoEntrance { 0% { transform: scale(0) rotate(-180deg); } 60% { transform: scale(1.2) rotate(10deg); } 100% { transform: scale(1) rotate(0deg); } } @keyframes logoHeartbeat { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } } @keyframes logoGlitch { 0% { transform: translate(0); } 20% { transform: translate(-3px, 3px); } 40% { transform: translate(-3px, -3px); } 60% { transform: translate(3px, 3px); } 80% { transform: translate(3px, -3px); } 100% { transform: translate(0); } } @keyframes logoWobble { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg) scale(1.1); } 75% { transform: rotate(15deg) scale(1.1); } }`}</style>
     </div>
   );

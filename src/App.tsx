@@ -326,7 +326,7 @@ function App() {
              <div className="flex-1 relative overflow-hidden">
                  <img 
                     src="/bg1.jpg" 
-                    className="w-full h-full object-cover opacity-35 brightness-[0.40]"
+                    className="w-full h-full object-cover opacity-45 brightness-[0.40]"
                     alt=""
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                  />
@@ -335,7 +335,7 @@ function App() {
              <div className="flex-1 relative overflow-hidden">
                  <img 
                     src="/bg2.jpg" 
-                    className="w-full h-full object-cover opacity-35 brightness-[0.40]"
+                    className="w-full h-full object-cover opacity-45 brightness-[0.40]"
                     alt=""
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                  />
@@ -344,7 +344,7 @@ function App() {
              <div className="flex-1 relative overflow-hidden">
                  <img 
                     src="/bg3.jpg" 
-                    className="w-full h-full object-cover opacity-35 brightness-[0.40]"
+                    className="w-full h-full object-cover opacity-45 brightness-[0.40]"
                     alt=""
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                  />

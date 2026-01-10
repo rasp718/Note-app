@@ -73,25 +73,28 @@ function App() {
   const { user, loading: authLoading } = useFirebaseSync();
   const { notes, addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
   
-  // --- CATEGORY INITIALIZATION (Handles Defaults + LocalStorage + Icon Overrides) ---
+  // --- CATEGORY INITIALIZATION ---
   const [categories, setCategories] = useState<CategoryConfig[]>(() => {
-    // 1. Start with Defaults
+    // Start with the updated DEFAULT_CATEGORIES (with new icons)
     let initial = DEFAULT_CATEGORIES;
     
-    // 2. Try loading from Local Storage
     try {
         const saved = localStorage.getItem('vibenotes_categories');
-        if (saved) initial = JSON.parse(saved);
+        if (saved) {
+            // Merge saved categories but FORCE the new icons
+            const savedCats = JSON.parse(saved);
+            initial = savedCats.map((c: CategoryConfig) => {
+                // Override icons based on ID
+                if (c.id === 'idea') return { ...c, emoji: '⚡' };
+                if (c.id === 'work') return { ...c, emoji: '🔧' };
+                if (c.id === 'journal') return { ...c, emoji: '✍️' };
+                if (c.id === 'to-do' || c.id === 'todo') return { ...c, emoji: '🔥' };
+                return c;
+            });
+        }
     } catch(e) {}
-
-    // 3. Force apply the specific icons requested (Wrench, Lightning, etc)
-    return initial.map(c => {
-      if (c.id === 'idea') return { ...c, emoji: '⚡' };
-      if (c.id === 'work') return { ...c, emoji: '🔧' };
-      if (c.id === 'journal') return { ...c, emoji: '✍️' };
-      if (c.id === 'to-do' || c.id === 'todo') return { ...c, emoji: '🔥' };
-      return c; 
-    });
+    
+    return initial;
   });
 
   const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
@@ -199,7 +202,7 @@ function App() {
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
   useEffect(() => { scrollToBottom(); }, [activeFilter]);
-  useEffect(() => { try { const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any); const savedVoice = localStorage.getItem('vibenotes_voice'); if(savedVoice) setSelectedVoiceURI(savedVoice); } catch (e) {} }, []);
+  useEffect(() => { try { const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any); const savedCats = localStorage.getItem('vibenotes_categories'); if(savedCats) setCategories(JSON.parse(savedCats)); const savedVoice = localStorage.getItem('vibenotes_voice'); if(savedVoice) setSelectedVoiceURI(savedVoice); } catch (e) {} }, []);
   useEffect(() => { const loadVoices = () => { const all = window.speechSynthesis.getVoices(); setVoices(all.filter(v => v.lang.startsWith('en'))); }; loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }, []);
   useEffect(() => { if (selectedVoiceURI) setSelectedVoice(voices.find(v => v.voiceURI === selectedVoiceURI) || null); }, [selectedVoiceURI, voices]);
   useEffect(() => { localStorage.setItem('vibenotes_categories', JSON.stringify(categories)); }, [categories]);
@@ -270,7 +273,10 @@ function App() {
   if (!user) return <Auth />;
 
   return (
-    <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
+    // Changed layout to standard block so absolute positioning works for footer overlay
+    <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} ${currentTheme.font}`}>
+      
+      {/* Header - Fixed Top */}
       <div className="fixed top-0 left-0 right-0 z-40">
         <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative">
             <div className="flex items-center gap-3">
@@ -296,9 +302,10 @@ function App() {
 
       {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-50 pointer-events-none" />}
 
-      {/* Added no-scrollbar to main list */}
-      <div ref={listRef} className={`flex-1 overflow-y-auto relative w-full no-scrollbar`}>
-          <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${getAlignmentClass()}`}>
+      {/* Main List - Absolute Inset to allow scrolling BEHIND footer */}
+      <div ref={listRef} className={`absolute inset-0 overflow-y-auto no-scrollbar`}>
+          {/* Padding top for header, Padding bottom for footer to ensure last item is visible */}
+          <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 px-4 pt-20 pb-24 ${getAlignmentClass()}`}>
             {filteredNotes.map((note, index) => {
                 const prevNote = filteredNotes[index - 1];
                 const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
@@ -331,8 +338,8 @@ function App() {
           </div>
       </div>
 
-      {/* FOOTER WRAPPER: bg-transparent ensures area around pills is clear */}
-      <div className={`flex-none w-full p-3 pb-6 md:pb-3 z-50 bg-transparent`}>
+      {/* Footer - Absolute Bottom, Transparent Background */}
+      <div className={`absolute bottom-0 w-full p-3 pb-6 md:pb-3 z-50 bg-transparent`}>
           <div className="max-w-2xl mx-auto flex flex-col gap-2">
             {editingNote && (
                 <div className="flex items-center justify-between px-4 py-2 mb-[-10px] mx-1 animate-in slide-in-from-bottom-5 fade-in duration-200">

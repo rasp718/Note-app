@@ -176,7 +176,7 @@ function App() {
 
   useEffect(() => { const timer = setTimeout(() => { setIsStartup(false); }, 4500); return () => clearTimeout(timer); }, []);
   
-  // --- MATRIX EFFECT: VARIABLE SPEEDS & CUSTOM MIX ---
+  // --- MATRIX EFFECT: DATA STREAM (Solid Black Start + Buildup) ---
   useEffect(() => {
     if (!showSecretAnim) return;
     const canvas = canvasRef.current;
@@ -184,51 +184,73 @@ function App() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // =================================================================================
+    // 🎛️ VALUES
+    // =================================================================================
+    const FONT_SIZE      = 24;
+    const FADE_SPEED     = 0.1;   // 0.1 = Nice dark background with visible trails
+    const MASTER_SPEED   = 50;    // Speed of falling
+    const STUTTER_AMOUNT = 0.85;  
+    const RAIN_BUILDUP   = 300;   // Higher # = Slower start (more rain "waiting" above screen)
+    
+    const COLOR_HEAD     = '#FFF'; 
+    const COLOR_TRAIL    = '#0D0'; 
+    const GLOW_COLOR     = '#0F0'; 
+    const GLOW_INTENSITY = 10;     
+
+    const binary = '010101010101'; 
+    const nums   = '0123456789';
+    const latin  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const rareKatakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ'; 
+    
+    const alphabet = binary + nums + latin + rareKatakana;
+    // =================================================================================
+
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // 1. Custom Mix: Heavy on Binary/Nums, Light on Japanese
-    const binary = '010101010101'; 
-    const nums = '0123456789';
-    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    // Reduced Katakana set so they feel special/rare
-    const rareKatakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ'; 
-    const alphabet = binary + nums + latin + rareKatakana;
+    // 1. FORCE BLACK SCREEN IMMEDIATELY (Fixes the "Green Flash")
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const fontSize = 22;
-    const columns = canvas.width / fontSize;
+    const columns = canvas.width / FONT_SIZE;
     
     const drops: number[] = [];
-    for(let x = 0; x < columns; x++) { drops[x] = 1; }
+    for(let x = 0; x < columns; x++) { 
+        // Initialize drops strictly ABOVE the screen (negative Y)
+        // This ensures the screen starts empty (Black) and rain falls in gradually
+        drops[x] = Math.floor(Math.random() * -RAIN_BUILDUP); 
+    }
 
     const draw = () => {
-        // 2. Faster Fade (0.16) = Shorter Trails
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.06)';
+        // Fade existing trails
+        ctx.fillStyle = `rgba(0, 0, 0, ${FADE_SPEED})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.font = `bold ${FONT_SIZE}px monospace`;
 
         for(let i = 0; i < drops.length; i++) {
-            // 3. Random Speed Variation
-            // 15% chance to "stutter" (skip update) this frame -> makes columns move at different rates
-            if (Math.random() > 0.65) continue;
+            if (Math.random() > STUTTER_AMOUNT) continue;
 
             const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-            const x = i * fontSize;
-            const y = drops[i] * fontSize;
+            const x = i * FONT_SIZE;
+            const y = drops[i] * FONT_SIZE;
 
-            // Trail: Dark Green
-            ctx.shadowBlur = 10;
-            ctx.fillStyle = '#0D0'; 
-            ctx.fillText(text, x, y - fontSize);
+            // Only draw if the drop has entered the visible screen area
+            if (y > 0) {
+                // Trail
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = COLOR_TRAIL; 
+                ctx.fillText(text, x, y - FONT_SIZE);
 
-            // Head: White + Glow
-            ctx.shadowColor = '#0F0';
-            ctx.shadowBlur = 12;
-            ctx.fillStyle = '#FFF';
-            ctx.fillText(text, x, y);
+                // Head
+                ctx.shadowColor = GLOW_COLOR;
+                ctx.shadowBlur = GLOW_INTENSITY;
+                ctx.fillStyle = COLOR_HEAD;
+                ctx.fillText(text, x, y);
+            }
 
-            // Reset drop
+            // Reset loop
             if(y > canvas.height && Math.random() > 0.975) {
                 drops[i] = 0;
             }
@@ -236,8 +258,7 @@ function App() {
         }
     };
     
-    // 4. Base interval 40ms (Speed variance handled inside loop)
-    const interval = setInterval(draw, 40);
+    const interval = setInterval(draw, MASTER_SPEED);
     return () => clearInterval(interval);
   }, [showSecretAnim]);
 

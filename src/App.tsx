@@ -32,18 +32,19 @@ const HACKER_CONFIG: CategoryConfig = {
 // --- ROBUST DATE UTILS ---
 const normalizeDate = (d: any): number => {
     try {
-        if (!d) return Date.now();
+        if (!d) return 0;
         if (typeof d === 'number') return d;
         if (typeof d.toMillis === 'function') return d.toMillis();
         if (d.seconds) return d.seconds * 1000;
         const parsed = new Date(d).getTime();
-        return isNaN(parsed) ? Date.now() : parsed;
-    } catch { return Date.now(); }
+        return isNaN(parsed) ? 0 : parsed;
+    } catch { return 0; }
 };
 
 const isSameDay = (d1: any, d2: any) => {
     const t1 = normalizeDate(d1);
     const t2 = normalizeDate(d2);
+    if (!t1 || !t2) return false;
     const date1 = new Date(t1);
     const date2 = new Date(t2);
     return date1.getDate() === date2.getDate() &&
@@ -53,6 +54,7 @@ const isSameDay = (d1: any, d2: any) => {
 
 const getDateLabel = (d: any) => {
     const timestamp = normalizeDate(d);
+    if (!timestamp) return '';
     const date = new Date(timestamp);
     const today = new Date();
     const yesterday = new Date();
@@ -152,10 +154,8 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   
-  // New State for Bubble Style
   const [bubbleStyle, setBubbleStyle] = useState<string>('orange_solid');
 
-  // --- CHAT DATA HOOKS ---
   const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
   const otherChatUser = useUser(currentChatObject?.otherUserId);
   
@@ -200,7 +200,6 @@ function App() {
     }
   }, [user]);
 
-  // Load Saved Bubble Style
   useEffect(() => {
       const savedBubble = localStorage.getItem('vibenotes_bubble_style');
       if (savedBubble) setBubbleStyle(savedBubble);
@@ -354,7 +353,6 @@ function App() {
   useEffect(() => { localStorage.setItem('vibenotes_bg_scale', bgScale.toString()); }, [bgScale]);
   useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
 
-  // Save Bubble Style change
   const changeBubbleStyle = (style: string) => {
       setBubbleStyle(style);
       localStorage.setItem('vibenotes_bubble_style', style);
@@ -410,11 +408,26 @@ function App() {
       if(n) await updateNote(id, { isPinned: !n.isPinned });
   };
 
+  // --- SAFE NOTES & SORTING (FIXED DATE LOGIC) ---
   const safeNotes = (notes || []).map(n => {
       const date = normalizeDate(n.date);
+      const editedAt = n.editedAt ? normalizeDate(n.editedAt) : undefined;
       const fallbackCat = (DEFAULT_CATEGORIES && DEFAULT_CATEGORIES.length > 0) ? DEFAULT_CATEGORIES[0].id : 'default';
       const validCategory = categories.some(c => c.id === n.category) || n.category === 'secret' ? n.category : fallbackCat;
-      return { ...n, id: n.id || Math.random().toString(), text: n.text || '', date, category: validCategory };
+      
+      // FIX: Determine effective date. If editedAt is newer, use it as the main date.
+      const effectiveDate = editedAt && editedAt > date ? editedAt : date;
+
+      return { 
+          ...n, 
+          id: n.id || Math.random().toString(), 
+          text: n.text || '', 
+          // CRITICAL FIX: Overwrite 'date' with 'effectiveDate' so headers and timestamps use the edit time.
+          date: effectiveDate, 
+          originalDate: date, // Keep original if needed internally
+          editedAt,
+          category: validCategory 
+      };
   });
 
   const filteredNotes = safeNotes.filter(n => {
@@ -425,9 +438,8 @@ function App() {
       return n.category === activeFilter;
   }).sort((a, b) => { 
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1; 
-      const timeA = a.editedAt ? normalizeDate(a.editedAt) : a.date;
-      const timeB = b.editedAt ? normalizeDate(b.editedAt) : b.date;
-      return timeB - timeA; 
+      // Sort by the new effective date
+      return a.date - b.date; 
   });
 
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
@@ -580,9 +592,10 @@ function App() {
                     {/* NEW: Chat Bubble Style Selector */}
                     <div className="space-y-3">
                         <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-5 gap-2">
                             <button onClick={() => changeBubbleStyle('orange_solid')} className={`h-10 rounded-lg border-2 transition-all ${bubbleStyle === 'orange_solid' ? 'border-white bg-[#c25e3e]' : 'border-zinc-700 bg-[#c25e3e]/50'}`} title="Orange Solid"></button>
                             <button onClick={() => changeBubbleStyle('orange_glass')} className={`h-10 rounded-lg border-2 transition-all ${bubbleStyle === 'orange_glass' ? 'border-white bg-[#c25e3e]/40' : 'border-zinc-700 bg-[#c25e3e]/20'}`} title="Orange Glass"></button>
+                            <button onClick={() => changeBubbleStyle('clear')} className={`h-10 rounded-lg border-2 transition-all bg-white/5 ${bubbleStyle === 'clear' ? 'border-white' : 'border-zinc-700 opacity-50'}`} title="Clear"></button>
                             <button onClick={() => changeBubbleStyle('cyberpunk')} className={`h-10 rounded-lg border-2 transition-all bg-black ${bubbleStyle === 'cyberpunk' ? 'border-green-500 shadow-[0_0_10px_#4ade80]' : 'border-zinc-700'}`} title="Cyberpunk"></button>
                             <button onClick={() => changeBubbleStyle('graffiti')} className={`h-10 rounded-lg border-2 transition-all bg-gradient-to-r from-purple-600 to-pink-600 ${bubbleStyle === 'graffiti' ? 'border-white' : 'border-zinc-700 opacity-50'}`} title="Street"></button>
                         </div>
@@ -629,14 +642,21 @@ function App() {
                                </div>
                            </div>
                         ) : (
-                           <div onClick={handleSecretTrigger} className="flex items-center gap-3 flex-1 min-w-0">
+                           <div onClick={handleSecretTrigger} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer select-none">
                                 <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden">
                                      {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-white text-lg leading-tight">Notes</h3>
-                                    <p className="text-zinc-500 text-xs font-mono uppercase tracking-widest">Personal</p>
-                                </div>
+                                {activeFilter === 'secret' ? (
+                                    <div className="animate-in fade-in duration-300">
+                                        <h3 className="font-bold text-green-500 text-base leading-tight font-mono tracking-tight">SYSTEM_ROOT</h3>
+                                        <p className="text-green-700 text-[10px] font-mono uppercase tracking-widest">Encrypted // 2048-bit</p>
+                                    </div>
+                                ) : (
+                                    <div className="animate-in fade-in duration-300">
+                                        <h3 className="font-bold text-white text-lg leading-tight">Notes</h3>
+                                        <p className="text-zinc-500 text-xs font-mono uppercase tracking-widest">Personal</p>
+                                    </div>
+                                )}
                            </div>
                         )}
 
@@ -663,6 +683,7 @@ function App() {
               <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
                 {activeChatId === 'saved_messages' ? (
+                    // --- NOTES RENDER ---
                     filteredNotes.map((note, index) => {
                         const prevNote = filteredNotes[index - 1];
                         const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
@@ -676,6 +697,7 @@ function App() {
                         );
                     })
                 ) : (
+                    // --- MESSAGES RENDER ---
                     activeMessages.map((msg, index) => {
                         const prevMsg = activeMessages[index - 1];
                         const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
@@ -688,6 +710,9 @@ function App() {
                         let customColors;
                         if (isMe) {
                             switch(bubbleStyle) {
+                                case 'clear': // NEW CLEAR STYLE
+                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/10 hover:border-white/40 transition-colors duration-300', text: 'text-white' };
+                                    break;
                                 case 'orange_glass':
                                     customColors = { bg: `bg-[${CLAUDE_ORANGE}]/20 backdrop-blur-md`, border: `border-[${CLAUDE_ORANGE}]/50`, text: 'text-white' };
                                     break;
@@ -756,7 +781,7 @@ function App() {
                  {activeChatId === 'saved_messages' && (<button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">{activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}</button>)}
                  <div className="flex-1 bg-zinc-900/50 border border-zinc-700/50 rounded-2xl flex items-center px-3 py-1.5 focus-within:border-blue-500/50 transition-colors gap-2 relative">
                     {imageUrl && (<div className="relative flex-shrink-0"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"><X size={10} /></button></div>)}
-                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} onFocus={() => { scrollToBottom('auto'); }} placeholder={editingNote ? "Edit..." : (activeChatId !== 'saved_messages' ? TRANSLATIONS.typePlaceholder : (activeFilter === 'all' ? "Select category..." : `${currentConfig?.label}...`))} rows={1} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-1 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
+                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} onFocus={() => { scrollToBottom('auto'); }} placeholder={editingNote ? "Edit..." : (activeChatId !== 'saved_messages' ? TRANSLATIONS.typePlaceholder : (activeFilter === 'all' ? "Select category..." : (isHackerMode ? ">_" : `${currentConfig?.label}...`)))} rows={1} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-1 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
                     {(!transcript && !editingNote) && (<label className="cursor-pointer text-zinc-400 hover:text-white"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>)}
                 </div>
                 <button onClick={handleMainAction} disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages')} className={`flex-shrink-0 w-8 h-8 mb-1 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg`} style={(transcript.trim() || imageUrl) && (activeFilter !== 'all' || activeChatId !== 'saved_messages') ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: 'transparent', color: '#71717a', boxShadow: 'none' }}>

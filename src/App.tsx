@@ -605,6 +605,7 @@ function App() {
               <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
                 {activeChatId === 'saved_messages' ? (
+                    // --- NOTES RENDER ---
                     filteredNotes.map((note, index) => {
                         const prevNote = filteredNotes[index - 1];
                         const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
@@ -618,6 +619,7 @@ function App() {
                         );
                     })
                 ) : (
+                    // --- MESSAGES RENDER (WHATSAPP STYLE) ---
                     activeMessages.map((msg, index) => {
                         const prevMsg = activeMessages[index - 1];
                         const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
@@ -626,12 +628,16 @@ function App() {
                         const isLastInSequence = !nextMsg || nextMsg.senderId !== msg.senderId;
                         const showAvatar = !isMe && isLastInSequence;
 
+                        // STYLING:
+                        // Make bubbles more opaque (solid) for better contrast
+                        // Yours: Green/Orange (Solid)
+                        // Theirs: Dark Gray (Solid)
                         const customColors = isMe ? {
-                            bg: isHackerMode ? 'bg-green-900/40' : 'bg-orange-500/20',
-                            border: isHackerMode ? 'border-green-500/50' : 'border-orange-500/30',
-                            text: isHackerMode ? 'text-green-100' : 'text-orange-50'
+                            bg: isHackerMode ? 'bg-green-900/90' : 'bg-[#da7756]/90', 
+                            border: isHackerMode ? 'border-green-500/50' : 'border-[#da7756]',
+                            text: 'text-white'
                         } : {
-                            bg: 'bg-zinc-800', // FIXED: Solid gray for high contrast
+                            bg: 'bg-[#27272a]', // Solid dark zinc
                             border: 'border-zinc-700',
                             text: 'text-zinc-100'
                         };
@@ -650,11 +656,18 @@ function App() {
                             <React.Fragment key={msg.id}>
                                 {showHeader && (<div className="flex justify-center my-6 opacity-60 w-full select-none"><span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full border border-white/5">{getDateLabel(msg.timestamp)}</span></div>)}
                                 
-                                <div className={`flex w-full mb-1 ${isMe ? 'justify-end' : 'justify-start items-end gap-2'}`}>
+                                {/* 
+                                   LAYOUT: 
+                                   items-end -> aligns avatar and bubble to the bottom of the row
+                                   justify-end / justify-start -> pushes to sides
+                                */}
+                                <div className={`flex w-full mb-1 items-end ${isMe ? 'justify-end' : 'justify-start gap-2'}`}>
+                                    
+                                    {/* AVATAR (Bottom Left) */}
                                     {!isMe && (
-                                        <div className="flex-shrink-0 w-8 h-8 -mb-1 relative">
+                                        <div className="flex-shrink-0 w-8 h-8 relative z-10">
                                             {showAvatar ? (
-                                                 <div className="w-8 h-8 rounded-lg bg-zinc-800 overflow-hidden border border-white/10 shadow-lg">
+                                                 <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 shadow-md">
                                                     {otherChatUser?.photoURL ? 
                                                         <img src={otherChatUser.photoURL} className="w-full h-full object-cover" /> :
                                                         <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">{otherChatUser?.displayName?.[0] || '?'}</div>
@@ -664,6 +677,7 @@ function App() {
                                         </div>
                                     )}
 
+                                    {/* MESSAGE BUBBLE */}
                                     <NoteCard 
                                         note={msgNote} 
                                         categories={[]} 

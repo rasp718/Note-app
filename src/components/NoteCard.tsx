@@ -57,10 +57,15 @@ interface NoteCardProps {
   onCategoryClick?: (category: CategoryId) => void;
   onEdit?: () => void;
   onToggleExpand?: (id: string) => void;
+  // NEW PROPS FOR CHAT STYLING
+  variant?: 'default' | 'sent' | 'received';
+  customColors?: { bg: string; border: string; text: string };
 }
 
-export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onToggleExpand }) => {
-  // CRASH GUARD 1: If note is null or undefined, do not render anything
+export const NoteCard: React.FC<NoteCardProps> = ({ 
+  note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onToggleExpand,
+  variant = 'default', customColors 
+}) => {
   if (!note) return null;
 
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -72,11 +77,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const longPressTimer = useRef<any>(null);
   const isLongPress = useRef(false); 
 
-  // CRASH GUARD 2: Safe Data Handling for Categories
   const safeCategories = Array.isArray(categories) ? categories : [];
   const defaultCat = { id: 'default', label: 'Note', emoji: '📝', colorClass: 'bg-zinc-500' };
-  
-  // Safe find logic using optional chaining
   const category = safeCategories.find((c: any) => c?.id === note.category) || safeCategories[0] || defaultCat;
 
   const isHacker = category?.label === 'Hacker' || category?.label === 'Anon';
@@ -84,10 +86,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const CLAUDE_ORANGE = '#da7756';
   const HACKER_GREEN = '#4ade80';
   const accentColor = isHacker ? HACKER_GREEN : isSecret ? '#ef4444' : CLAUDE_ORANGE;
-  const borderColor = isHacker ? 'rgba(74, 222, 128, 0.2)' : '#27272a'; 
-  const isExpanded = !!note.isExpanded;
   
-  // CRASH GUARD 3: Safe text conversion
+  // Use custom colors if provided (for chat), otherwise default logic
+  const borderColor = customColors?.border || (isHacker ? 'rgba(74, 222, 128, 0.2)' : '#27272a'); 
+  const bgColor = customColors?.bg || 'bg-zinc-900';
+  
+  const isExpanded = !!note.isExpanded;
   const safeText = String(note.text || '');
   const lines = safeText.split('\n');
   const isCompact = lines.length === 1 && !note.imageUrl;
@@ -145,12 +149,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     } catch (e) { return ''; }
   };
 
-  const handleCategoryClick = (e: any) => { 
-      e.stopPropagation(); 
-      if (onCategoryClick) { triggerHaptic(); onCategoryClick(note.category); }
-  };
-  
+  // --- SWIPE LOGIC (Disabled for Chat Messages) ---
   const handleTouchStart = (e: any) => {
+    if (variant !== 'default') return; // Disable swipe for chat
     if (e.targetTouches.length !== 1 || !onDelete) return;
     touchStartX.current = e.targetTouches[0].clientX; touchStartY.current = e.targetTouches[0].clientY;
     setIsSwiping(false); isLongPress.current = false;
@@ -160,6 +161,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   };
 
   const handleTouchMove = (e: any) => {
+    if (variant !== 'default') return;
     if (!touchStartX.current || !touchStartY.current || !onDelete) return;
     const currentX = e.targetTouches[0].clientX; const currentY = e.targetTouches[0].clientY;
     const diffX = currentX - touchStartX.current; const diffY = currentY - touchStartY.current;
@@ -170,6 +172,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   };
 
   const handleTouchEnd = () => {
+    if (variant !== 'default') return;
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
     if (isLongPress.current) { touchStartX.current = null; touchStartY.current = null; return; }
     if (swipeOffset < -100 && onDelete && note.id) { triggerHaptic(); onDelete(note.id); }
@@ -177,14 +180,26 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   };
 
   const paddingClass = isCompact ? 'px-3 py-2' : 'p-2'; 
+  
+  // Custom Border Radius for Chat Bubbles
+  let radiusClass = 'rounded-xl';
+  if (variant === 'sent') radiusClass = 'rounded-2xl rounded-tr-sm';
+  if (variant === 'received') radiusClass = 'rounded-2xl rounded-tl-sm';
 
   return (
     <>
-      <div className="relative w-fit max-w-[88%] md:max-w-full overflow-visible rounded-xl group" onContextMenu={handleContextMenu}>
-        <div className={`absolute inset-0 flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: isHacker ? '#16a34a' : CLAUDE_ORANGE }}>
-          <Trash2 className="text-white animate-pulse" size={24} />
-        </div>
-        <div className={`bg-zinc-900 border rounded-xl ${paddingClass} hover:border-zinc-700 relative w-full`} style={{ borderColor: borderColor, transform: `translateX(${swipeOffset}px)`, transition: isSwiping ? 'none' : 'transform 0.3s ease-out' }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+      <div className={`relative w-fit max-w-[88%] md:max-w-[70%] overflow-visible group ${radiusClass}`} onContextMenu={handleContextMenu}>
+        {/* Swipe Delete Background (Only for Default Notes) */}
+        {variant === 'default' && (
+           <div className={`absolute inset-0 flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: isHacker ? '#16a34a' : CLAUDE_ORANGE }}>
+             <Trash2 className="text-white animate-pulse" size={24} />
+           </div>
+        )}
+        
+        <div className={`${bgColor} border ${radiusClass} ${paddingClass} relative w-full transition-all duration-200`} 
+             style={{ borderColor: borderColor, transform: `translateX(${swipeOffset}px)` }} 
+             onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+          
           {isExpanded ? (
             <div className="flex flex-col gap-1">
               {note.imageUrl && (
@@ -193,12 +208,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                 </div>
               )}
               <div className="block w-full">
-                  <span className="text-base leading-snug whitespace-pre-wrap break-words text-zinc-300">{safeText}</span>
+                  <span className={`text-base leading-snug whitespace-pre-wrap break-words ${customColors?.text || 'text-zinc-300'}`}>{safeText}</span>
                   <div className="float-right ml-2 mt-1 flex items-center gap-1.5 align-bottom">
                       {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={accentColor} />}
-                      <InlineActionButton onClick={handleSpeakNote} icon={Volume2} accentColor={accentColor} />
-                      <span className="text-[10px] uppercase tracking-wider font-medium ml-0.5 select-none" style={{ color: accentColor }}>{formatTime(note.date)}</span>
-                      {onCategoryClick && (<button onClick={handleCategoryClick} className="w-4 h-4 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer ml-0.5" style={{ borderColor: borderColor }}><span className="text-[9px] grayscale">{safeEmoji}</span></button>)}
+                      <span className="text-[10px] opacity-60 font-medium ml-0.5 select-none" style={{ color: customColors?.text || accentColor }}>{formatTime(note.date)}</span>
                   </div>
               </div>
             </div>
@@ -206,14 +219,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
              <div className="flex gap-2">
                  <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <div onClick={() => onToggleExpand && onToggleExpand(note.id)} className="cursor-pointer">
-                       <p className="text-base leading-tight truncate mb-1 text-left text-zinc-300">{lines[0] || <span className="italic opacity-50">Image</span>}</p>
-                       {lines.length > 1 && <p className="text-sm leading-snug truncate text-left opacity-70 text-zinc-300">{lines[1]}</p>}
+                       <p className={`text-base leading-tight truncate mb-1 text-left ${customColors?.text || 'text-zinc-300'}`}>{lines[0] || <span className="italic opacity-50">Image</span>}</p>
+                       {lines.length > 1 && <p className={`text-sm leading-snug truncate text-left opacity-70 ${customColors?.text || 'text-zinc-300'}`}>{lines[1]}</p>}
                     </div>
                  </div>
                  {note.imageUrl && (<div className="flex-shrink-0 w-12 h-10 rounded bg-zinc-800 border overflow-hidden" style={{ borderColor: borderColor }}><img src={note.imageUrl} alt="" className="w-full h-full object-cover" /></div>)}
                  <div className="flex flex-col justify-center items-end gap-1 flex-shrink-0">
-                    <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: accentColor }}>{formatTime(note.date)}</span>
-                    {onCategoryClick && (<button onClick={handleCategoryClick} className="w-4 h-4 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer" style={{ borderColor: borderColor }}><span className="text-[9px] grayscale">{safeEmoji}</span></button>)}
+                    <span className="text-[10px] opacity-60 font-medium" style={{ color: customColors?.text || accentColor }}>{formatTime(note.date)}</span>
                  </div>
              </div>
           )}
@@ -222,11 +234,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       {contextMenu && onDelete && typeof document !== 'undefined' && createPortal(
         <div className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'rgba(24, 24, 27, 0.95)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
           <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={accentColor} />
-          {onEdit && <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={accentColor} />}
-          {onPin && <ContextMenuItem icon={Pin} label={note.isPinned ? "Unpin" : "Pin"} onClick={() => { onPin(note.id); setContextMenu(null); }} accentColor={accentColor} />}
           <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={accentColor} />
-          <div className="h-px bg-white/10 mx-3 my-1" />
-          <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { onDelete(note.id); setContextMenu(null); }} accentColor={accentColor} />
+          {variant === 'default' && (
+            <>
+              <div className="h-px bg-white/10 mx-3 my-1" />
+              <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { onDelete(note.id); setContextMenu(null); }} accentColor={accentColor} />
+            </>
+          )}
         </div>, document.body
       )}
     </>

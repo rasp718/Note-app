@@ -152,6 +152,11 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   
+  // --- CHAT DATA HOOKS (Added for Avatar Support) ---
+  // We need to fetch the 'other' user to show their avatar in the chat room
+  const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
+  const otherChatUser = useUser(currentChatObject?.otherUserId);
+  
   const searchInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null); 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -185,7 +190,6 @@ function App() {
     selection: isHackerMode ? 'selection:bg-green-500/30 selection:text-green-400' : 'selection:bg-[#da7756]/30 selection:text-[#da7756]'
   };
 
-  // Find current config for UI labels
   const currentConfig = activeFilter === 'all' ? null : (activeFilter === 'secret' ? HACKER_CONFIG : categories.find(c => c.id === activeFilter));
 
   useEffect(() => { const timer = setTimeout(() => { setIsStartup(false); }, 4500); return () => clearTimeout(timer); }, []);
@@ -398,13 +402,11 @@ function App() {
       if(n) await updateNote(id, { isPinned: !n.isPinned });
   };
 
-  // --- DATA CLEANING (THE CRASH FIX) ---
+  // --- DATA CLEANING (THE FIX) ---
   const safeNotes = (notes || []).map(n => {
       const date = normalizeDate(n.date);
-      // Ensure we have a valid fallback category if one is missing in the DB
       const fallbackCat = (DEFAULT_CATEGORIES && DEFAULT_CATEGORIES.length > 0) ? DEFAULT_CATEGORIES[0].id : 'default';
       const validCategory = categories.some(c => c.id === n.category) || n.category === 'secret' ? n.category : fallbackCat;
-      
       return { 
           ...n, 
           id: n.id || Math.random().toString(), 
@@ -639,11 +641,28 @@ function App() {
                         );
                     })
                 ) : (
-                    // --- MESSAGES RENDER ---
+                    // --- MESSAGES RENDER (NEW LAYOUT) ---
                     activeMessages.map((msg, index) => {
                         const prevMsg = activeMessages[index - 1];
                         const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
                         
+                        const isMe = msg.senderId === user?.uid;
+                        const nextMsg = activeMessages[index + 1];
+                        // Show avatar if next message is different sender OR if this is the last message
+                        const isLastInSequence = !nextMsg || nextMsg.senderId !== msg.senderId;
+                        const showAvatar = !isMe && isLastInSequence;
+
+                        // STYLING: Define colors based on sender
+                        const customColors = isMe ? {
+                            bg: isHackerMode ? 'bg-green-900/40' : 'bg-orange-500/20',
+                            border: isHackerMode ? 'border-green-500/50' : 'border-orange-500/30',
+                            text: isHackerMode ? 'text-green-100' : 'text-orange-50'
+                        } : {
+                            bg: 'bg-zinc-900/90 backdrop-blur-md',
+                            border: 'border-zinc-800',
+                            text: 'text-zinc-200'
+                        };
+
                         const msgNote = {
                             id: msg.id,
                             text: msg.text,
@@ -656,9 +675,33 @@ function App() {
 
                         return (
                             <React.Fragment key={msg.id}>
-                                {showHeader && (<div className="flex justify-center my-4 opacity-70 w-full select-none"><span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">{getDateLabel(msg.timestamp)}</span></div>)}
-                                <div className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'}`}>
-                                    <NoteCard note={msgNote} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={undefined} onPin={undefined} onCategoryClick={undefined} onEdit={undefined} onToggleExpand={undefined} />
+                                {showHeader && (<div className="flex justify-center my-6 opacity-60 w-full select-none"><span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full border border-white/5">{getDateLabel(msg.timestamp)}</span></div>)}
+                                
+                                <div className={`flex w-full mb-1 ${isMe ? 'justify-end' : 'justify-start items-end gap-2'}`}>
+                                    
+                                    {/* AVATAR FOR RECEIVED MESSAGES */}
+                                    {!isMe && (
+                                        <div className="flex-shrink-0 w-8 h-8 -mb-1 relative">
+                                            {showAvatar ? (
+                                                 <div className="w-8 h-8 rounded-lg bg-zinc-800 overflow-hidden border border-white/10 shadow-lg">
+                                                    {otherChatUser?.photoURL ? 
+                                                        <img src={otherChatUser.photoURL} className="w-full h-full object-cover" /> :
+                                                        <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">{otherChatUser?.displayName?.[0] || '?'}</div>
+                                                    }
+                                                 </div>
+                                            ) : <div className="w-8" />} 
+                                        </div>
+                                    )}
+
+                                    {/* MESSAGE BUBBLE */}
+                                    <NoteCard 
+                                        note={msgNote} 
+                                        categories={[]} 
+                                        selectedVoice={selectedVoice} 
+                                        variant={isMe ? 'sent' : 'received'}
+                                        customColors={customColors}
+                                        onDelete={undefined} onPin={undefined} onCategoryClick={undefined} onEdit={undefined} onToggleExpand={undefined}
+                                    />
                                 </div>
                             </React.Fragment>
                         );

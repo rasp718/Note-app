@@ -372,49 +372,61 @@ function App() {
       </div>
   );
 
-  // Bottom Tab Bar - FLOATING DOCK STYLE
+  // Bottom Tab Bar - REIMAGINED "VIBE DOCK"
   const BottomTabBar = () => {
     if (isEditing) {
         return (
-            <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl p-4 flex justify-between items-center text-[10px] font-medium text-zinc-400 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
+            <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-full shadow-2xl p-2 px-6 flex justify-between items-center text-[10px] font-medium text-zinc-400 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
                <button onClick={() => {}} className="flex flex-col items-center gap-1 hover:text-white transition-colors">
-                  <Archive size={20} />
-                  <span className="uppercase tracking-wider">Archive</span>
+                  <Archive size={18} />
                </button>
                <button onClick={() => {}} className="flex flex-col items-center gap-1 hover:text-white transition-colors">
-                  <CheckCheck size={20} />
-                  <span className="uppercase tracking-wider">Read</span>
+                  <CheckCheck size={18} />
                </button>
                <button onClick={() => {}} className="flex flex-col items-center gap-1 hover:text-red-500 transition-colors">
-                  <Trash2 size={20} />
-                  <span className="uppercase tracking-wider">Delete</span>
+                  <Trash2 size={18} />
                </button>
             </div>
         );
     }
 
     return (
-        <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-black/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl shadow-black/50 p-2 flex justify-between items-center text-[10px] font-medium text-zinc-500 z-50">
+        <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-2xl border border-white/5 rounded-full shadow-2xl shadow-black/50 p-1.5 flex gap-1 z-50">
            
-           <button onClick={() => setActiveTab('contacts')} className={`flex-1 h-12 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-300 ${activeTab === 'contacts' ? 'text-white bg-white/10' : 'hover:text-zinc-300'}`}>
-              <Globe size={20} strokeWidth={activeTab === 'contacts' ? 2.5 : 2} />
-              <span className="text-[9px] uppercase tracking-widest font-bold">Net</span>
+           <button onClick={() => setActiveTab('contacts')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group">
+              <Globe 
+                size={22} 
+                className={`transition-all duration-300 ${activeTab === 'contacts' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`}
+                style={activeTab === 'contacts' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}
+              />
+              {activeTab === 'contacts' && <div className="absolute bottom-2 w-1 h-1 rounded-full" style={{ backgroundColor: accentColor }}></div>}
            </button>
 
-           <button onClick={() => setActiveTab('calls')} className={`flex-1 h-12 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-300 ${activeTab === 'calls' ? 'text-white bg-white/10' : 'hover:text-zinc-300'}`}>
-              <Zap size={20} strokeWidth={activeTab === 'calls' ? 2.5 : 2} />
-              <span className="text-[9px] uppercase tracking-widest font-bold">Signal</span>
+           <button onClick={() => setActiveTab('calls')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group">
+              <Zap 
+                size={22} 
+                className={`transition-all duration-300 ${activeTab === 'calls' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`}
+                style={activeTab === 'calls' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}
+              />
+              {activeTab === 'calls' && <div className="absolute bottom-2 w-1 h-1 rounded-full" style={{ backgroundColor: accentColor }}></div>}
            </button>
 
-           <button onClick={() => setActiveTab('chats')} className={`flex-1 h-12 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-300 ${activeTab === 'chats' ? 'text-white bg-white/10' : 'hover:text-zinc-300'}`}>
-              <MessageSquareDashed size={20} strokeWidth={activeTab === 'chats' ? 2.5 : 2} />
-              <span className="text-[9px] uppercase tracking-widest font-bold">Feed</span>
+           <button onClick={() => setActiveTab('chats')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group">
+              <MessageSquareDashed 
+                size={22} 
+                className={`transition-all duration-300 ${activeTab === 'chats' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`}
+                style={activeTab === 'chats' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}
+              />
+              {activeTab === 'chats' && <div className="absolute bottom-2 w-1 h-1 rounded-full" style={{ backgroundColor: accentColor }}></div>}
            </button>
 
-           <button onClick={() => setActiveTab('settings')} className={`flex-1 h-12 rounded-2xl flex flex-col items-center justify-center gap-1 relative transition-all duration-300 ${activeTab === 'settings' ? 'text-white bg-white/10' : 'hover:text-zinc-300'}`}>
-              <Cpu size={20} strokeWidth={activeTab === 'settings' ? 2.5 : 2} />
-              <span className="text-[9px] uppercase tracking-widest font-bold">Sys</span>
-              <span className="absolute top-3 right-3 w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
+           <button onClick={() => setActiveTab('settings')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group">
+              <Cpu 
+                size={22} 
+                className={`transition-all duration-300 ${activeTab === 'settings' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`}
+                style={activeTab === 'settings' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}
+              />
+              {activeTab === 'settings' && <div className="absolute bottom-2 w-1 h-1 rounded-full" style={{ backgroundColor: accentColor }}></div>}
            </button>
 
         </div>
@@ -455,11 +467,19 @@ function App() {
                 <div className="flex gap-4 items-center mb-1">
                     <button 
                         onClick={toggleEditMode} 
-                        className="text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-white transition-colors"
+                        className="text-xs font-bold uppercase tracking-wider text-zinc-500 transition-colors"
+                        onMouseEnter={(e) => e.currentTarget.style.color = accentColor}
+                        onMouseLeave={(e) => e.currentTarget.style.color = '#71717a'} // zinc-500
                     >
                         {isEditing ? 'Done' : 'Select'}
                     </button>
-                    <button className="text-zinc-500 hover:text-white transition-colors"><PenLine size={20} /></button>
+                    <button 
+                        className="text-zinc-500 transition-colors"
+                        onMouseEnter={(e) => e.currentTarget.style.color = accentColor}
+                        onMouseLeave={(e) => e.currentTarget.style.color = '#71717a'}
+                    >
+                        <PenLine size={20} />
+                    </button>
                 </div>
              </div>
            )}
@@ -481,7 +501,7 @@ function App() {
                       <input 
                         type="text" 
                         placeholder="Search frequency..." 
-                        className="bg-transparent border-none outline-none text-white text-sm w-full placeholder:text-zinc-600 font-medium"
+                        className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-medium"
                       />
                    </div>
                 </div>

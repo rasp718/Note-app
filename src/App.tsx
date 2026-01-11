@@ -712,18 +712,24 @@ function App() {
                    {/* AVATAR SELECTOR GRID */}
                    {isEditingProfile && showAvatarSelector && (
                        <div className="grid grid-cols-6 gap-2 pt-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                           {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
+                           {Array.from({ length: 7 }, (_, i) => i + 1).map((num) => (
                                <button 
                                    key={num}
                                    onClick={() => handleSelectPreset(num)}
-                                   className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-orange-500 transition-colors bg-black/40"
+                                   className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-orange-500 transition-colors bg-black/40 flex items-center justify-center text-xl"
                                >
+                                   {/* Attempt to load image, fallback to emoji if it fails (404/wrong extension) */}
                                    <img 
-                                     src={`/robot${num}.jpg?t=${Date.now()}`} 
-                                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                     src={`/robot${num}.jpg`} 
                                      className="w-full h-full object-cover" 
                                      alt={`Bot ${num}`}
+                                     onError={(e) => { 
+                                        e.currentTarget.style.display = 'none'; 
+                                        // Parent will show emoji because img is hidden
+                                     }}
                                    />
+                                   {/* This span only shows if the img is hidden by onError */}
+                                   <span className="absolute z-[-1]">🤖</span>
                                </button>
                            ))}
                        </div>

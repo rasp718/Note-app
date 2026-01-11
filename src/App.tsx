@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, ArrowUp, LayoutGrid, Image as ImageIcon, Check, Terminal, Plus, PenLine } from 'lucide-react'; 
+import { Search, X, Settings, ArrowUp, LayoutGrid, Image as ImageIcon, Check, Terminal, Plus, PenLine, AlignLeft, AlignCenter, AlignRight } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
 import { useFirebaseSync, useNotes } from './useFirebaseSync';
@@ -92,7 +92,11 @@ function App() {
     return initial;
   });
 
+  // --- SETTINGS STATE ---
   const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
+  const [bgIndex, setBgIndex] = useState<number>(1);
+  const [bgOpacity, setBgOpacity] = useState<number>(0.45);
+
   const [transcript, setTranscript] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -241,11 +245,33 @@ function App() {
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
   useEffect(() => { scrollToBottom(); }, [activeFilter]);
-  useEffect(() => { try { const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any); const savedVoice = localStorage.getItem('vibenotes_voice'); if(savedVoice) setSelectedVoiceURI(savedVoice); } catch (e) {} }, []);
+  
+  // --- LOAD SETTINGS ---
+  useEffect(() => { 
+      try { 
+          const savedAlignment = localStorage.getItem('vibenotes_alignment'); 
+          if(savedAlignment) setAlignment(savedAlignment as any); 
+          
+          const savedVoice = localStorage.getItem('vibenotes_voice'); 
+          if(savedVoice) setSelectedVoiceURI(savedVoice);
+
+          const savedBg = localStorage.getItem('vibenotes_bg');
+          if (savedBg) setBgIndex(parseInt(savedBg));
+
+          const savedOpacity = localStorage.getItem('vibenotes_bg_opacity');
+          if (savedOpacity) setBgOpacity(parseFloat(savedOpacity));
+      } catch (e) {} 
+  }, []);
+
   useEffect(() => { const loadVoices = () => { const all = window.speechSynthesis.getVoices(); setVoices(all.filter(v => v.lang.startsWith('en'))); }; loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }, []);
   useEffect(() => { if (selectedVoiceURI) setSelectedVoice(voices.find(v => v.voiceURI === selectedVoiceURI) || null); }, [selectedVoiceURI, voices]);
   useEffect(() => { localStorage.setItem('vibenotes_categories', JSON.stringify(categories)); }, [categories]);
+  
+  // --- SAVE SETTINGS ---
   useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
+  useEffect(() => { localStorage.setItem('vibenotes_bg', bgIndex.toString()); }, [bgIndex]);
+  useEffect(() => { localStorage.setItem('vibenotes_bg_opacity', bgOpacity.toString()); }, [bgOpacity]);
+
   useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
 
   const cycleFilter = () => {
@@ -315,40 +341,19 @@ function App() {
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
       {/* 
-          === GRAFFITI COLLAGE BACKGROUND === 
-          Adjustment: 5% Darker
-          Opacity: 30%
-          Brightness: 45% (brightness-[0.45])
+          === DYNAMIC BACKGROUND === 
+          Uses bgIndex to select bg1-bg10 from public folder
+          Uses bgOpacity for transparency
       */}
       <div className="fixed inset-0 z-0 pointer-events-none select-none overflow-hidden bg-black">
-        <div className="absolute inset-0 flex flex-col md:flex-row">
-             {/* Image 1 */}
-             <div className="flex-1 relative overflow-hidden">
-                 <img 
-                    src="/bg1.jpg" 
-                    className="w-full h-full object-cover opacity-45 brightness-[0.40]"
-                    alt=""
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                 />
-             </div>
-             {/* Image 2 */}
-             <div className="flex-1 relative overflow-hidden">
-                 <img 
-                    src="/bg2.jpg" 
-                    className="w-full h-full object-cover opacity-45 brightness-[0.40]"
-                    alt=""
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                 />
-             </div>
-             {/* Image 3 */}
-             <div className="flex-1 relative overflow-hidden">
-                 <img 
-                    src="/bg3.jpg" 
-                    className="w-full h-full object-cover opacity-45 brightness-[0.40]"
-                    alt=""
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                 />
-             </div>
+        <div className="absolute inset-0">
+             <img 
+                src={`/bg${bgIndex}.jpg`}
+                className="w-full h-full object-cover transition-opacity duration-300"
+                style={{ opacity: bgOpacity }}
+                alt="background"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+             />
         </div>
       </div>
 
@@ -372,7 +377,6 @@ function App() {
                     </div>
                 </div>
             </div>
-            <div className="flex items-center gap-2"></div>
         </header>
       </div>
 
@@ -448,6 +452,63 @@ function App() {
             </div>
           </div>
       </div>
+      
+      {/* --- SETTINGS MODAL --- */}
+      {showSettings && (
+          <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+              <div className="bg-zinc-900 border border-zinc-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col gap-6">
+                  <div className="flex items-center justify-between">
+                      <h2 className="text-white font-bold text-lg">Settings</h2>
+                      <button onClick={() => setShowSettings(false)} className="p-2 text-zinc-500 hover:text-white bg-zinc-800 rounded-full"><X size={18} /></button>
+                  </div>
+                  
+                  {/* Alignment */}
+                  <div className="space-y-3">
+                      <label className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Message Alignment</label>
+                      <div className="flex gap-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800">
+                          <button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button>
+                          <button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button>
+                          <button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button>
+                      </div>
+                  </div>
+
+                   {/* Background Opacity */}
+                   <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <label className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Background Opacity</label>
+                        <span className="text-zinc-400 text-xs">{Math.round(bgOpacity * 100)}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="1" 
+                        step="0.05"
+                        value={bgOpacity}
+                        onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
+                        className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                      />
+                  </div>
+
+                  {/* Background Selection */}
+                  <div className="space-y-3">
+                      <label className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Wallpaper</label>
+                      <div className="grid grid-cols-5 gap-2">
+                          {[1,2,3,4,5,6,7,8,9,10].map((num) => (
+                              <button 
+                                key={num}
+                                onClick={() => setBgIndex(num)}
+                                className={`aspect-square rounded-lg overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-orange-500 scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                              >
+                                  <img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} />
+                                  {bgIndex === num && <div className="absolute inset-0 bg-orange-500/20" />}
+                              </button>
+                          ))}
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
       <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } @keyframes logoEntrance { 0% { transform: scale(0) rotate(-180deg); } 60% { transform: scale(1.2) rotate(10deg); } 100% { transform: scale(1) rotate(0deg); } } @keyframes logoHeartbeat { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } } @keyframes logoGlitch { 0% { transform: translate(0); } 20% { transform: translate(-3px, 3px); } 40% { transform: translate(-3px, -3px); } 60% { transform: translate(3px, 3px); } 80% { transform: translate(3px, -3px); } 100% { transform: translate(0); } } @keyframes logoWobble { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg) scale(1.1); } 75% { transform: rotate(15deg) scale(1.1); } }`}</style>
     </div>
   );

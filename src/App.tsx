@@ -201,21 +201,10 @@ function App() {
       } catch(e) { console.error(e); }
   };
 
-  // UPDATED: Optimized Preset Selection
+  // STRICT ROBOT SELECTION
   const handleSelectPreset = (num: number) => {
-      const robotPath = `/robot${num}.jpg`;
-      const bgPath = `/bg${num}.jpg`;
-      
-      // Optimistically set robot
-      setProfilePic(robotPath);
+      setProfilePic(`/robot${num}.jpg`);
       setShowAvatarSelector(false); 
-      
-      // Fallback check in case robot image doesn't exist
-      const img = new Image();
-      img.src = robotPath;
-      img.onerror = () => {
-          setProfilePic(bgPath);
-      };
   };
 
   const handleImageUpload = async (file: File) => {
@@ -663,7 +652,7 @@ function App() {
                                         src={profilePic} 
                                         alt="Profile" 
                                         className="w-full h-full object-cover" 
-                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.style.backgroundColor = '#27272a'; }}
                                    />
                                ) : (
                                    <span>😎</span>
@@ -731,7 +720,7 @@ function App() {
                                >
                                    <img 
                                      src={`/robot${num}.jpg?t=${Date.now()}`} 
-                                     onError={(e) => { e.currentTarget.src = `/bg${num}.jpg` }} // Fallback
+                                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                      className="w-full h-full object-cover" 
                                      alt={`Bot ${num}`}
                                    />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, ArrowUp, LayoutGrid, Image as ImageIcon, Check, Terminal, Plus, PenLine, AlignLeft, AlignCenter, AlignRight } from 'lucide-react'; 
+import { Search, X, Settings, ArrowUp, LayoutGrid, Image as ImageIcon, Check, Terminal, Plus, PenLine, AlignLeft, AlignCenter, AlignRight, Scan } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
 import { useFirebaseSync, useNotes } from './useFirebaseSync';
@@ -96,6 +96,7 @@ function App() {
   const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
   const [bgIndex, setBgIndex] = useState<number>(1);
   const [bgOpacity, setBgOpacity] = useState<number>(0.45);
+  const [bgScale, setBgScale] = useState<number>(100); // 100 = Cover, <100 = Tile percentage
 
   const [transcript, setTranscript] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -179,7 +180,7 @@ function App() {
 
   useEffect(() => { const timer = setTimeout(() => { setIsStartup(false); }, 4500); return () => clearTimeout(timer); }, []);
   
-  // --- MATRIX EFFECT: DATA STREAM ---
+  // --- MATRIX EFFECT ---
   useEffect(() => {
     if (!showSecretAnim) return;
     const canvas = canvasRef.current;
@@ -260,6 +261,9 @@ function App() {
 
           const savedOpacity = localStorage.getItem('vibenotes_bg_opacity');
           if (savedOpacity) setBgOpacity(parseFloat(savedOpacity));
+
+          const savedScale = localStorage.getItem('vibenotes_bg_scale');
+          if (savedScale) setBgScale(parseInt(savedScale));
       } catch (e) {} 
   }, []);
 
@@ -271,6 +275,7 @@ function App() {
   useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
   useEffect(() => { localStorage.setItem('vibenotes_bg', bgIndex.toString()); }, [bgIndex]);
   useEffect(() => { localStorage.setItem('vibenotes_bg_opacity', bgOpacity.toString()); }, [bgOpacity]);
+  useEffect(() => { localStorage.setItem('vibenotes_bg_scale', bgScale.toString()); }, [bgScale]);
 
   useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
 
@@ -341,20 +346,20 @@ function App() {
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
       {/* 
-          === DYNAMIC BACKGROUND === 
-          Uses bgIndex to select bg1-bg10 from public folder
-          Uses bgOpacity for transparency
+          === DYNAMIC BACKGROUND (SCALABLE) === 
+          Switched from <img> to <div> background-image for scaling support.
       */}
       <div className="fixed inset-0 z-0 pointer-events-none select-none overflow-hidden bg-black">
-        <div className="absolute inset-0">
-             <img 
-                src={`/bg${bgIndex}.jpg`}
-                className="w-full h-full object-cover transition-opacity duration-300"
-                style={{ opacity: bgOpacity }}
-                alt="background"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-             />
-        </div>
+        <div 
+            className="absolute inset-0 transition-opacity duration-300"
+            style={{ 
+                backgroundImage: `url(/bg${bgIndex}.jpg)`,
+                backgroundSize: bgScale >= 100 ? 'cover' : `${bgScale}%`,
+                backgroundPosition: 'center',
+                backgroundRepeat: 'repeat',
+                opacity: bgOpacity
+            }}
+        />
       </div>
 
       {/* Header */}
@@ -456,7 +461,7 @@ function App() {
       {/* --- SETTINGS MODAL --- */}
       {showSettings && (
           <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-              <div className="bg-zinc-900 border border-zinc-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col gap-6">
+              <div className="bg-zinc-900 border border-zinc-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto">
                   <div className="flex items-center justify-between">
                       <h2 className="text-white font-bold text-lg">Settings</h2>
                       <button onClick={() => setShowSettings(false)} className="p-2 text-zinc-500 hover:text-white bg-zinc-800 rounded-full"><X size={18} /></button>
@@ -470,6 +475,23 @@ function App() {
                           <button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button>
                           <button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button>
                       </div>
+                  </div>
+
+                  {/* Wallpaper Scale (Zoom/Tile) */}
+                   <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <label className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Wallpaper Scale</label>
+                        <span className="text-zinc-400 text-xs flex items-center gap-1"><Scan size={12}/> {bgScale >= 100 ? 'Cover' : `${bgScale}%`}</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="20" 
+                        max="100" 
+                        step="5"
+                        value={bgScale}
+                        onChange={(e) => setBgScale(parseInt(e.target.value))}
+                        className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                      />
                   </div>
 
                    {/* Background Opacity */}
@@ -489,11 +511,11 @@ function App() {
                       />
                   </div>
 
-                  {/* Background Selection */}
+                  {/* Background Selection (Updated to 20 images) */}
                   <div className="space-y-3">
                       <label className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Wallpaper</label>
                       <div className="grid grid-cols-5 gap-2">
-                          {[1,2,3,4,5,6,7,8,9,10].map((num) => (
+                          {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
                               <button 
                                 key={num}
                                 onClick={() => setBgIndex(num)}

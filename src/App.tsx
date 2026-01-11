@@ -73,8 +73,9 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
-// --- MOCK DATA FOR CHAT LIST ---
-const MOCK_CHATS = [
+// --- INITIAL MOCK DATA ---
+// Renamed to INITIAL_CHATS so we can load it into state and modify it
+const INITIAL_CHATS = [
   { id: '2', name: 'Max & Stacy', message: 'See? like... super unrelated, right?', time: '8:42 PM', avatar: '/api/placeholder/40/40', color: 'bg-orange-500' },
   { id: '3', name: 'Trade Watcher', message: 'The Dollar isn\'t backed by anything.', time: '1:32 PM', avatar: '/api/placeholder/40/40', color: 'bg-zinc-700' },
   { id: '4', name: 'Strape', message: 'Norm finkelstiens mom said there are...', time: 'Yesterday', avatar: '/api/placeholder/40/40', color: 'bg-red-500' },
@@ -92,6 +93,10 @@ function App() {
   // --- EDIT MODE STATE ---
   const [isEditing, setIsEditing] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
+
+  // --- CHAT STATE (NEW) ---
+  // We use state here so we can delete them
+  const [chatList, setChatList] = useState(INITIAL_CHATS);
 
   // --- PROFILE STATE ---
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -183,6 +188,15 @@ function App() {
     setSelectedChatIds(newSet);
   };
 
+  const handleDeleteSelected = () => {
+    // 1. Remove mock chats that are selected
+    setChatList(prev => prev.filter(chat => !selectedChatIds.has(chat.id)));
+    
+    // 2. Clear selection and exit edit mode
+    setSelectedChatIds(new Set());
+    setIsEditing(false);
+  };
+
   // Profile Edit Logic
   const handleProfileSave = () => {
       setIsEditingProfile(false);
@@ -203,7 +217,7 @@ function App() {
 
   // STRICT ROBOT SELECTION
   const handleSelectPreset = (num: number) => {
-      // FIXED: Uses .jpeg and adds v=1 to fix mobile cache
+      // Uses .jpeg and v=1 to fix mobile cache
       setProfilePic(`/robot${num}.jpeg?v=1`);
       setShowAvatarSelector(false); 
   };
@@ -243,7 +257,7 @@ function App() {
     const FADE_SPEED = 0.1;
     const MASTER_SPEED = 50;
     const STUTTER_AMOUNT = 0.85;  
-    const RAIN_BUILDUP = 50;
+    const RAIN_BUILDUP = 300;
     
     const COLOR_HEAD = '#FFF'; 
     const COLOR_TRAIL = '#0D0'; 
@@ -418,13 +432,13 @@ function App() {
     if (isEditing) {
         return (
             <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-full shadow-2xl p-2 px-6 flex justify-between items-center text-[10px] font-medium text-zinc-400 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
-               <button onClick={() => {}} className="flex flex-col items-center gap-1 hover:text-white transition-colors">
+               <button onClick={() => {}} className="flex flex-col items-center gap-1 text-zinc-500 transition-colors hover:text-[#da7756]">
                   <Archive size={18} />
                </button>
-               <button onClick={() => {}} className="flex flex-col items-center gap-1 hover:text-white transition-colors">
+               <button onClick={() => {}} className="flex flex-col items-center gap-1 text-zinc-500 transition-colors hover:text-[#da7756]">
                   <CheckCheck size={18} />
                </button>
-               <button onClick={() => {}} className="flex flex-col items-center gap-1 hover:text-red-500 transition-colors">
+               <button onClick={handleDeleteSelected} className="flex flex-col items-center gap-1 text-zinc-500 transition-colors hover:text-[#da7756]">
                   <Trash2 size={18} />
                </button>
             </div>
@@ -501,7 +515,7 @@ function App() {
                 <div>
                     <h1 className="text-3xl font-black text-white tracking-tighter">FEED</h1>
                     <p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mt-1">
-                        {isEditing && selectedChatIds.size > 0 ? `${selectedChatIds.size} SELETED` : 'Encrypted'}
+                        {isEditing && selectedChatIds.size > 0 ? `${selectedChatIds.size} SELECTED` : 'Encrypted'}
                     </p>
                 </div>
                 
@@ -585,8 +599,8 @@ function App() {
                     </div>
                 </div>
 
-                {/* MOCK CHATS */}
-                {MOCK_CHATS.map(chat => (
+                {/* DYNAMIC CHATS (Now using state) */}
+                {chatList.map(chat => (
                   <div 
                     key={chat.id} 
                     onClick={() => {

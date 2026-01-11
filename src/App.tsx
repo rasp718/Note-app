@@ -4,7 +4,7 @@ import {
   Check, Terminal, Plus, PenLine, AlignLeft, AlignCenter, AlignRight, Scan, 
   ChevronLeft, MessageSquareDashed, Bookmark, Edit, Moon, Book,
   Archive, Trash2, CheckCheck, Circle, Globe, Zap, Cpu, SlidersHorizontal,
-  User, AtSign, Activity, Camera, Save, Grid, UserPlus, MessageCircle
+  User, AtSign, Activity, Camera, Save, Grid, UserPlus, MessageCircle, MoreVertical, Phone
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
@@ -19,7 +19,8 @@ const TRANSLATIONS = {
 };
 
 // --- THEME CONSTANTS ---
-const CLAUDE_ORANGE = '#da7756';
+// Darker Orange for better text contrast
+const CLAUDE_ORANGE = '#c25e3e'; 
 const HACKER_GREEN = '#4ade80';
 
 const HACKER_CONFIG: CategoryConfig = {
@@ -29,7 +30,7 @@ const HACKER_CONFIG: CategoryConfig = {
     colorClass: 'bg-green-500' 
 };
 
-// --- ROBUST DATE UTILS (CRASH FIX) ---
+// --- ROBUST DATE UTILS ---
 const normalizeDate = (d: any): number => {
     try {
         if (!d) return Date.now();
@@ -581,19 +582,54 @@ function App() {
       {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
             <div className="fixed top-0 left-0 right-0 z-40">
-                <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative">
-                    <div className="flex items-center gap-3 w-full">
-                        <button onClick={() => { setCurrentView('list'); setActiveChatId(null); }} className="w-10 h-10 flex items-center justify-center text-zinc-400 transition-colors active:scale-95" onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = '#a1a1aa'}><ChevronLeft size={28} /></button>
-                        <button onClick={handleSecretTrigger} className="w-10 h-10 bg-transparent flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible group/logo">
-                            {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" style={{ color: isStartup ? undefined : HACKER_GREEN }} size={24} />) : (<div className={`w-3 h-3 rounded-sm relative z-10 transition-all duration-300 ${isStartup ? 'animate-bounce' : ''}`} style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
+                <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative z-50">
+                    <div className="flex items-center gap-1 w-full">
+                        <button onClick={() => { setCurrentView('list'); setActiveChatId(null); }} className="w-10 h-10 flex items-center justify-center text-zinc-400 transition-colors active:scale-95 hover:bg-white/5 rounded-full mr-1">
+                            <ChevronLeft size={28} />
                         </button>
-                        <div className="relative flex items-center h-10 ml-auto">
-                            <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}><Search size={20} /></button>
-                            <div className={`absolute right-0 bg-zinc-900 border border-zinc-800 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
-                                <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
-                                <input ref={searchInputRef} type="text" placeholder={TRANSLATIONS.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
-                                <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
+                        
+                        {/* HEADER CONTENT: IF CHAT, SHOW AVATAR + NAME */}
+                        {activeChatId !== 'saved_messages' ? (
+                           <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors">
+                               <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 relative">
+                                  {otherChatUser?.photoURL ? (
+                                      <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
+                                  ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-lg">{otherChatUser?.displayName?.[0] || '?'}</div>
+                                  )}
+                               </div>
+                               <div className="flex-1 min-w-0">
+                                   <h3 className="font-bold text-white text-base leading-tight truncate">{otherChatUser?.displayName || 'Unknown'}</h3>
+                                   <p className="text-zinc-400 text-xs truncate">{otherChatUser?.handle || 'Online'}</p>
+                               </div>
+                           </div>
+                        ) : (
+                            // NOTES HEADER
+                           <div onClick={handleSecretTrigger} className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden">
+                                     {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-white text-lg leading-tight">Notes</h3>
+                                    <p className="text-zinc-500 text-xs font-mono uppercase tracking-widest">Personal</p>
+                                </div>
+                           </div>
+                        )}
+
+                        <div className="flex items-center gap-1">
+                            {/* SEARCH BTN */}
+                             <div className="relative flex items-center h-10">
+                                <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-400 transition-all active:scale-95 rounded-full hover:bg-white/5 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={22} /></button>
+                                <div className={`absolute right-0 bg-zinc-900 border border-zinc-800 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
+                                    <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
+                                    <input ref={searchInputRef} type="text" placeholder={TRANSLATIONS.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
+                                    <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
+                                </div>
                             </div>
+                            {/* EXTRA MENU BTN (Visual only for now) */}
+                            {activeChatId !== 'saved_messages' && (
+                                <button className="w-10 h-10 flex items-center justify-center text-zinc-400 rounded-full hover:bg-white/5"><Phone size={22} /></button>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -629,16 +665,15 @@ function App() {
                         const showAvatar = !isMe && isLastInSequence;
 
                         // STYLING:
-                        // Make bubbles more opaque (solid) for better contrast
-                        // Yours: Green/Orange (Solid)
-                        // Theirs: Dark Gray (Solid)
+                        // Updated to match WhatsApp Contrast (Darker Orange for you, Dark Gray for them)
+                        // Faint border handled in NoteCard.tsx via variants
                         const customColors = isMe ? {
-                            bg: isHackerMode ? 'bg-green-900/90' : 'bg-[#da7756]/90', 
-                            border: isHackerMode ? 'border-green-500/50' : 'border-[#da7756]',
+                            bg: isHackerMode ? 'bg-green-900/90' : `bg-[${CLAUDE_ORANGE}]`, // Dark Orange
+                            border: 'border-transparent', // Handled by NoteCard class logic
                             text: 'text-white'
                         } : {
-                            bg: 'bg-[#27272a]', // Solid dark zinc
-                            border: 'border-zinc-700',
+                            bg: 'bg-[#27272a]', // Zinc-800 equivalent
+                            border: 'border-transparent',
                             text: 'text-zinc-100'
                         };
 
@@ -656,14 +691,8 @@ function App() {
                             <React.Fragment key={msg.id}>
                                 {showHeader && (<div className="flex justify-center my-6 opacity-60 w-full select-none"><span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full border border-white/5">{getDateLabel(msg.timestamp)}</span></div>)}
                                 
-                                {/* 
-                                   LAYOUT: 
-                                   items-end -> aligns avatar and bubble to the bottom of the row
-                                   justify-end / justify-start -> pushes to sides
-                                */}
                                 <div className={`flex w-full mb-1 items-end ${isMe ? 'justify-end' : 'justify-start gap-2'}`}>
                                     
-                                    {/* AVATAR (Bottom Left) */}
                                     {!isMe && (
                                         <div className="flex-shrink-0 w-8 h-8 relative z-10">
                                             {showAvatar ? (
@@ -677,7 +706,6 @@ function App() {
                                         </div>
                                     )}
 
-                                    {/* MESSAGE BUBBLE */}
                                     <NoteCard 
                                         note={msgNote} 
                                         categories={[]} 

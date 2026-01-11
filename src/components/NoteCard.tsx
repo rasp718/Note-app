@@ -57,7 +57,7 @@ interface NoteCardProps {
   onCategoryClick?: (category: CategoryId) => void;
   onEdit?: () => void;
   onToggleExpand?: (id: string) => void;
-  // NEW PROPS FOR CHAT STYLING
+  // CHAT PROPS
   variant?: 'default' | 'sent' | 'received';
   customColors?: { bg: string; border: string; text: string };
 }
@@ -87,9 +87,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const HACKER_GREEN = '#4ade80';
   const accentColor = isHacker ? HACKER_GREEN : isSecret ? '#ef4444' : CLAUDE_ORANGE;
   
-  // Use custom colors if provided (for chat), otherwise default logic
+  // Use custom colors if provided (Chat Mode), else default (Note Mode)
   const borderColor = customColors?.border || (isHacker ? 'rgba(74, 222, 128, 0.2)' : '#27272a'); 
   const bgColor = customColors?.bg || 'bg-zinc-900';
+  const textColor = customColors?.text || 'text-zinc-300';
   
   const isExpanded = !!note.isExpanded;
   const safeText = String(note.text || '');
@@ -149,9 +150,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     } catch (e) { return ''; }
   };
 
-  // --- SWIPE LOGIC (Disabled for Chat Messages) ---
+  // --- TOUCH / SWIPE LOGIC (Only for Notes) ---
   const handleTouchStart = (e: any) => {
-    if (variant !== 'default') return; // Disable swipe for chat
+    if (variant !== 'default') return;
     if (e.targetTouches.length !== 1 || !onDelete) return;
     touchStartX.current = e.targetTouches[0].clientX; touchStartY.current = e.targetTouches[0].clientY;
     setIsSwiping(false); isLongPress.current = false;
@@ -179,16 +180,16 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     setSwipeOffset(0); setIsSwiping(false); touchStartX.current = null; touchStartY.current = null;
   };
 
-  const paddingClass = isCompact ? 'px-3 py-2' : 'p-2'; 
+  const paddingClass = isCompact ? 'px-3 py-2' : 'p-3'; 
   
-  // Custom Border Radius for Chat Bubbles
+  // BUBBLE SHAPE LOGIC
   let radiusClass = 'rounded-xl';
-  if (variant === 'sent') radiusClass = 'rounded-2xl rounded-tr-sm';
-  if (variant === 'received') radiusClass = 'rounded-2xl rounded-tl-sm';
+  if (variant === 'sent') radiusClass = 'rounded-2xl rounded-tr-none'; // Sharp top-right for me
+  if (variant === 'received') radiusClass = 'rounded-2xl rounded-tl-none'; // Sharp top-left for them
 
   return (
     <>
-      <div className={`relative w-fit max-w-[88%] md:max-w-[70%] overflow-visible group ${radiusClass}`} onContextMenu={handleContextMenu}>
+      <div className={`relative w-fit max-w-[85%] md:max-w-[70%] overflow-visible group ${radiusClass}`} onContextMenu={handleContextMenu}>
         {/* Swipe Delete Background (Only for Default Notes) */}
         {variant === 'default' && (
            <div className={`absolute inset-0 flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: isHacker ? '#16a34a' : CLAUDE_ORANGE }}>
@@ -208,7 +209,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 </div>
               )}
               <div className="block w-full">
-                  <span className={`text-base leading-snug whitespace-pre-wrap break-words ${customColors?.text || 'text-zinc-300'}`}>{safeText}</span>
+                  <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>
                   <div className="float-right ml-2 mt-1 flex items-center gap-1.5 align-bottom">
                       {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={accentColor} />}
                       <span className="text-[10px] opacity-60 font-medium ml-0.5 select-none" style={{ color: customColors?.text || accentColor }}>{formatTime(note.date)}</span>
@@ -219,8 +220,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
              <div className="flex gap-2">
                  <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <div onClick={() => onToggleExpand && onToggleExpand(note.id)} className="cursor-pointer">
-                       <p className={`text-base leading-tight truncate mb-1 text-left ${customColors?.text || 'text-zinc-300'}`}>{lines[0] || <span className="italic opacity-50">Image</span>}</p>
-                       {lines.length > 1 && <p className={`text-sm leading-snug truncate text-left opacity-70 ${customColors?.text || 'text-zinc-300'}`}>{lines[1]}</p>}
+                       <p className={`text-base leading-tight truncate mb-1 text-left ${textColor}`}>{lines[0] || <span className="italic opacity-50">Image</span>}</p>
+                       {lines.length > 1 && <p className={`text-sm leading-snug truncate text-left opacity-70 ${textColor}`}>{lines[1]}</p>}
                     </div>
                  </div>
                  {note.imageUrl && (<div className="flex-shrink-0 w-12 h-10 rounded bg-zinc-800 border overflow-hidden" style={{ borderColor: borderColor }}><img src={note.imageUrl} alt="" className="w-full h-full object-cover" /></div>)}

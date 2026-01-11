@@ -152,8 +152,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   
-  // --- CHAT DATA HOOKS (Added for Avatar Support) ---
-  // We need to fetch the 'other' user to show their avatar in the chat room
+  // --- CHAT DATA HOOKS ---
   const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
   const otherChatUser = useUser(currentChatObject?.otherUserId);
   
@@ -169,14 +168,9 @@ function App() {
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [isStartup, setIsStartup] = useState(true);
-  const [startupAnimName] = useState(() => {
-    const anims = ['logoEntrance', 'logoHeartbeat', 'logoGlitch', 'logoWobble'];
-    const seed = Date.now(); return anims[seed % anims.length];
-  });
   const [secretTaps, setSecretTaps] = useState(0);
   const tapTimeoutRef = useRef<any>(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
 
   const { messages: activeMessages, sendMessage } = useMessages(
     (activeChatId && activeChatId !== 'saved_messages') ? activeChatId : null
@@ -298,8 +292,7 @@ function App() {
     const binary = '010101010101'; 
     const nums = '0123456789';
     const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const rareKatakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ'; 
-    const alphabet = binary + nums + latin + rareKatakana;
+    const alphabet = binary + nums + latin;
     const columns = canvas.width / FONT_SIZE;
     const drops: number[] = [];
     for(let x = 0; x < columns; x++) { drops[x] = Math.floor(Math.random() * -RAIN_BUILDUP); }
@@ -402,18 +395,11 @@ function App() {
       if(n) await updateNote(id, { isPinned: !n.isPinned });
   };
 
-  // --- DATA CLEANING (THE FIX) ---
   const safeNotes = (notes || []).map(n => {
       const date = normalizeDate(n.date);
       const fallbackCat = (DEFAULT_CATEGORIES && DEFAULT_CATEGORIES.length > 0) ? DEFAULT_CATEGORIES[0].id : 'default';
       const validCategory = categories.some(c => c.id === n.category) || n.category === 'secret' ? n.category : fallbackCat;
-      return { 
-          ...n, 
-          id: n.id || Math.random().toString(), 
-          text: n.text || '', 
-          date, 
-          category: validCategory 
-      };
+      return { ...n, id: n.id || Math.random().toString(), text: n.text || '', date, category: validCategory };
   });
 
   const filteredNotes = safeNotes.filter(n => {
@@ -471,7 +457,6 @@ function App() {
              </div>
            )}
 
-           {/* CHATS TAB */}
            {activeTab === 'chats' && (
              <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
                 <div className="px-4 mb-4">
@@ -481,7 +466,6 @@ function App() {
                    </div>
                 </div>
 
-                {/* SAVED MESSAGES (NOTES) */}
                 <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5`}>
                     <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
                         <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50">
@@ -500,7 +484,6 @@ function App() {
                     </div>
                 </div>
 
-                {/* REAL CHATS */}
                 {realChats.map(chat => (
                   <ChatListItem 
                     key={chat.id} 
@@ -514,7 +497,6 @@ function App() {
              </div>
            )}
 
-           {/* CONTACTS TAB */}
            {activeTab === 'contacts' && (
              <div className="flex-1 overflow-y-auto p-4 pb-24">
                 <div className="space-y-6">
@@ -525,7 +507,6 @@ function App() {
                             <button type="submit" disabled={isSearchingContacts} className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all disabled:opacity-50"><Search size={16} /></button>
                         </div>
                     </form>
-
                     <div className="space-y-3">
                         {isSearchingContacts ? (
                             <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div></div>
@@ -539,8 +520,6 @@ function App() {
                                     <button onClick={() => startNewChat(u.uid)} className="w-10 h-10 rounded-full bg-orange-500/10 text-orange-500 flex items-center justify-center hover:bg-orange-500 hover:text-white transition-all"><MessageCircle size={20} /></button>
                                 </div>
                             ))
-                        ) : contactSearchQuery && !isSearchingContacts ? (
-                            <div className="text-center py-10 text-zinc-500 text-sm">No users found with handle "{contactSearchQuery}"</div>
                         ) : (
                             <div className="text-center py-10 opacity-30"><UserPlus size={48} className="mx-auto mb-4 text-zinc-600" /><p className="text-zinc-500 text-sm">Search for a handle to start connecting.</p></div>
                         )}
@@ -549,7 +528,6 @@ function App() {
              </div>
            )}
 
-           {/* SETTINGS TAB */}
            {activeTab === 'settings' && (
              <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
                 <div className="relative overflow-hidden bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col gap-6 backdrop-blur-xl group">
@@ -624,10 +602,9 @@ function App() {
            {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}
 
            <div ref={listRef} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
-              <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${getAlignmentClass()}`}>
+              <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
                 {activeChatId === 'saved_messages' ? (
-                    // --- NOTES RENDER ---
                     filteredNotes.map((note, index) => {
                         const prevNote = filteredNotes[index - 1];
                         const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
@@ -641,26 +618,22 @@ function App() {
                         );
                     })
                 ) : (
-                    // --- MESSAGES RENDER (NEW LAYOUT) ---
                     activeMessages.map((msg, index) => {
                         const prevMsg = activeMessages[index - 1];
                         const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
-                        
                         const isMe = msg.senderId === user?.uid;
                         const nextMsg = activeMessages[index + 1];
-                        // Show avatar if next message is different sender OR if this is the last message
                         const isLastInSequence = !nextMsg || nextMsg.senderId !== msg.senderId;
                         const showAvatar = !isMe && isLastInSequence;
 
-                        // STYLING: Define colors based on sender
                         const customColors = isMe ? {
                             bg: isHackerMode ? 'bg-green-900/40' : 'bg-orange-500/20',
                             border: isHackerMode ? 'border-green-500/50' : 'border-orange-500/30',
                             text: isHackerMode ? 'text-green-100' : 'text-orange-50'
                         } : {
-                            bg: 'bg-zinc-900/90 backdrop-blur-md',
-                            border: 'border-zinc-800',
-                            text: 'text-zinc-200'
+                            bg: 'bg-zinc-800', // FIXED: Solid gray for high contrast
+                            border: 'border-zinc-700',
+                            text: 'text-zinc-100'
                         };
 
                         const msgNote = {
@@ -678,8 +651,6 @@ function App() {
                                 {showHeader && (<div className="flex justify-center my-6 opacity-60 w-full select-none"><span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full border border-white/5">{getDateLabel(msg.timestamp)}</span></div>)}
                                 
                                 <div className={`flex w-full mb-1 ${isMe ? 'justify-end' : 'justify-start items-end gap-2'}`}>
-                                    
-                                    {/* AVATAR FOR RECEIVED MESSAGES */}
                                     {!isMe && (
                                         <div className="flex-shrink-0 w-8 h-8 -mb-1 relative">
                                             {showAvatar ? (
@@ -693,14 +664,12 @@ function App() {
                                         </div>
                                     )}
 
-                                    {/* MESSAGE BUBBLE */}
                                     <NoteCard 
                                         note={msgNote} 
                                         categories={[]} 
                                         selectedVoice={selectedVoice} 
                                         variant={isMe ? 'sent' : 'received'}
                                         customColors={customColors}
-                                        onDelete={undefined} onPin={undefined} onCategoryClick={undefined} onEdit={undefined} onToggleExpand={undefined}
                                     />
                                 </div>
                             </React.Fragment>

@@ -4,11 +4,11 @@ import {
   Check, Terminal, Plus, PenLine, AlignLeft, AlignCenter, AlignRight, Scan, 
   ChevronLeft, MessageSquareDashed, Bookmark, Edit, Moon, Book,
   Archive, Trash2, CheckCheck, Circle, Globe, Zap, Cpu, SlidersHorizontal,
-  User, AtSign, Activity, Camera, Save, Grid
+  User, AtSign, Activity, Camera, Save, Grid, UserPlus, MessageCircle
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
-import { useFirebaseSync, useNotes } from './useFirebaseSync';
+import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers } from './useFirebaseSync';
 import Auth from './components/Auth';
 
 const TRANSLATIONS = { 
@@ -73,17 +73,10 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
-// --- INITIAL MOCK DATA ---
-// Renamed to INITIAL_CHATS so we can load it into state and modify it
-const INITIAL_CHATS = [
-  { id: '2', name: 'Max & Stacy', message: 'See? like... super unrelated, right?', time: '8:42 PM', avatar: '/api/placeholder/40/40', color: 'bg-orange-500' },
-  { id: '3', name: 'Trade Watcher', message: 'The Dollar isn\'t backed by anything.', time: '1:32 PM', avatar: '/api/placeholder/40/40', color: 'bg-zinc-700' },
-  { id: '4', name: 'Strape', message: 'Norm finkelstiens mom said there are...', time: 'Yesterday', avatar: '/api/placeholder/40/40', color: 'bg-red-500' },
-];
-
 function App() {
   const { user, loading: authLoading } = useFirebaseSync();
   const { notes, addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
+  const { chats: realChats, createChat } = useChats(user?.uid || null);
   
   // --- NAVIGATION STATE ---
   const [currentView, setCurrentView] = useState<'list' | 'room'>('list');
@@ -94,9 +87,10 @@ function App() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
 
-  // --- CHAT STATE (NEW) ---
-  // We use state here so we can delete them
-  const [chatList, setChatList] = useState(INITIAL_CHATS);
+  // --- CONTACTS SEARCH STATE (NEW) ---
+  const [contactSearchQuery, setContactSearchQuery] = useState('');
+  const [contactSearchResults, setContactSearchResults] = useState<any[]>([]);
+  const [isSearchingContacts, setIsSearchingContacts] = useState(false);
 
   // --- PROFILE STATE ---
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -146,6 +140,11 @@ function App() {
   const [showSecretAnim, setShowSecretAnim] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
+  // NEW: Messages Hook
+  const { messages: activeMessages, sendMessage } = useMessages(
+    (activeChatId && activeChatId !== 'saved_messages') ? activeChatId : null
+  );
+
   const activeSecretConfig = HACKER_CONFIG;
   const isHackerMode = activeFilter === 'secret' || editingNote?.category === 'secret';
   const accentColor = isHackerMode ? HACKER_GREEN : CLAUDE_ORANGE;
@@ -158,6 +157,13 @@ function App() {
 
   // --- LOGIC ---
   useEffect(() => { const timer = setTimeout(() => { setIsStartup(false); }, 4500); return () => clearTimeout(timer); }, []);
+
+  // Sync Profile on Load
+  useEffect(() => {
+    if (user) {
+        syncUserProfile(user);
+    }
+  }, [user]);
 
   const handleSecretTrigger = () => {
     setSecretTaps(prev => prev + 1);
@@ -189,10 +195,8 @@ function App() {
   };
 
   const handleDeleteSelected = () => {
-    // 1. Remove mock chats that are selected
-    setChatList(prev => prev.filter(chat => !selectedChatIds.has(chat.id)));
-    
-    // 2. Clear selection and exit edit mode
+    // Note: To really delete from firebase, you'd need a delete function in the hook
+    // For now this clears local state or mock data
     setSelectedChatIds(new Set());
     setIsEditing(false);
   };
@@ -205,6 +209,7 @@ function App() {
       localStorage.setItem('vibenotes_profile_handle', profileHandle);
       localStorage.setItem('vibenotes_profile_bio', profileBio);
       if (profilePic) localStorage.setItem('vibenotes_profile_pic', profilePic);
+      if (user) syncUserProfile(user); // Push to cloud immediately
   };
 
   const handleAvatarUpload = async (file: File) => {
@@ -217,7 +222,6 @@ function App() {
 
   // STRICT ROBOT SELECTION
   const handleSelectPreset = (num: number) => {
-      // Uses .jpeg and v=1 to fix mobile cache
       setProfilePic(`/robot${num}.jpeg?v=1`);
       setShowAvatarSelector(false); 
   };
@@ -242,6 +246,39 @@ function App() {
     }
   };
 
+  // --- CONTACTS LOGIC ---
+  const handleSearchContacts = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!contactSearchQuery.trim()) return;
+      
+      setIsSearchingContacts(true);
+      try {
+          const results = await searchUsers(contactSearchQuery);
+          // Filter out yourself
+          setContactSearchResults(results.filter((u: any) => u.uid !== user?.uid));
+      } catch (err) {
+          console.error(err);
+      } finally {
+          setIsSearchingContacts(false);
+      }
+  };
+
+  const startNewChat = async (otherUid: string) => {
+      if (!otherUid) return;
+      try {
+          const newChatId = await createChat(otherUid);
+          if (newChatId) {
+              setActiveChatId(newChatId);
+              setCurrentView('room');
+              // Clear search
+              setContactSearchQuery('');
+              setContactSearchResults([]);
+          }
+      } catch (e) {
+          console.error("Failed to create chat", e);
+      }
+  };
+
   // Matrix Effect
   useEffect(() => {
     if (!showSecretAnim || currentView !== 'room') return;
@@ -257,7 +294,7 @@ function App() {
     const FADE_SPEED = 0.1;
     const MASTER_SPEED = 50;
     const STUTTER_AMOUNT = 0.85;  
-    const RAIN_BUILDUP = 300;
+    const RAIN_BUILDUP = 50; // Faster buildup
     
     const COLOR_HEAD = '#FFF'; 
     const COLOR_TRAIL = '#0D0'; 
@@ -378,21 +415,40 @@ function App() {
   const togglePin = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
   const handleToggleExpand = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
 
+  // --- MAIN SEND ACTION (UPDATED FOR MESSAGES) ---
   const handleMainAction = async () => {
     if (!transcript.trim() && !imageUrl) return;
-    if (activeFilter === 'all' && !editingNote) return;
+    
+    // Notes Logic
+    if (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages') {
+        // Can't send empty to "All" unless editing
+        return; 
+    }
+
     try {
-        if (editingNote) {
-            const updates: Partial<Note> = { text: transcript.trim() };
-            if (imageUrl !== editingNote.imageUrl) updates.imageUrl = imageUrl || undefined;
-            await updateNote(editingNote.id, updates);
-            setEditingNote(null);
+        if (activeChatId === 'saved_messages' || activeChatId === null) {
+            // --- NOTES MODE ---
+            if (editingNote) {
+                const updates: Partial<Note> = { text: transcript.trim() };
+                if (imageUrl !== editingNote.imageUrl) updates.imageUrl = imageUrl || undefined;
+                await updateNote(editingNote.id, updates);
+                setEditingNote(null);
+            } else {
+                const categoryToUse = activeFilter as CategoryId; 
+                await addNote({ text: transcript.trim(), date: Date.now(), category: categoryToUse, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
+                scrollToBottom(); 
+            }
         } else {
-            const categoryToUse = activeFilter as CategoryId; 
-            await addNote({ text: transcript.trim(), date: Date.now(), category: categoryToUse, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
-            scrollToBottom(); 
+            // --- MESSAGING MODE ---
+            // This is where we send a message to a person
+            if (user) {
+                await sendMessage(transcript.trim(), imageUrl, user.uid);
+            }
         }
-        setTranscript(''); setImageUrl('');
+        
+        setTranscript(''); 
+        setImageUrl('');
+        scrollToBottom();
     } catch (e) { console.error(e); }
   };
 
@@ -432,13 +488,13 @@ function App() {
     if (isEditing) {
         return (
             <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-full shadow-2xl p-2 px-6 flex justify-between items-center text-[10px] font-medium text-zinc-400 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
-               <button onClick={() => {}} className="flex flex-col items-center gap-1 text-zinc-500 transition-colors hover:text-[#da7756]">
+               <button onClick={() => {}} className="flex flex-col items-center gap-1 text-zinc-500 hover:text-[#da7756] transition-colors">
                   <Archive size={18} />
                </button>
-               <button onClick={() => {}} className="flex flex-col items-center gap-1 text-zinc-500 transition-colors hover:text-[#da7756]">
+               <button onClick={() => {}} className="flex flex-col items-center gap-1 text-zinc-500 hover:text-[#da7756] transition-colors">
                   <CheckCheck size={18} />
                </button>
-               <button onClick={handleDeleteSelected} className="flex flex-col items-center gap-1 text-zinc-500 transition-colors hover:text-[#da7756]">
+               <button onClick={handleDeleteSelected} className="flex flex-col items-center gap-1 text-zinc-500 hover:text-[#da7756] transition-colors">
                   <Trash2 size={18} />
                </button>
             </div>
@@ -546,6 +602,13 @@ function App() {
              </div>
            )}
 
+           {/* Header for Contacts Tab */}
+           {activeTab === 'contacts' && (
+             <div className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
+                <h1 className="text-3xl font-black text-white tracking-tighter">CONTACTS</h1>
+             </div>
+           )}
+
            {/* CONTENT: CHATS */}
            {activeTab === 'chats' && (
              <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
@@ -599,13 +662,13 @@ function App() {
                     </div>
                 </div>
 
-                {/* DYNAMIC CHATS (Now using state) */}
-                {chatList.map(chat => (
+                {/* DYNAMIC CHATS (REAL) */}
+                {realChats.map(chat => (
                   <div 
                     key={chat.id} 
                     onClick={() => {
                         if (isEditing) toggleChatSelection(chat.id);
-                        // else openChat(chat.id);
+                        else { setActiveChatId(chat.id); setCurrentView('room'); scrollToBottom('auto'); }
                     }}
                     className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent ${isEditing && selectedChatIds.has(chat.id) ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
                   >
@@ -615,21 +678,89 @@ function App() {
                         </div>
                       )}
                       
-                      <div className={`w-14 h-14 rounded-2xl ${chat.color} flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-lg shadow-black/30`}>
-                          {chat.name[0]}
+                      {/* Avatar Placeholder for now - eventually fetch other user's pic */}
+                      <div className={`w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-lg shadow-black/30`}>
+                          <User size={24} className="text-zinc-500" />
                       </div>
                       <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
                           <div className="flex justify-between items-baseline">
-                              <span className="font-bold text-white text-base tracking-tight truncate">{chat.name}</span>
-                              <span className="text-[10px] text-zinc-500 font-mono">{chat.time}</span>
+                              <span className="font-bold text-white text-base tracking-tight truncate">Unknown User</span>
+                              <span className="text-[10px] text-zinc-500 font-mono">{chat.timestamp ? getDateLabel(chat.timestamp.toMillis ? chat.timestamp.toMillis() : Date.now()) : ''}</span>
                           </div>
                           <div className="flex justify-between items-center">
-                              <span className="text-zinc-400 text-sm truncate opacity-70">{chat.message}</span>
-                              <div className="bg-zinc-800 border border-zinc-700 text-white text-[10px] font-bold h-5 min-w-[20px] px-1 rounded-full flex items-center justify-center">1</div>
+                              <span className="text-zinc-400 text-sm truncate opacity-70">{chat.lastMessage}</span>
                           </div>
                       </div>
                   </div>
                 ))}
+             </div>
+           )}
+
+           {/* CONTENT: CONTACTS (NEW) */}
+           {activeTab === 'contacts' && (
+             <div className="flex-1 overflow-y-auto p-4 pb-24">
+                <div className="space-y-6">
+                    {/* Search Input */}
+                    <form onSubmit={handleSearchContacts} className="relative">
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-3 gap-3 focus-within:border-orange-500/50 transition-colors">
+                            <AtSign size={18} className="text-zinc-500" />
+                            <input 
+                                type="text" 
+                                value={contactSearchQuery}
+                                onChange={(e) => setContactSearchQuery(e.target.value)}
+                                placeholder="Search by handle (e.g. @neo)" 
+                                className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-mono"
+                            />
+                            <button 
+                                type="submit"
+                                disabled={isSearchingContacts}
+                                className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all disabled:opacity-50"
+                            >
+                                <Search size={16} />
+                            </button>
+                        </div>
+                    </form>
+
+                    {/* Results Area */}
+                    <div className="space-y-3">
+                        {isSearchingContacts ? (
+                            <div className="flex justify-center py-10">
+                                <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        ) : contactSearchResults.length > 0 ? (
+                            contactSearchResults.map((u) => (
+                                <div key={u.uid} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden">
+                                        {u.photoURL ? (
+                                            <img src={u.photoURL} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-xl">🤖</div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-white">{u.displayName}</h3>
+                                        <p className="text-xs text-zinc-500 font-mono">{u.handle}</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => startNewChat(u.uid)}
+                                        className="w-10 h-10 rounded-full bg-orange-500/10 text-orange-500 flex items-center justify-center hover:bg-orange-500 hover:text-white transition-all"
+                                    >
+                                        <MessageCircle size={20} />
+                                    </button>
+                                </div>
+                            ))
+                        ) : contactSearchQuery && !isSearchingContacts ? (
+                            <div className="text-center py-10 text-zinc-500 text-sm">
+                                No users found with handle "{contactSearchQuery}"
+                            </div>
+                        ) : (
+                            <div className="text-center py-10 opacity-30">
+                                <UserPlus size={48} className="mx-auto mb-4 text-zinc-600" />
+                                <p className="text-zinc-500 text-sm">Search for a handle to start connecting.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
              </div>
            )}
 
@@ -664,7 +795,7 @@ function App() {
                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center text-3xl shadow-xl overflow-hidden">
                                {profilePic ? (
                                    <img 
-                                        key={profilePic} // FIXED: Added key to force re-render
+                                        key={profilePic} 
                                         src={profilePic} 
                                         alt="Profile" 
                                         className="w-full h-full object-cover" 
@@ -728,13 +859,12 @@ function App() {
                    {/* AVATAR SELECTOR GRID */}
                    {isEditingProfile && showAvatarSelector && (
                        <div className="grid grid-cols-6 gap-2 pt-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                           {Array.from({ length: 7 }, (_, i) => i + 1).map((num) => ( // FIXED: Length 7
+                           {Array.from({ length: 7 }, (_, i) => i + 1).map((num) => (
                                <button 
                                    key={num}
                                    onClick={() => handleSelectPreset(num)}
                                    className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-orange-500 transition-colors bg-black/40 flex items-center justify-center text-xl relative"
                                >
-                                   {/* FIXED: Uses .jpeg and v=1 for cache busting */}
                                    <img 
                                      src={`/robot${num}.jpeg?v=1`} 
                                      className="w-full h-full object-cover relative z-10" 
@@ -828,7 +958,7 @@ function App() {
       )}
 
       {/* === VIEW 2: CHAT ROOM (NOTES) === */}
-      {currentView === 'room' && activeChatId === 'saved_messages' && (
+      {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
            
            {/* HEADER (Restored to Original + Back Icon) */}
@@ -838,7 +968,7 @@ function App() {
                         
                         {/* 1. Back Icon (Arrow) - UPDATED HOVER LOGIC */}
                         <button 
-                            onClick={() => setCurrentView('list')} 
+                            onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
                             className="w-10 h-10 flex items-center justify-center text-zinc-400 transition-colors active:scale-95"
                             onMouseEnter={(e) => e.currentTarget.style.color = accentColor}
                             onMouseLeave={(e) => e.currentTarget.style.color = '#a1a1aa'} // zinc-400
@@ -872,23 +1002,49 @@ function App() {
            {/* Messages List (Reuse your logic) */}
            <div ref={listRef} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
               <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${getAlignmentClass()}`}>
-                {filteredNotes.map((note, index) => {
-                    const prevNote = filteredNotes[index - 1];
-                    const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
+                {/* RENDER EITHER NOTES OR MESSAGES */}
+                {(activeChatId === 'saved_messages' ? filteredNotes : activeMessages).map((item, index) => {
+                    // Normalize data structure between Notes and Messages
+                    const date = item.date || item.timestamp;
+                    const id = item.id;
+                    const prevItem = (activeChatId === 'saved_messages' ? filteredNotes : activeMessages)[index - 1];
+                    const prevDate = prevItem ? (prevItem.date || prevItem.timestamp) : null;
+                    const showHeader = !prevItem || !isSameDay(date, prevDate);
+                    
+                    // Create a Note-like object for NoteCard
+                    const noteObj = {
+                        id: id,
+                        text: item.text,
+                        date: date,
+                        category: item.category || 'default', // Messages won't have category usually
+                        isPinned: item.isPinned || false,
+                        isExpanded: true, // Messages always expanded
+                        imageUrl: item.imageUrl
+                    };
+
                     return (
-                        <React.Fragment key={note.id}>
+                        <React.Fragment key={id}>
                              {showHeader && (
                                  <div className="flex justify-center my-4 opacity-70 w-full select-none">
                                     <span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">
-                                        {getDateLabel(note.date)}
+                                        {getDateLabel(date)}
                                     </span>
                                  </div>
                              )}
                             <div 
-                              onDoubleClick={() => handleToggleExpand(note.id)} 
-                              className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}
+                              onDoubleClick={() => activeChatId === 'saved_messages' ? handleToggleExpand(id) : null} 
+                              className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}
                             >
-                                <NoteCard note={note} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onToggleExpand={handleToggleExpand} />
+                                <NoteCard 
+                                    note={noteObj} 
+                                    categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
+                                    selectedVoice={selectedVoice} 
+                                    onDelete={activeChatId === 'saved_messages' ? handleDeleteNote : undefined} 
+                                    onPin={togglePin} 
+                                    onCategoryClick={(cat) => setActiveFilter(cat)} 
+                                    onEdit={() => activeChatId === 'saved_messages' ? handleEditClick(noteObj) : null} 
+                                    onToggleExpand={handleToggleExpand} 
+                                />
                             </div>
                         </React.Fragment>
                     );
@@ -901,10 +1057,12 @@ function App() {
            <div className="flex-none w-full p-2 pb-6 md:pb-3 bg-black/60 backdrop-blur-xl z-50 border-t border-zinc-800/50">
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  
-                 {/* RESTORED CATEGORY BUTTON */}
-                 <button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">
-                    {activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}
-                 </button>
+                 {/* RESTORED CATEGORY BUTTON (Only show in Notes mode) */}
+                 {activeChatId === 'saved_messages' && (
+                     <button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">
+                        {activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}
+                     </button>
+                 )}
                  
                  <div className="flex-1 bg-zinc-900/50 border border-zinc-700/50 rounded-2xl flex items-center px-3 py-1.5 focus-within:border-blue-500/50 transition-colors gap-2 relative">
                     {imageUrl && (
@@ -919,7 +1077,7 @@ function App() {
                         onChange={(e) => setTranscript(e.target.value)} 
                         onPaste={(e) => handlePaste(e)} 
                         onFocus={() => { scrollToBottom('auto'); }}
-                        placeholder={editingNote ? "Edit..." : (activeFilter === 'all' ? "Select category..." : `${currentConfig?.label}...`)} 
+                        placeholder={editingNote ? "Edit..." : (activeChatId !== 'saved_messages' ? "Message..." : (activeFilter === 'all' ? "Select category..." : `${currentConfig?.label}...`))} 
                         rows={1} 
                         className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-1 ${isHackerMode ? 'font-mono' : ''}`} 
                         style={isHackerMode ? { color: HACKER_GREEN } : undefined} 
@@ -929,9 +1087,9 @@ function App() {
 
                 <button 
                   onClick={handleMainAction} 
-                  disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote)} 
+                  disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages')} 
                   className={`flex-shrink-0 w-8 h-8 mb-1 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg`}
-                  style={(transcript.trim() || imageUrl) && activeFilter !== 'all' 
+                  style={(transcript.trim() || imageUrl) && (activeFilter !== 'all' || activeChatId !== 'saved_messages')
                       ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } 
                       : { backgroundColor: 'transparent', color: '#71717a', boxShadow: 'none' }
                   }

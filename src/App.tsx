@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Settings, ArrowUp, LayoutGrid, Image as ImageIcon, Check, Terminal, Plus, PenLine, AlignLeft, AlignCenter, AlignRight, Scan } from 'lucide-react'; 
+import { 
+  Search, X, Settings as SettingsIcon, ArrowUp, LayoutGrid, Image as ImageIcon, 
+  Check, Terminal, Plus, PenLine, AlignLeft, AlignCenter, AlignRight, Scan, 
+  ChevronLeft, Phone, Users, MessageCircle, Bookmark, Edit, Moon, Book 
+} from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
 import { useFirebaseSync, useNotes } from './useFirebaseSync';
@@ -23,7 +27,7 @@ const HACKER_CONFIG: CategoryConfig = {
     colorClass: 'bg-green-500' 
 };
 
-// --- HELPER: DATE HEADERS ---
+// --- UTILS ---
 const isSameDay = (d1: number, d2: number) => {
     const date1 = new Date(d1);
     const date2 = new Date(d2);
@@ -40,11 +44,9 @@ const getDateLabel = (timestamp: number) => {
 
     if (isSameDay(timestamp, today.getTime())) return 'Today';
     if (isSameDay(timestamp, yesterday.getTime())) return 'Yesterday';
-    
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
-// --- UTILS ---
 const compressImage = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -69,68 +71,60 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
+// --- MOCK DATA FOR CHAT LIST ---
+const MOCK_CHATS = [
+  { id: '2', name: 'Max & Stacy', message: 'See? like... super unrelated, right?', time: '8:42 PM', avatar: '/api/placeholder/40/40', color: 'bg-orange-500' },
+  { id: '3', name: 'Trade Watcher', message: 'The Dollar isn\'t backed by anything.', time: '1:32 PM', avatar: '/api/placeholder/40/40', color: 'bg-zinc-700' },
+  { id: '4', name: 'Strape', message: 'Norm finkelstiens mom said there are...', time: 'Yesterday', avatar: '/api/placeholder/40/40', color: 'bg-red-500' },
+];
+
 function App() {
   const { user, loading: authLoading } = useFirebaseSync();
   const { notes, addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
   
-  // --- CATEGORY INITIALIZATION ---
-  const [categories, setCategories] = useState<CategoryConfig[]>(() => {
-    let initial = DEFAULT_CATEGORIES;
-    try {
-        const saved = localStorage.getItem('vibenotes_categories');
-        if (saved) {
-            const savedCats = JSON.parse(saved);
-            initial = savedCats.map((c: CategoryConfig) => {
-                if (c.id === 'idea') return { ...c, emoji: '⚡' };
-                if (c.id === 'work') return { ...c, emoji: '🔧' };
-                if (c.id === 'journal') return { ...c, emoji: '✍️' };
-                if (c.id === 'to-do' || c.id === 'todo') return { ...c, emoji: '🔥' };
-                return c;
-            });
-        }
-    } catch(e) {}
-    return initial;
-  });
+  // --- NAVIGATION STATE ---
+  const [currentView, setCurrentView] = useState<'list' | 'room'>('list');
+  const [activeTab, setActiveTab] = useState<'contacts' | 'calls' | 'chats' | 'settings'>('chats');
+  const [activeChatId, setActiveChatId] = useState<string | null>(null); 
 
-  // --- SETTINGS STATE ---
+  // --- APP STATE ---
+  const [categories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
   const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
   const [bgIndex, setBgIndex] = useState<number>(1);
   const [bgOpacity, setBgOpacity] = useState<number>(0.45);
-  const [bgScale, setBgScale] = useState<number>(100); // 100 = Cover, <100 = Tile percentage
+  const [bgScale, setBgScale] = useState<number>(100);
 
   const [transcript, setTranscript] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  
+  // Search State for Header
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null); 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all' | 'secret'>('all');
-  const [showSettings, setShowSettings] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
-  const [showBars, setShowBars] = useState(true); 
-  const [isNoteFocused, setIsNoteFocused] = useState(false);   
-
-  const [secretTaps, setSecretTaps] = useState(0);
-  const tapTimeoutRef = useRef<any>(null);
-  const [showSecretAnim, setShowSecretAnim] = useState(false);
   const [isStartup, setIsStartup] = useState(true);
   const [startupAnimName] = useState(() => {
     const anims = ['logoEntrance', 'logoHeartbeat', 'logoGlitch', 'logoWobble'];
     const seed = Date.now(); return anims[seed % anims.length];
   });
+
+  // Secret / Hacker Mode
+  const [secretTaps, setSecretTaps] = useState(0);
+  const tapTimeoutRef = useRef<any>(null);
+  const [showSecretAnim, setShowSecretAnim] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [showSaveAnim, setShowSaveAnim] = useState(false);
-  const [saveAnimType, setSaveAnimType] = useState<'brain' | 'lightning' | 'money' | 'journal' | 'fire' | 'matrix' | null>(null);
 
   const activeSecretConfig = HACKER_CONFIG;
   const isHackerMode = activeFilter === 'secret' || editingNote?.category === 'secret';
@@ -139,6 +133,11 @@ function App() {
     font: isHackerMode ? 'font-mono' : 'font-sans',
     selection: isHackerMode ? 'selection:bg-green-500/30 selection:text-green-400' : 'selection:bg-[#da7756]/30 selection:text-[#da7756]'
   };
+
+  const t = TRANSLATIONS;
+
+  // --- LOGIC ---
+  useEffect(() => { const timer = setTimeout(() => { setIsStartup(false); }, 4500); return () => clearTimeout(timer); }, []);
 
   const handleSecretTrigger = () => {
     setSecretTaps(prev => prev + 1);
@@ -150,13 +149,6 @@ function App() {
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     }
   };
-
-  const getCurrentConfig = () => {
-      if (activeFilter === 'secret') return activeSecretConfig;
-      if (activeFilter === 'all') return null; 
-      return categories.find(c => c.id === activeFilter) || categories[0];
-  };
-  const currentConfig = getCurrentConfig();
 
   const handleImageUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) return alert('Please select an image file');
@@ -178,16 +170,15 @@ function App() {
     }
   };
 
-  useEffect(() => { const timer = setTimeout(() => { setIsStartup(false); }, 4500); return () => clearTimeout(timer); }, []);
-  
-  // --- MATRIX EFFECT ---
+  // Matrix Effect (Restored Original Logic + Full Screen Fix)
   useEffect(() => {
-    if (!showSecretAnim) return;
+    if (!showSecretAnim || currentView !== 'room') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
+    
+    // --- RESTORED CONFIG ---
     const FONT_SIZE = 24;
     const FADE_SPEED = 0.1;
     const MASTER_SPEED = 50;
@@ -205,80 +196,92 @@ function App() {
     const rareKatakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ'; 
     const alphabet = binary + nums + latin + rareKatakana;
 
+    // Set canvas to full window size
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const columns = canvas.width / FONT_SIZE;
     const drops: number[] = [];
     for(let x = 0; x < columns; x++) { drops[x] = Math.floor(Math.random() * -RAIN_BUILDUP); }
-
+    
     const draw = () => {
         ctx.fillStyle = `rgba(0, 0, 0, ${FADE_SPEED})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.font = `bold ${FONT_SIZE}px monospace`;
-
+        
         for(let i = 0; i < drops.length; i++) {
             if (Math.random() > STUTTER_AMOUNT) continue;
+            
             const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
             const x = i * FONT_SIZE;
             const y = drops[i] * FONT_SIZE;
-
+            
             if (y > 0) {
+                // Draw Trail
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = COLOR_TRAIL; 
                 ctx.fillText(text, x, y - FONT_SIZE);
+                
+                // Draw Head (White glowing tip)
                 ctx.shadowColor = GLOW_COLOR;
                 ctx.shadowBlur = GLOW_INTENSITY;
                 ctx.fillStyle = COLOR_HEAD;
                 ctx.fillText(text, x, y);
             }
-            if(y > canvas.height && Math.random() > 0.975) { drops[i] = 0; }
+            
+            if(y > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
             drops[i]++;
         }
     };
     
     const interval = setInterval(draw, MASTER_SPEED);
-    return () => clearInterval(interval);
-  }, [showSecretAnim]);
+    
+    // Handle resize
+    const handleResize = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+        clearInterval(interval);
+        window.removeEventListener('resize', handleResize);
+    };
+  }, [showSecretAnim, currentView]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
-  useEffect(() => { scrollToBottom(); }, [activeFilter]);
   
-  // --- LOAD SETTINGS ---
+  // Load Settings
   useEffect(() => { 
       try { 
           const savedAlignment = localStorage.getItem('vibenotes_alignment'); 
           if(savedAlignment) setAlignment(savedAlignment as any); 
-          
-          const savedVoice = localStorage.getItem('vibenotes_voice'); 
-          if(savedVoice) setSelectedVoiceURI(savedVoice);
-
           const savedBg = localStorage.getItem('vibenotes_bg');
           if (savedBg) setBgIndex(parseInt(savedBg));
-
           const savedOpacity = localStorage.getItem('vibenotes_bg_opacity');
           if (savedOpacity) setBgOpacity(parseFloat(savedOpacity));
-
           const savedScale = localStorage.getItem('vibenotes_bg_scale');
           if (savedScale) setBgScale(parseInt(savedScale));
       } catch (e) {} 
   }, []);
 
-  useEffect(() => { const loadVoices = () => { const all = window.speechSynthesis.getVoices(); setVoices(all.filter(v => v.lang.startsWith('en'))); }; loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }, []);
-  useEffect(() => { if (selectedVoiceURI) setSelectedVoice(voices.find(v => v.voiceURI === selectedVoiceURI) || null); }, [selectedVoiceURI, voices]);
-  useEffect(() => { localStorage.setItem('vibenotes_categories', JSON.stringify(categories)); }, [categories]);
-  
-  // --- SAVE SETTINGS ---
   useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
   useEffect(() => { localStorage.setItem('vibenotes_bg', bgIndex.toString()); }, [bgIndex]);
   useEffect(() => { localStorage.setItem('vibenotes_bg_opacity', bgOpacity.toString()); }, [bgOpacity]);
   useEffect(() => { localStorage.setItem('vibenotes_bg_scale', bgScale.toString()); }, [bgScale]);
-
   useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
 
+  // --- HELPER: GET CURRENT CONFIG ---
+  const getCurrentConfig = () => {
+      if (activeFilter === 'secret') return activeSecretConfig;
+      if (activeFilter === 'all') return null; 
+      return categories.find(c => c.id === activeFilter) || categories[0];
+  };
+  const currentConfig = getCurrentConfig();
+
+  // --- ACTIONS ---
   const cycleFilter = () => {
       if (activeFilter === 'secret') { setActiveFilter('all'); return; }
       const order: (CategoryId | 'all')[] = ['all', ...categories.map(c => c.id)];
@@ -286,7 +289,18 @@ function App() {
       if (currentIndex === -1) { setActiveFilter('all'); return; }
       const nextIndex = (currentIndex + 1) % order.length; setActiveFilter(order[nextIndex]);
   };
+
+  const handleCancelEdit = () => { setEditingNote(null); setTranscript(''); setImageUrl(''); };
   
+  const handleDeleteNote = async (id: string) => { 
+      const noteToDelete = notes.find(n => n.id === id);
+      if (noteToDelete && (noteToDelete.category === 'to-do' || noteToDelete.category === 'todo')) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 4500); }
+      await deleteNoteFromFirebase(id); if (editingNote?.id === id) handleCancelEdit();
+  };
+
+  const togglePin = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
+  const handleToggleExpand = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
+
   const handleMainAction = async () => {
     if (!transcript.trim() && !imageUrl) return;
     if (activeFilter === 'all' && !editingNote) return;
@@ -299,11 +313,6 @@ function App() {
         } else {
             const categoryToUse = activeFilter as CategoryId; 
             await addNote({ text: transcript.trim(), date: Date.now(), category: categoryToUse, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
-            if (categoryToUse === 'idea') { setSaveAnimType(Math.random() > 0.5 ? 'brain' : 'lightning'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 6000); }
-            else if (categoryToUse === 'work') { setSaveAnimType('money'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 4500); }
-            else if (categoryToUse === 'journal') { setSaveAnimType('journal'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 4500); }
-            else if (categoryToUse === 'to-do' || categoryToUse === 'todo') { setSaveAnimType('fire'); setShowSaveAnim(true); setTimeout(() => setShowSaveAnim(false), 4500); }
-            else if (categoryToUse === 'secret') { setShowSecretAnim(true); setTimeout(() => setShowSecretAnim(false), 6000); }
             scrollToBottom(); 
         }
         setTranscript(''); setImageUrl('');
@@ -316,15 +325,6 @@ function App() {
     setTimeout(() => { textareaRef.current?.focus(); textareaRef.current?.select(); }, 50);
   };
 
-  const handleCancelEdit = () => { setEditingNote(null); setTranscript(''); setImageUrl(''); };
-  const handleDeleteNote = async (id: string) => { 
-      const noteToDelete = notes.find(n => n.id === id);
-      if (noteToDelete && (noteToDelete.category === 'to-do' || noteToDelete.category === 'todo')) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 4500); }
-      await deleteNoteFromFirebase(id); if (editingNote?.id === id) handleCancelEdit();
-  };
-  const togglePin = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
-  const handleToggleExpand = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
-
   const filteredNotes = notes.filter(n => {
       const matchesSearch = n.text.toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchesSearch) return false;
@@ -336,19 +336,40 @@ function App() {
       return a.date - b.date; 
   });
 
-  const t = TRANSLATIONS;
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
 
   if (authLoading) return <div className="min-h-screen bg-black" />;
   if (!user) return <Auth />;
 
+  // --- RENDER HELPERS ---
+
+  // Bottom Tab Bar
+  const BottomTabBar = () => (
+    <div className="flex-none bg-black/80 backdrop-blur-xl border-t border-zinc-800 pb-6 pt-2 px-6 flex justify-between items-center text-[10px] font-medium text-zinc-500 z-50">
+       <button onClick={() => setActiveTab('contacts')} className={`flex flex-col items-center gap-1 ${activeTab === 'contacts' ? 'text-blue-500' : 'hover:text-zinc-300'}`}>
+          <Users size={24} strokeWidth={activeTab === 'contacts' ? 2.5 : 2} />
+          <span>Contacts</span>
+       </button>
+       <button onClick={() => setActiveTab('calls')} className={`flex flex-col items-center gap-1 ${activeTab === 'calls' ? 'text-blue-500' : 'hover:text-zinc-300'}`}>
+          <Phone size={24} strokeWidth={activeTab === 'calls' ? 2.5 : 2} />
+          <span>Calls</span>
+       </button>
+       <button onClick={() => setActiveTab('chats')} className={`flex flex-col items-center gap-1 ${activeTab === 'chats' ? 'text-blue-500' : 'hover:text-zinc-300'}`}>
+          <MessageCircle size={24} strokeWidth={activeTab === 'chats' ? 2.5 : 2} fill={activeTab === 'chats' ? "currentColor" : "none"} />
+          <span>Chats</span>
+       </button>
+       <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-1 relative ${activeTab === 'settings' ? 'text-blue-500' : 'hover:text-zinc-300'}`}>
+          <SettingsIcon size={24} strokeWidth={activeTab === 'settings' ? 2.5 : 2} />
+          <span>Settings</span>
+          <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-black"></span>
+       </button>
+    </div>
+  );
+
   return (
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
-      {/* 
-          === DYNAMIC BACKGROUND (SCALABLE) === 
-          Switched from <img> to <div> background-image for scaling support.
-      */}
+      {/* GLOBAL WALLPAPER */}
       <div className="fixed inset-0 z-0 pointer-events-none select-none overflow-hidden bg-black">
         <div 
             className="absolute inset-0 transition-opacity duration-300"
@@ -362,159 +383,152 @@ function App() {
         />
       </div>
 
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40">
-        <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative">
-            <div className="flex items-center gap-3">
-                <button onClick={handleSecretTrigger} className="w-10 h-10 bg-transparent flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible group/logo">
-                    {isStartup && (<><div className="absolute inset-[-4px] border rounded-xl animate-[spin_1s_linear_infinite] opacity-50" style={{ borderColor: `${accentColor}80` }} /><div className="absolute inset-0 rounded-xl animate-ping opacity-75" style={{ backgroundColor: accentColor, animationDuration: '4.5s' }} /></>)}
-                    {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" style={{ color: isStartup ? undefined : HACKER_GREEN }} size={24} />) : (<div className={`w-3 h-3 rounded-sm relative z-10 transition-all duration-300 ${isStartup ? 'animate-bounce' : ''}`} style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80`, animation: isStartup ? `${startupAnimName} 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` : undefined }} />)}
-                </button>
-                <button onClick={() => { setShowSettings(true); }} className="w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95" onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>
-                    <Settings size={20} />
-                </button>
-                <div className="relative flex items-center h-10">
-                    <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}><Search size={20} /></button>
-                     <div className={`absolute left-0 bg-zinc-900 border border-zinc-800 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-left ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
-                        <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
-                        <input ref={searchInputRef} type="text" placeholder={t.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
-                        <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
+      {/* === VIEW 1: MAIN LIST (TABS) === */}
+      {currentView === 'list' && (
+        <div className="flex-1 flex flex-col h-full z-10 animate-in fade-in slide-in-from-left-5 duration-300">
+           
+           {/* Header for Chats Tab */}
+           {activeTab === 'chats' && (
+             <div className="flex-none pt-12 pb-2 px-4 flex items-center justify-between bg-black/40 backdrop-blur-md sticky top-0 z-20">
+                <button className="text-blue-500 text-base font-medium">Edit</button>
+                <span className="text-white font-semibold text-base">Chats</span>
+                <button className="text-blue-500"><PenLine size={20} /></button>
+             </div>
+           )}
+
+            {/* Header for Settings Tab */}
+            {activeTab === 'settings' && (
+             <div className="flex-none pt-12 pb-2 px-4 flex items-center justify-center bg-black/40 backdrop-blur-md sticky top-0 z-20">
+                <span className="text-white font-semibold text-base">Settings</span>
+             </div>
+           )}
+
+           {/* CONTENT: CHATS */}
+           {activeTab === 'chats' && (
+             <div className="flex-1 overflow-y-auto no-scrollbar">
+                {/* Search Bar */}
+                <div className="px-4 py-2">
+                   <div className="bg-zinc-900/80 rounded-xl flex items-center px-3 py-1.5 gap-2">
+                      <Search size={16} className="text-zinc-500" />
+                      <span className="text-zinc-500 text-sm">Search</span>
+                   </div>
+                </div>
+
+                {/* SAVED MESSAGES (RENAMED TO NOTES) */}
+                <div 
+                  onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }}
+                  className="px-4 py-3 flex gap-3 hover:bg-white/5 active:bg-white/10 transition-colors cursor-pointer border-b border-zinc-800/50"
+                >
+                    {/* VIBENOTES LOGO AS AVATAR */}
+                    <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 group/logo">
+                        <div className="w-full h-full rounded-xl flex items-center justify-center relative overflow-visible">
+                            {/* Startup Animation */}
+                            {isStartup && (
+                                <>
+                                    <div className="absolute inset-[-4px] border rounded-xl animate-[spin_1s_linear_infinite] opacity-50" style={{ borderColor: `${accentColor}80` }} />
+                                    <div className="absolute inset-0 rounded-xl animate-ping opacity-75" style={{ backgroundColor: accentColor, animationDuration: '4.5s' }} />
+                                </>
+                            )}
+                            
+                            {/* Logo Content */}
+                            {activeFilter === 'secret' ? (
+                                <Terminal className="text-zinc-500 transition-colors" style={{ color: isStartup ? undefined : HACKER_GREEN }} size={24} />
+                            ) : (
+                                <div 
+                                    className={`w-3 h-3 rounded-sm relative z-10 transition-all duration-300 ${isStartup ? 'animate-bounce' : ''}`} 
+                                    style={{ 
+                                        backgroundColor: accentColor, 
+                                        boxShadow: `0 0 10px ${accentColor}80`, 
+                                        animation: isStartup ? `${startupAnimName} 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` : undefined 
+                                    }} 
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <div className="flex justify-between items-baseline">
+                            <span className="font-semibold text-white">Notes</span>
+                            <span className="text-xs text-zinc-500">{notes.length > 0 ? getDateLabel(notes[notes.length-1].date) : ''}</span>
+                        </div>
+                        <div className="text-zinc-400 text-sm truncate pr-4">
+                           <span className="text-blue-400 mr-1">You:</span>
+                           {notes.length > 0 ? notes[notes.length-1].text : 'No notes yet'}
+                        </div>
                     </div>
                 </div>
-            </div>
-        </header>
-      </div>
 
-      {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-50 pointer-events-none" />}
+                {/* MOCK CHATS */}
+                {MOCK_CHATS.map(chat => (
+                  <div key={chat.id} className="px-4 py-3 flex gap-3 hover:bg-white/5 transition-colors cursor-pointer border-b border-zinc-800/50">
+                      <div className={`w-12 h-12 rounded-full ${chat.color} flex items-center justify-center flex-shrink-0 text-white font-bold text-lg`}>
+                          {chat.name[0]}
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <div className="flex justify-between items-baseline">
+                              <span className="font-semibold text-white truncate">{chat.name}</span>
+                              <span className="text-xs text-zinc-500">{chat.time}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                              <span className="text-zinc-400 text-sm truncate">{chat.message}</span>
+                              <div className="bg-zinc-700 text-white text-[10px] px-1.5 rounded-full min-w-[18px] text-center">1</div>
+                          </div>
+                      </div>
+                  </div>
+                ))}
+             </div>
+           )}
 
-      {/* Main List */}
-      <div ref={listRef} className={`flex-1 overflow-y-auto overflow-x-hidden relative z-10 w-full no-scrollbar`}>
-          <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${getAlignmentClass()}`}>
-            {filteredNotes.map((note, index) => {
-                const prevNote = filteredNotes[index - 1];
-                const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
+           {/* CONTENT: SETTINGS */}
+           {activeTab === 'settings' && (
+             <div className="flex-1 overflow-y-auto p-4 space-y-6">
                 
-                return (
-                    <React.Fragment key={note.id}>
-                         {showHeader && (
-                             <div className="flex justify-center my-4 opacity-70 w-full select-none">
-                                <span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">
-                                    {getDateLabel(note.date)}
-                                </span>
-                             </div>
-                         )}
-                        <div 
-                          onDoubleClick={() => handleToggleExpand(note.id)} 
-                          className={`select-none touch-manipulation transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}
-                        >
-                            <NoteCard note={note} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onToggleExpand={handleToggleExpand} />
-                        </div>
-                    </React.Fragment>
-                );
-            })}
-            {filteredNotes.length === 0 && (
-                <div className="text-center py-20 border border-dashed border-zinc-900 rounded-lg w-full opacity-50 mb-auto mt-20 backdrop-blur-md bg-black/40">
-                    <LayoutGrid className="mx-auto text-zinc-800 mb-2" size={32} />
-                    <p className="text-zinc-700 text-xs font-mono uppercase">{activeFilter === 'secret' ? 'System Clean' : (activeFilter === 'all' ? 'Select a Category' : 'Start Typing...')}</p>
+                {/* Profile Section */}
+                <div className="bg-zinc-900/80 rounded-2xl p-4 flex items-center gap-4">
+                   <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-purple-500 to-orange-500 flex items-center justify-center text-2xl">😎</div>
+                   <div>
+                      <h2 className="text-xl font-bold">{user.displayName || "Vibe User"}</h2>
+                      <p className="text-zinc-500 text-sm">+1 555 019 2834</p>
+                   </div>
                 </div>
-            )}
-            <div ref={bottomRef} className="h-0 w-full shrink-0" />
-          </div>
-      </div>
 
-      {/* Footer */}
-      <div className={`flex-none w-full p-3 pb-6 md:pb-3 bg-black z-50`}>
-          <div className="max-w-2xl mx-auto flex flex-col gap-2">
-            {editingNote && (
-                <div className="flex items-center justify-between px-4 py-2 mb-[-10px] mx-1 animate-in slide-in-from-bottom-5 fade-in duration-200">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                        <div style={{ color: accentColor }}><PenLine size={12} /></div>
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: accentColor }}>Editing Message</span>
-                            <span className="text-xs text-zinc-400 truncate max-w-[200px]">{editingNote.text}</span>
-                        </div>
+                {/* Appearance Section */}
+                <div className="bg-zinc-900/80 rounded-2xl p-4 space-y-6">
+                   <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Appearance</h3>
+                   
+                    {/* Alignment */}
+                    <div className="space-y-2">
+                      <label className="text-white text-sm">Message Alignment</label>
+                      <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-zinc-800">
+                          <button onClick={() => setAlignment('left')} className={`flex-1 h-8 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600'}`}><AlignLeft size={16}/></button>
+                          <button onClick={() => setAlignment('center')} className={`flex-1 h-8 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600'}`}><AlignCenter size={16}/></button>
+                          <button onClick={() => setAlignment('right')} className={`flex-1 h-8 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600'}`}><AlignRight size={16}/></button>
+                      </div>
                     </div>
-                    <button onClick={handleCancelEdit} className="p-1 hover:bg-zinc-800/50 rounded-full text-zinc-500 hover:text-white transition-colors"><X size={16} /></button>
-                </div>
-            )}
-            <div className="flex items-end gap-2 p-1">
-                <button onClick={cycleFilter} className="flex-shrink-0 h-10 w-10 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 flex items-center justify-center transition-all active:scale-95 group shadow-lg shadow-black/50">
-                    {activeFilter === 'all' ? (<LayoutGrid size={16} className="text-zinc-500 group-hover:text-white transition-colors" />) : (<span className="text-xs grayscale group-hover:grayscale-0 transition-all">{currentConfig?.emoji}</span>)}
-                </button>
-                <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-2 focus-within:border-zinc-600 transition-colors gap-3 shadow-lg shadow-black/50 relative">
-                    {imageUrl && (
-                        <div className="relative flex-shrink-0 group/image">
-                            <div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div>
-                            <button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"><X size={10} /></button>
+
+                    {/* Scale */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between">
+                            <label className="text-white text-sm">Wallpaper Scale</label>
+                            <span className="text-zinc-500 text-xs">{bgScale >= 100 ? 'Cover' : `${bgScale}%`}</span>
                         </div>
-                    )}
-                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} placeholder={editingNote ? "Edit message..." : (activeFilter === 'all' ? "Select category to send..." : `${currentConfig?.label}...`)} rows={1} onFocus={() => { setIsNoteFocused(true); setShowBars(true); scrollToBottom('auto'); }} onBlur={() => setIsNoteFocused(false)} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none text-base md:text-sm resize-none max-h-32 py-0.5 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
-                    {(!transcript && !editingNote) && (<label className="cursor-pointer text-zinc-500 hover:text-zinc-300"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>)}
+                        <input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                    </div>
+
+                     {/* Opacity */}
+                     <div className="space-y-2">
+                        <div className="flex justify-between">
+                            <label className="text-white text-sm">Opacity</label>
+                            <span className="text-zinc-500 text-xs">{Math.round(bgOpacity * 100)}%</span>
+                        </div>
+                        <input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                    </div>
                 </div>
-                <button onClick={handleMainAction} disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote)} className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 shadow-lg shadow-black/50`} style={(transcript.trim() || imageUrl) && activeFilter !== 'all' ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: '#18181b', borderColor: '#27272a', borderWidth: '1px', color: '#52525b' }}>
-                    {editingNote ? <Check size={20} strokeWidth={3} /> : (transcript.trim() || imageUrl ? <ArrowUp size={20} strokeWidth={3} /> : <Plus size={20} />)}
-                </button>
-            </div>
-          </div>
-      </div>
-      
-      {/* --- SETTINGS MODAL --- */}
-      {showSettings && (
-          <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-              <div className="bg-zinc-900 border border-zinc-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto">
-                  <div className="flex items-center justify-between">
-                      <h2 className="text-white font-bold text-lg">Settings</h2>
-                      <button onClick={() => setShowSettings(false)} className="p-2 text-zinc-500 hover:text-white bg-zinc-800 rounded-full"><X size={18} /></button>
-                  </div>
-                  
-                  {/* Alignment */}
-                  <div className="space-y-3">
-                      <label className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Message Alignment</label>
-                      <div className="flex gap-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800">
-                          <button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button>
-                          <button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button>
-                          <button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button>
-                      </div>
-                  </div>
 
-                  {/* Wallpaper Scale (Zoom/Tile) */}
-                   <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <label className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Wallpaper Scale</label>
-                        <span className="text-zinc-400 text-xs flex items-center gap-1"><Scan size={12}/> {bgScale >= 100 ? 'Cover' : `${bgScale}%`}</span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="20" 
-                        max="100" 
-                        step="5"
-                        value={bgScale}
-                        onChange={(e) => setBgScale(parseInt(e.target.value))}
-                        className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
-                      />
-                  </div>
-
-                   {/* Background Opacity */}
-                   <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <label className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Background Opacity</label>
-                        <span className="text-zinc-400 text-xs">{Math.round(bgOpacity * 100)}%</span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="1" 
-                        step="0.05"
-                        value={bgOpacity}
-                        onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
-                        className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
-                      />
-                  </div>
-
-                  {/* Background Selection (Updated to 20 images) */}
-                  <div className="space-y-3">
-                      <label className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Wallpaper</label>
-                      <div className="grid grid-cols-5 gap-2">
+                {/* Wallpaper Grid */}
+                <div className="bg-zinc-900/80 rounded-2xl p-4 space-y-4">
+                     <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Wallpapers</h3>
+                     <div className="grid grid-cols-4 gap-2">
                           {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
                               <button 
                                 key={num}
@@ -522,16 +536,136 @@ function App() {
                                 className={`aspect-square rounded-lg overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-orange-500 scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`}
                               >
                                   <img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} />
-                                  {bgIndex === num && <div className="absolute inset-0 bg-orange-500/20" />}
                               </button>
                           ))}
                       </div>
-                  </div>
-              </div>
-          </div>
+                </div>
+
+             </div>
+           )}
+
+           <BottomTabBar />
+        </div>
       )}
 
-      <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } @keyframes logoEntrance { 0% { transform: scale(0) rotate(-180deg); } 60% { transform: scale(1.2) rotate(10deg); } 100% { transform: scale(1) rotate(0deg); } } @keyframes logoHeartbeat { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } } @keyframes logoGlitch { 0% { transform: translate(0); } 20% { transform: translate(-3px, 3px); } 40% { transform: translate(-3px, -3px); } 60% { transform: translate(3px, 3px); } 80% { transform: translate(3px, -3px); } 100% { transform: translate(0); } } @keyframes logoWobble { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg) scale(1.1); } 75% { transform: rotate(15deg) scale(1.1); } }`}</style>
+      {/* === VIEW 2: CHAT ROOM (NOTES) === */}
+      {currentView === 'room' && activeChatId === 'saved_messages' && (
+        <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
+           
+           {/* HEADER (Restored to Original + Back Icon) */}
+            <div className="fixed top-0 left-0 right-0 z-40">
+                <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative">
+                    <div className="flex items-center gap-3 w-full">
+                        
+                        {/* 1. Back Icon (Arrow) - UPDATED HOVER LOGIC */}
+                        <button 
+                            onClick={() => setCurrentView('list')} 
+                            className="w-10 h-10 flex items-center justify-center text-zinc-400 transition-colors active:scale-95"
+                            onMouseEnter={(e) => e.currentTarget.style.color = accentColor}
+                            onMouseLeave={(e) => e.currentTarget.style.color = '#a1a1aa'} // zinc-400
+                        >
+                            <ChevronLeft size={28} />
+                        </button>
+
+                        {/* 2. Logo / Secret Trigger (Original) */}
+                        <button onClick={handleSecretTrigger} className="w-10 h-10 bg-transparent flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible group/logo">
+                            {isStartup && (<><div className="absolute inset-[-4px] border rounded-xl animate-[spin_1s_linear_infinite] opacity-50" style={{ borderColor: `${accentColor}80` }} /><div className="absolute inset-0 rounded-xl animate-ping opacity-75" style={{ backgroundColor: accentColor, animationDuration: '4.5s' }} /></>)}
+                            {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" style={{ color: isStartup ? undefined : HACKER_GREEN }} size={24} />) : (<div className={`w-3 h-3 rounded-sm relative z-10 transition-all duration-300 ${isStartup ? 'animate-bounce' : ''}`} style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80`, animation: isStartup ? `${startupAnimName} 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` : undefined }} />)}
+                        </button>
+                        
+                        {/* 3. Search Bar (Original) */}
+                        <div className="relative flex items-center h-10 ml-auto">
+                            <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}><Search size={20} /></button>
+                            <div className={`absolute right-0 bg-zinc-900 border border-zinc-800 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
+                                <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
+                                <input ref={searchInputRef} type="text" placeholder={t.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
+                                <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
+                            </div>
+                        </div>
+
+                    </div>
+                </header>
+            </div>
+
+           {/* Secret Canvas Layer */}
+           {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}
+
+           {/* Messages List (Reuse your logic) */}
+           <div ref={listRef} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
+              <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${getAlignmentClass()}`}>
+                {filteredNotes.map((note, index) => {
+                    const prevNote = filteredNotes[index - 1];
+                    const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
+                    return (
+                        <React.Fragment key={note.id}>
+                             {showHeader && (
+                                 <div className="flex justify-center my-4 opacity-70 w-full select-none">
+                                    <span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">
+                                        {getDateLabel(note.date)}
+                                    </span>
+                                 </div>
+                             )}
+                            <div 
+                              onDoubleClick={() => handleToggleExpand(note.id)} 
+                              className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}
+                            >
+                                <NoteCard note={note} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onToggleExpand={handleToggleExpand} />
+                            </div>
+                        </React.Fragment>
+                    );
+                })}
+                <div ref={bottomRef} className="h-0 w-full shrink-0" />
+              </div>
+           </div>
+
+           {/* Input Footer */}
+           <div className="flex-none w-full p-2 pb-6 md:pb-3 bg-black/60 backdrop-blur-xl z-50 border-t border-zinc-800/50">
+             <div className="max-w-2xl mx-auto flex items-end gap-2">
+                 
+                 {/* RESTORED CATEGORY BUTTON */}
+                 <button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">
+                    {activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}
+                 </button>
+                 
+                 <div className="flex-1 bg-zinc-900/50 border border-zinc-700/50 rounded-2xl flex items-center px-3 py-1.5 focus-within:border-blue-500/50 transition-colors gap-2 relative">
+                    {imageUrl && (
+                        <div className="relative flex-shrink-0">
+                            <div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div>
+                            <button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"><X size={10} /></button>
+                        </div>
+                    )}
+                    <textarea 
+                        ref={textareaRef} 
+                        value={transcript} 
+                        onChange={(e) => setTranscript(e.target.value)} 
+                        onPaste={(e) => handlePaste(e)} 
+                        onFocus={() => { scrollToBottom('auto'); }}
+                        placeholder={editingNote ? "Edit..." : (activeFilter === 'all' ? "Select category..." : `${currentConfig?.label}...`)} 
+                        rows={1} 
+                        className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-1 ${isHackerMode ? 'font-mono' : ''}`} 
+                        style={isHackerMode ? { color: HACKER_GREEN } : undefined} 
+                    />
+                    {(!transcript && !editingNote) && (<label className="cursor-pointer text-zinc-400 hover:text-white"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>)}
+                </div>
+
+                <button 
+                  onClick={handleMainAction} 
+                  disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote)} 
+                  className={`flex-shrink-0 w-8 h-8 mb-1 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg`}
+                  style={(transcript.trim() || imageUrl) && activeFilter !== 'all' 
+                      ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } 
+                      : { backgroundColor: 'transparent', color: '#71717a', boxShadow: 'none' }
+                  }
+                >
+                    {editingNote ? <Check size={18} strokeWidth={3} /> : <ArrowUp size={20} strokeWidth={3} />}
+                </button>
+             </div>
+           </div>
+
+        </div>
+      )}
+
+      <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
     </div>
   );
 }

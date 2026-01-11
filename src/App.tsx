@@ -8,7 +8,8 @@ import {
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
-import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers } from './useFirebaseSync';
+// Added useUser to imports
+import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers, useUser } from './useFirebaseSync';
 import Auth from './components/Auth';
 
 const TRANSLATIONS = { 
@@ -73,6 +74,67 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
+// --- SUB-COMPONENT: REAL CHAT LIST ITEM ---
+// This handles fetching the specific user details for each row
+const ChatListItem = ({ chat, active, isEditing, onSelect, onClick }: any) => {
+    // 1. Get the other user's data using the hook
+    const otherUser = useUser(chat.otherUserId);
+    
+    // 2. Handle Loading vs Missing Data
+    const isLoading = !otherUser && chat.otherUserId;
+    const displayName = otherUser?.displayName || (isLoading ? 'Loading...' : 'Unknown User');
+    const photoURL = otherUser?.photoURL;
+
+    // 3. Fallback initials if no picture
+    const initial = displayName && displayName !== 'Unknown User' && displayName !== 'Loading...' 
+        ? displayName[0].toUpperCase() 
+        : '?';
+
+    return (
+        <div 
+            onClick={isEditing ? onSelect : onClick}
+            className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
+        >
+            {isEditing && (
+                <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200">
+                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${active ? 'bg-orange-500 border-orange-500 scale-110' : 'border-zinc-700 bg-black/40'}`}>
+                        {active && <Check size={14} className="text-black" strokeWidth={4} />}
+                    </div>
+                </div>
+            )}
+            
+            <div className="w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-lg shadow-black/30 overflow-hidden relative">
+                {photoURL ? (
+                    <img 
+                        src={photoURL} 
+                        className="w-full h-full object-cover" 
+                        alt="avatar" 
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }} 
+                    />
+                ) : null}
+                {/* Show initial if image is missing or loading */}
+                <span className={`absolute ${photoURL ? '-z-10' : ''}`}>{initial}</span>
+            </div>
+            
+            <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+                <div className="flex justify-between items-baseline">
+                    <span className={`font-bold text-base tracking-tight truncate ${isLoading ? 'text-zinc-500 animate-pulse' : 'text-white'}`}>
+                        {displayName}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-mono">
+                        {chat.timestamp ? getDateLabel(chat.timestamp.toMillis ? chat.timestamp.toMillis() : Date.now()) : ''}
+                    </span>
+                </div>
+                <div className="flex justify-between items-center">
+                    <span className="text-zinc-400 text-sm truncate opacity-70">
+                        {chat.lastMessage}
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 function App() {
   const { user, loading: authLoading } = useFirebaseSync();
   const { notes, addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
@@ -87,7 +149,7 @@ function App() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
 
-  // --- CONTACTS SEARCH STATE (NEW) ---
+  // --- CONTACTS SEARCH STATE ---
   const [contactSearchQuery, setContactSearchQuery] = useState('');
   const [contactSearchResults, setContactSearchResults] = useState<any[]>([]);
   const [isSearchingContacts, setIsSearchingContacts] = useState(false);
@@ -140,7 +202,7 @@ function App() {
   const [showSecretAnim, setShowSecretAnim] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  // NEW: Messages Hook
+  // MESSAGES HOOK
   const { messages: activeMessages, sendMessage } = useMessages(
     (activeChatId && activeChatId !== 'saved_messages') ? activeChatId : null
   );
@@ -195,8 +257,6 @@ function App() {
   };
 
   const handleDeleteSelected = () => {
-    // Note: To really delete from firebase, you'd need a delete function in the hook
-    // For now this clears local state or mock data
     setSelectedChatIds(new Set());
     setIsEditing(false);
   };
@@ -254,7 +314,6 @@ function App() {
       setIsSearchingContacts(true);
       try {
           const results = await searchUsers(contactSearchQuery);
-          // Filter out yourself
           setContactSearchResults(results.filter((u: any) => u.uid !== user?.uid));
       } catch (err) {
           console.error(err);
@@ -270,7 +329,6 @@ function App() {
           if (newChatId) {
               setActiveChatId(newChatId);
               setCurrentView('room');
-              // Clear search
               setContactSearchQuery('');
               setContactSearchResults([]);
           }
@@ -294,7 +352,7 @@ function App() {
     const FADE_SPEED = 0.1;
     const MASTER_SPEED = 50;
     const STUTTER_AMOUNT = 0.85;  
-    const RAIN_BUILDUP = 50; // Faster buildup
+    const RAIN_BUILDUP = 50; 
     
     const COLOR_HEAD = '#FFF'; 
     const COLOR_TRAIL = '#0D0'; 
@@ -664,34 +722,14 @@ function App() {
 
                 {/* DYNAMIC CHATS (REAL) */}
                 {realChats.map(chat => (
-                  <div 
+                  <ChatListItem 
                     key={chat.id} 
-                    onClick={() => {
-                        if (isEditing) toggleChatSelection(chat.id);
-                        else { setActiveChatId(chat.id); setCurrentView('room'); scrollToBottom('auto'); }
-                    }}
-                    className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent ${isEditing && selectedChatIds.has(chat.id) ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
-                  >
-                      {isEditing && (
-                        <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200">
-                            <SelectCheckbox selected={selectedChatIds.has(chat.id)} />
-                        </div>
-                      )}
-                      
-                      {/* Avatar Placeholder for now - eventually fetch other user's pic */}
-                      <div className={`w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-lg shadow-black/30`}>
-                          <User size={24} className="text-zinc-500" />
-                      </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                          <div className="flex justify-between items-baseline">
-                              <span className="font-bold text-white text-base tracking-tight truncate">Unknown User</span>
-                              <span className="text-[10px] text-zinc-500 font-mono">{chat.timestamp ? getDateLabel(chat.timestamp.toMillis ? chat.timestamp.toMillis() : Date.now()) : ''}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                              <span className="text-zinc-400 text-sm truncate opacity-70">{chat.lastMessage}</span>
-                          </div>
-                      </div>
-                  </div>
+                    chat={chat} 
+                    active={isEditing ? selectedChatIds.has(chat.id) : false} 
+                    isEditing={isEditing}
+                    onSelect={() => toggleChatSelection(chat.id)}
+                    onClick={() => { setActiveChatId(chat.id); setCurrentView('room'); scrollToBottom('auto'); }}
+                  />
                 ))}
              </div>
            )}

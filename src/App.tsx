@@ -243,7 +243,7 @@ function App() {
     const FADE_SPEED = 0.1;
     const MASTER_SPEED = 50;
     const STUTTER_AMOUNT = 0.85;  
-    const RAIN_BUILDUP = 300;
+    const RAIN_BUILDUP = 50;
     
     const COLOR_HEAD = '#FFF'; 
     const COLOR_TRAIL = '#0D0'; 

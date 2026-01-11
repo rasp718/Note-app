@@ -3,7 +3,8 @@ import {
   Search, X, Settings as SettingsIcon, ArrowUp, LayoutGrid, Image as ImageIcon, 
   Check, Terminal, Plus, PenLine, AlignLeft, AlignCenter, AlignRight, Scan, 
   ChevronLeft, MessageSquareDashed, Bookmark, Edit, Moon, Book,
-  Archive, Trash2, CheckCheck, Circle, Globe, Zap, Cpu, SlidersHorizontal
+  Archive, Trash2, CheckCheck, Circle, Globe, Zap, Cpu, SlidersHorizontal,
+  User, AtSign, Activity, Camera, Save, Grid
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
@@ -92,6 +93,15 @@ function App() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
 
+  // --- PROFILE STATE ---
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [profileName, setProfileName] = useState(user?.displayName || "Vibe User");
+  const [profileHandle, setProfileHandle] = useState("@neo");
+  const [profileBio, setProfileBio] = useState("Status: Online");
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const profileInputRef = useRef<HTMLInputElement>(null);
+
   // --- APP STATE ---
   const [categories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
   const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
@@ -158,7 +168,6 @@ function App() {
   // Edit Mode Logic
   const toggleEditMode = () => {
     if (isEditing) {
-        // Clear selection when cancelling/finishing
         setSelectedChatIds(new Set());
     }
     setIsEditing(!isEditing);
@@ -172,6 +181,41 @@ function App() {
         newSet.add(id);
     }
     setSelectedChatIds(newSet);
+  };
+
+  // Profile Edit Logic
+  const handleProfileSave = () => {
+      setIsEditingProfile(false);
+      setShowAvatarSelector(false);
+      localStorage.setItem('vibenotes_profile_name', profileName);
+      localStorage.setItem('vibenotes_profile_handle', profileHandle);
+      localStorage.setItem('vibenotes_profile_bio', profileBio);
+      if (profilePic) localStorage.setItem('vibenotes_profile_pic', profilePic);
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+      try {
+          const url = await compressImage(file);
+          setProfilePic(url);
+          setShowAvatarSelector(false);
+      } catch(e) { console.error(e); }
+  };
+
+  // UPDATED: Optimized Preset Selection
+  const handleSelectPreset = (num: number) => {
+      const robotPath = `/robot${num}.jpg`;
+      const bgPath = `/bg${num}.jpg`;
+      
+      // Optimistically set robot
+      setProfilePic(robotPath);
+      setShowAvatarSelector(false); 
+      
+      // Fallback check in case robot image doesn't exist
+      const img = new Image();
+      img.src = robotPath;
+      img.onerror = () => {
+          setProfilePic(bgPath);
+      };
   };
 
   const handleImageUpload = async (file: File) => {
@@ -202,7 +246,6 @@ function App() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Set canvas to full window size
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
@@ -240,12 +283,9 @@ function App() {
             const y = drops[i] * FONT_SIZE;
             
             if (y > 0) {
-                // Draw Trail
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = COLOR_TRAIL; 
                 ctx.fillText(text, x, y - FONT_SIZE);
-                
-                // Draw Head (White glowing tip)
                 ctx.shadowColor = GLOW_COLOR;
                 ctx.shadowBlur = GLOW_INTENSITY;
                 ctx.fillStyle = COLOR_HEAD;
@@ -286,6 +326,17 @@ function App() {
           if (savedOpacity) setBgOpacity(parseFloat(savedOpacity));
           const savedScale = localStorage.getItem('vibenotes_bg_scale');
           if (savedScale) setBgScale(parseInt(savedScale));
+
+          // Load Profile
+          const savedName = localStorage.getItem('vibenotes_profile_name');
+          if (savedName) setProfileName(savedName);
+          const savedHandle = localStorage.getItem('vibenotes_profile_handle');
+          if (savedHandle) setProfileHandle(savedHandle);
+          const savedBio = localStorage.getItem('vibenotes_profile_bio');
+          if (savedBio) setProfileBio(savedBio);
+          const savedPic = localStorage.getItem('vibenotes_profile_pic');
+          if (savedPic) setProfilePic(savedPic);
+
       } catch (e) {} 
   }, []);
 
@@ -582,12 +633,132 @@ function App() {
            {activeTab === 'settings' && (
              <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
                 
-                {/* Profile Section */}
-                <div className="bg-white/5 border border-white/5 rounded-3xl p-6 flex items-center gap-5">
-                   <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center text-3xl shadow-xl">😎</div>
-                   <div>
-                      <h2 className="text-2xl font-black tracking-tight text-white">{user.displayName || "Vibe User"}</h2>
-                      <p className="text-zinc-500 text-xs font-mono uppercase tracking-widest mt-1">Online • Encrypted</p>
+                {/* IDENTITY CARD (Edit Mode) */}
+                <div className="relative overflow-hidden bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col gap-6 backdrop-blur-xl group">
+                   
+                   {/* Edit Trigger */}
+                   <div className="absolute top-4 right-4">
+                        {isEditingProfile ? (
+                            <button 
+                                onClick={handleProfileSave} 
+                                className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-500 transition-all"
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = CLAUDE_ORANGE; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = CLAUDE_ORANGE; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#27272a'; e.currentTarget.style.color = '#71717a'; e.currentTarget.style.borderColor = '#3f3f46'; }}
+                            >
+                                <Check size={16} strokeWidth={3} />
+                            </button>
+                        ) : (
+                            <button onClick={() => setIsEditingProfile(true)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 hover:text-white transition-all">
+                                <Edit size={14} />
+                            </button>
+                        )}
+                   </div>
+
+                   <div className="flex items-center gap-5">
+                       {/* Avatar */}
+                       <div className="relative">
+                           <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center text-3xl shadow-xl overflow-hidden">
+                               {profilePic ? (
+                                   <img 
+                                        src={profilePic} 
+                                        alt="Profile" 
+                                        className="w-full h-full object-cover" 
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                   />
+                               ) : (
+                                   <span>😎</span>
+                               )}
+                           </div>
+                           
+                           {isEditingProfile && (
+                               <>
+                                   {/* UPLOAD BUTTON */}
+                                   <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-zinc-800 border border-zinc-700 rounded-full flex items-center justify-center text-white cursor-pointer shadow-lg active:scale-95 transition-transform hover:bg-zinc-700 z-10">
+                                       <Camera size={14} />
+                                       <input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleAvatarUpload(e.target.files[0]); }} />
+                                   </label>
+                                   
+                                   {/* PRESET TRIGGER */}
+                                   <button 
+                                     onClick={() => setShowAvatarSelector(!showAvatarSelector)}
+                                     className="absolute -bottom-2 -left-2 w-8 h-8 bg-zinc-800 border border-zinc-700 rounded-full flex items-center justify-center text-white cursor-pointer shadow-lg active:scale-95 transition-transform hover:bg-zinc-700 z-10"
+                                   >
+                                       <Grid size={14} />
+                                   </button>
+                               </>
+                           )}
+                       </div>
+
+                       <div className="flex-1 min-w-0 space-y-1">
+                           {isEditingProfile ? (
+                               <input 
+                                   ref={profileInputRef}
+                                   type="text" 
+                                   value={profileName} 
+                                   onChange={(e) => setProfileName(e.target.value)}
+                                   className="bg-transparent border-b border-white/20 text-white text-xl font-bold w-full focus:outline-none focus:border-orange-500 py-1"
+                                   placeholder="Display Name"
+                               />
+                           ) : (
+                               <h2 className="text-2xl font-black tracking-tight text-white truncate">{profileName}</h2>
+                           )}
+                           
+                           {isEditingProfile ? (
+                                <div className="flex items-center gap-1 text-zinc-500">
+                                    <AtSign size={12} />
+                                    <input 
+                                        type="text" 
+                                        value={profileHandle} 
+                                        onChange={(e) => setProfileHandle(e.target.value)}
+                                        className="bg-transparent border-b border-white/20 text-white text-sm font-mono w-full focus:outline-none focus:border-orange-500"
+                                        placeholder="handle"
+                                    />
+                                </div>
+                           ) : (
+                               <p className="text-zinc-400 text-xs font-mono tracking-wide">{profileHandle}</p>
+                           )}
+                       </div>
+                   </div>
+
+                   {/* AVATAR SELECTOR GRID */}
+                   {isEditingProfile && showAvatarSelector && (
+                       <div className="grid grid-cols-6 gap-2 pt-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                           {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
+                               <button 
+                                   key={num}
+                                   onClick={() => handleSelectPreset(num)}
+                                   className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-orange-500 transition-colors bg-black/40"
+                               >
+                                   <img 
+                                     src={`/robot${num}.jpg?t=${Date.now()}`} 
+                                     onError={(e) => { e.currentTarget.src = `/bg${num}.jpg` }} // Fallback
+                                     className="w-full h-full object-cover" 
+                                     alt={`Bot ${num}`}
+                                   />
+                               </button>
+                           ))}
+                       </div>
+                   )}
+
+                   {/* Bio / Status */}
+                   <div className="pt-2 border-t border-white/5">
+                        {isEditingProfile ? (
+                            <div className="flex items-center gap-2">
+                                <Activity size={14} className="text-zinc-500" />
+                                <input 
+                                    type="text" 
+                                    value={profileBio} 
+                                    onChange={(e) => setProfileBio(e.target.value)}
+                                    className="bg-transparent border-b border-white/20 text-zinc-300 text-xs font-mono w-full focus:outline-none focus:border-orange-500 py-1"
+                                    placeholder="Status..."
+                                />
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 text-zinc-500 text-xs font-mono uppercase tracking-widest">
+                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                {profileBio}
+                            </div>
+                        )}
                    </div>
                 </div>
 

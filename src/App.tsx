@@ -203,7 +203,8 @@ function App() {
 
   // STRICT ROBOT SELECTION
   const handleSelectPreset = (num: number) => {
-      setProfilePic(`/robot${num}.jpg`);
+      // FIXED: Uses .jpeg and adds v=1 to fix mobile cache
+      setProfilePic(`/robot${num}.jpeg?v=1`);
       setShowAvatarSelector(false); 
   };
 
@@ -242,7 +243,7 @@ function App() {
     const FADE_SPEED = 0.1;
     const MASTER_SPEED = 50;
     const STUTTER_AMOUNT = 0.85;  
-    const RAIN_BUILDUP = 50;
+    const RAIN_BUILDUP = 300;
     
     const COLOR_HEAD = '#FFF'; 
     const COLOR_TRAIL = '#0D0'; 
@@ -649,6 +650,7 @@ function App() {
                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center text-3xl shadow-xl overflow-hidden">
                                {profilePic ? (
                                    <img 
+                                        key={profilePic} // FIXED: Added key to force re-render
                                         src={profilePic} 
                                         alt="Profile" 
                                         className="w-full h-full object-cover" 
@@ -712,15 +714,15 @@ function App() {
                    {/* AVATAR SELECTOR GRID */}
                    {isEditingProfile && showAvatarSelector && (
                        <div className="grid grid-cols-6 gap-2 pt-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                           {Array.from({ length: 7 }, (_, i) => i + 1).map((num) => (
+                           {Array.from({ length: 7 }, (_, i) => i + 1).map((num) => ( // FIXED: Length 7
                                <button 
                                    key={num}
                                    onClick={() => handleSelectPreset(num)}
                                    className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-orange-500 transition-colors bg-black/40 flex items-center justify-center text-xl relative"
                                >
-                                   {/* Added ?v=2 to force cache refresh on mobile */}
+                                   {/* FIXED: Uses .jpeg and v=1 for cache busting */}
                                    <img 
-                                     src={`/robot${num}.jpg?v=2`} 
+                                     src={`/robot${num}.jpeg?v=1`} 
                                      className="w-full h-full object-cover relative z-10" 
                                      alt={`Bot ${num}`}
                                      onError={(e) => { 

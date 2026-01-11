@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, X, Settings as SettingsIcon, ArrowUp, LayoutGrid, Image as ImageIcon, 
   Check, Terminal, Plus, PenLine, AlignLeft, AlignCenter, AlignRight, Scan, 
-  ChevronLeft, Phone, Users, MessageCircle, Bookmark, Edit, Moon, Book 
+  ChevronLeft, MessageSquareDashed, Bookmark, Edit, Moon, Book,
+  Archive, Trash2, CheckCheck, Circle, Globe, Zap, Cpu, SlidersHorizontal
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
@@ -87,6 +88,10 @@ function App() {
   const [activeTab, setActiveTab] = useState<'contacts' | 'calls' | 'chats' | 'settings'>('chats');
   const [activeChatId, setActiveChatId] = useState<string | null>(null); 
 
+  // --- EDIT MODE STATE ---
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
+
   // --- APP STATE ---
   const [categories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
   const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
@@ -150,6 +155,25 @@ function App() {
     }
   };
 
+  // Edit Mode Logic
+  const toggleEditMode = () => {
+    if (isEditing) {
+        // Clear selection when cancelling/finishing
+        setSelectedChatIds(new Set());
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const toggleChatSelection = (id: string) => {
+    const newSet = new Set(selectedChatIds);
+    if (newSet.has(id)) {
+        newSet.delete(id);
+    } else {
+        newSet.add(id);
+    }
+    setSelectedChatIds(newSet);
+  };
+
   const handleImageUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) return alert('Please select an image file');
     setIsUploadingImage(true);
@@ -170,7 +194,7 @@ function App() {
     }
   };
 
-  // Matrix Effect (Restored Original Logic + Full Screen Fix)
+  // Matrix Effect
   useEffect(() => {
     if (!showSecretAnim || currentView !== 'room') return;
     const canvas = canvasRef.current;
@@ -178,7 +202,10 @@ function App() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // --- RESTORED CONFIG ---
+    // Set canvas to full window size
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
     const FONT_SIZE = 24;
     const FADE_SPEED = 0.1;
     const MASTER_SPEED = 50;
@@ -195,10 +222,6 @@ function App() {
     const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const rareKatakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ'; 
     const alphabet = binary + nums + latin + rareKatakana;
-
-    // Set canvas to full window size
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
 
     const columns = canvas.width / FONT_SIZE;
     const drops: number[] = [];
@@ -238,7 +261,6 @@ function App() {
     
     const interval = setInterval(draw, MASTER_SPEED);
     
-    // Handle resize
     const handleResize = () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -343,28 +365,61 @@ function App() {
 
   // --- RENDER HELPERS ---
 
-  // Bottom Tab Bar
-  const BottomTabBar = () => (
-    <div className="flex-none bg-black/80 backdrop-blur-xl border-t border-zinc-800 pb-6 pt-2 px-6 flex justify-between items-center text-[10px] font-medium text-zinc-500 z-50">
-       <button onClick={() => setActiveTab('contacts')} className={`flex flex-col items-center gap-1 ${activeTab === 'contacts' ? 'text-blue-500' : 'hover:text-zinc-300'}`}>
-          <Users size={24} strokeWidth={activeTab === 'contacts' ? 2.5 : 2} />
-          <span>Contacts</span>
-       </button>
-       <button onClick={() => setActiveTab('calls')} className={`flex flex-col items-center gap-1 ${activeTab === 'calls' ? 'text-blue-500' : 'hover:text-zinc-300'}`}>
-          <Phone size={24} strokeWidth={activeTab === 'calls' ? 2.5 : 2} />
-          <span>Calls</span>
-       </button>
-       <button onClick={() => setActiveTab('chats')} className={`flex flex-col items-center gap-1 ${activeTab === 'chats' ? 'text-blue-500' : 'hover:text-zinc-300'}`}>
-          <MessageCircle size={24} strokeWidth={activeTab === 'chats' ? 2.5 : 2} fill={activeTab === 'chats' ? "currentColor" : "none"} />
-          <span>Chats</span>
-       </button>
-       <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-1 relative ${activeTab === 'settings' ? 'text-blue-500' : 'hover:text-zinc-300'}`}>
-          <SettingsIcon size={24} strokeWidth={activeTab === 'settings' ? 2.5 : 2} />
-          <span>Settings</span>
-          <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-black"></span>
-       </button>
-    </div>
+  // Checkbox Component
+  const SelectCheckbox = ({ selected }: { selected: boolean }) => (
+      <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${selected ? 'bg-orange-500 border-orange-500 scale-110' : 'border-zinc-700 bg-black/40'}`}>
+          {selected && <Check size={14} className="text-black" strokeWidth={4} />}
+      </div>
   );
+
+  // Bottom Tab Bar - FLOATING DOCK STYLE
+  const BottomTabBar = () => {
+    if (isEditing) {
+        return (
+            <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl p-4 flex justify-between items-center text-[10px] font-medium text-zinc-400 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
+               <button onClick={() => {}} className="flex flex-col items-center gap-1 hover:text-white transition-colors">
+                  <Archive size={20} />
+                  <span className="uppercase tracking-wider">Archive</span>
+               </button>
+               <button onClick={() => {}} className="flex flex-col items-center gap-1 hover:text-white transition-colors">
+                  <CheckCheck size={20} />
+                  <span className="uppercase tracking-wider">Read</span>
+               </button>
+               <button onClick={() => {}} className="flex flex-col items-center gap-1 hover:text-red-500 transition-colors">
+                  <Trash2 size={20} />
+                  <span className="uppercase tracking-wider">Delete</span>
+               </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-black/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl shadow-black/50 p-2 flex justify-between items-center text-[10px] font-medium text-zinc-500 z-50">
+           
+           <button onClick={() => setActiveTab('contacts')} className={`flex-1 h-12 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-300 ${activeTab === 'contacts' ? 'text-white bg-white/10' : 'hover:text-zinc-300'}`}>
+              <Globe size={20} strokeWidth={activeTab === 'contacts' ? 2.5 : 2} />
+              <span className="text-[9px] uppercase tracking-widest font-bold">Net</span>
+           </button>
+
+           <button onClick={() => setActiveTab('calls')} className={`flex-1 h-12 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-300 ${activeTab === 'calls' ? 'text-white bg-white/10' : 'hover:text-zinc-300'}`}>
+              <Zap size={20} strokeWidth={activeTab === 'calls' ? 2.5 : 2} />
+              <span className="text-[9px] uppercase tracking-widest font-bold">Signal</span>
+           </button>
+
+           <button onClick={() => setActiveTab('chats')} className={`flex-1 h-12 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-300 ${activeTab === 'chats' ? 'text-white bg-white/10' : 'hover:text-zinc-300'}`}>
+              <MessageSquareDashed size={20} strokeWidth={activeTab === 'chats' ? 2.5 : 2} />
+              <span className="text-[9px] uppercase tracking-widest font-bold">Feed</span>
+           </button>
+
+           <button onClick={() => setActiveTab('settings')} className={`flex-1 h-12 rounded-2xl flex flex-col items-center justify-center gap-1 relative transition-all duration-300 ${activeTab === 'settings' ? 'text-white bg-white/10' : 'hover:text-zinc-300'}`}>
+              <Cpu size={20} strokeWidth={activeTab === 'settings' ? 2.5 : 2} />
+              <span className="text-[9px] uppercase tracking-widest font-bold">Sys</span>
+              <span className="absolute top-3 right-3 w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
+           </button>
+
+        </div>
+    );
+  };
 
   return (
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
@@ -389,89 +444,113 @@ function App() {
            
            {/* Header for Chats Tab */}
            {activeTab === 'chats' && (
-             <div className="flex-none pt-12 pb-2 px-4 flex items-center justify-between bg-black/40 backdrop-blur-md sticky top-0 z-20">
-                <button className="text-blue-500 text-base font-medium">Edit</button>
-                <span className="text-white font-semibold text-base">Chats</span>
-                <button className="text-blue-500"><PenLine size={20} /></button>
+             <div className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
+                <div>
+                    <h1 className="text-3xl font-black text-white tracking-tighter">FEED</h1>
+                    <p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mt-1">
+                        {isEditing && selectedChatIds.size > 0 ? `${selectedChatIds.size} SELETED` : 'Encrypted'}
+                    </p>
+                </div>
+                
+                <div className="flex gap-4 items-center mb-1">
+                    <button 
+                        onClick={toggleEditMode} 
+                        className="text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-white transition-colors"
+                    >
+                        {isEditing ? 'Done' : 'Select'}
+                    </button>
+                    <button className="text-zinc-500 hover:text-white transition-colors"><PenLine size={20} /></button>
+                </div>
              </div>
            )}
 
             {/* Header for Settings Tab */}
             {activeTab === 'settings' && (
-             <div className="flex-none pt-12 pb-2 px-4 flex items-center justify-center bg-black/40 backdrop-blur-md sticky top-0 z-20">
-                <span className="text-white font-semibold text-base">Settings</span>
+             <div className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
+                <h1 className="text-3xl font-black text-white tracking-tighter">SYSTEM</h1>
              </div>
            )}
 
            {/* CONTENT: CHATS */}
            {activeTab === 'chats' && (
-             <div className="flex-1 overflow-y-auto no-scrollbar">
+             <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
                 {/* Search Bar */}
-                <div className="px-4 py-2">
-                   <div className="bg-zinc-900/80 rounded-xl flex items-center px-3 py-1.5 gap-2">
+                <div className="px-4 mb-4">
+                   <div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-zinc-700">
                       <Search size={16} className="text-zinc-500" />
-                      <span className="text-zinc-500 text-sm">Search</span>
+                      <input 
+                        type="text" 
+                        placeholder="Search frequency..." 
+                        className="bg-transparent border-none outline-none text-white text-sm w-full placeholder:text-zinc-600 font-medium"
+                      />
                    </div>
                 </div>
 
-                {/* SAVED MESSAGES (RENAMED TO NOTES) */}
+                {/* SAVED MESSAGES (NOTES) */}
                 <div 
-                  onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }}
-                  className="px-4 py-3 flex gap-3 hover:bg-white/5 active:bg-white/10 transition-colors cursor-pointer border-b border-zinc-800/50"
+                  onClick={() => { 
+                      if (isEditing) toggleChatSelection('saved_messages'); 
+                      else { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }
+                  }}
+                  className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent ${isEditing && selectedChatIds.has('saved_messages') ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
                 >
+                    {isEditing && (
+                        <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200">
+                            <SelectCheckbox selected={selectedChatIds.has('saved_messages')} />
+                        </div>
+                    )}
+
                     {/* VIBENOTES LOGO AS AVATAR */}
-                    <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 group/logo">
-                        <div className="w-full h-full rounded-xl flex items-center justify-center relative overflow-visible">
-                            {/* Startup Animation */}
-                            {isStartup && (
-                                <>
-                                    <div className="absolute inset-[-4px] border rounded-xl animate-[spin_1s_linear_infinite] opacity-50" style={{ borderColor: `${accentColor}80` }} />
-                                    <div className="absolute inset-0 rounded-xl animate-ping opacity-75" style={{ backgroundColor: accentColor, animationDuration: '4.5s' }} />
-                                </>
-                            )}
-                            
-                            {/* Logo Content */}
+                    <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
+                        <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50">
+                            {isStartup && (<><div className="absolute inset-[-4px] border rounded-xl animate-[spin_1s_linear_infinite] opacity-50" style={{ borderColor: `${accentColor}80` }} /><div className="absolute inset-0 rounded-xl animate-ping opacity-75" style={{ backgroundColor: accentColor, animationDuration: '4.5s' }} /></>)}
                             {activeFilter === 'secret' ? (
                                 <Terminal className="text-zinc-500 transition-colors" style={{ color: isStartup ? undefined : HACKER_GREEN }} size={24} />
                             ) : (
-                                <div 
-                                    className={`w-3 h-3 rounded-sm relative z-10 transition-all duration-300 ${isStartup ? 'animate-bounce' : ''}`} 
-                                    style={{ 
-                                        backgroundColor: accentColor, 
-                                        boxShadow: `0 0 10px ${accentColor}80`, 
-                                        animation: isStartup ? `${startupAnimName} 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` : undefined 
-                                    }} 
-                                />
+                                <div className={`w-3 h-3 rounded-sm relative z-10 transition-all duration-300 ${isStartup ? 'animate-bounce' : ''}`} style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80`, animation: isStartup ? `${startupAnimName} 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` : undefined }} />
                             )}
                         </div>
                     </div>
 
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
                         <div className="flex justify-between items-baseline">
-                            <span className="font-semibold text-white">Notes</span>
-                            <span className="text-xs text-zinc-500">{notes.length > 0 ? getDateLabel(notes[notes.length-1].date) : ''}</span>
+                            <span className="font-bold text-white text-base tracking-tight">Notes</span>
+                            <span className="text-[10px] text-zinc-500 font-mono">{notes.length > 0 ? getDateLabel(notes[notes.length-1].date) : ''}</span>
                         </div>
-                        <div className="text-zinc-400 text-sm truncate pr-4">
-                           <span className="text-blue-400 mr-1">You:</span>
-                           {notes.length > 0 ? notes[notes.length-1].text : 'No notes yet'}
+                        <div className="text-zinc-400 text-sm truncate pr-4 flex items-center gap-1">
+                           <span className="text-[10px] font-bold uppercase tracking-wider px-1 rounded bg-white/10" style={{ color: accentColor }}>You</span>
+                           <span className="opacity-70 truncate">{notes.length > 0 ? notes[notes.length-1].text : 'No notes yet'}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* MOCK CHATS */}
                 {MOCK_CHATS.map(chat => (
-                  <div key={chat.id} className="px-4 py-3 flex gap-3 hover:bg-white/5 transition-colors cursor-pointer border-b border-zinc-800/50">
-                      <div className={`w-12 h-12 rounded-full ${chat.color} flex items-center justify-center flex-shrink-0 text-white font-bold text-lg`}>
+                  <div 
+                    key={chat.id} 
+                    onClick={() => {
+                        if (isEditing) toggleChatSelection(chat.id);
+                        // else openChat(chat.id);
+                    }}
+                    className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent ${isEditing && selectedChatIds.has(chat.id) ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
+                  >
+                      {isEditing && (
+                        <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200">
+                            <SelectCheckbox selected={selectedChatIds.has(chat.id)} />
+                        </div>
+                      )}
+                      
+                      <div className={`w-14 h-14 rounded-2xl ${chat.color} flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-lg shadow-black/30`}>
                           {chat.name[0]}
                       </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
                           <div className="flex justify-between items-baseline">
-                              <span className="font-semibold text-white truncate">{chat.name}</span>
-                              <span className="text-xs text-zinc-500">{chat.time}</span>
+                              <span className="font-bold text-white text-base tracking-tight truncate">{chat.name}</span>
+                              <span className="text-[10px] text-zinc-500 font-mono">{chat.time}</span>
                           </div>
                           <div className="flex justify-between items-center">
-                              <span className="text-zinc-400 text-sm truncate">{chat.message}</span>
-                              <div className="bg-zinc-700 text-white text-[10px] px-1.5 rounded-full min-w-[18px] text-center">1</div>
+                              <span className="text-zinc-400 text-sm truncate opacity-70">{chat.message}</span>
+                              <div className="bg-zinc-800 border border-zinc-700 text-white text-[10px] font-bold h-5 min-w-[20px] px-1 rounded-full flex items-center justify-center">1</div>
                           </div>
                       </div>
                   </div>
@@ -481,59 +560,59 @@ function App() {
 
            {/* CONTENT: SETTINGS */}
            {activeTab === 'settings' && (
-             <div className="flex-1 overflow-y-auto p-4 space-y-6">
+             <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
                 
                 {/* Profile Section */}
-                <div className="bg-zinc-900/80 rounded-2xl p-4 flex items-center gap-4">
-                   <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-purple-500 to-orange-500 flex items-center justify-center text-2xl">😎</div>
+                <div className="bg-white/5 border border-white/5 rounded-3xl p-6 flex items-center gap-5">
+                   <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center text-3xl shadow-xl">😎</div>
                    <div>
-                      <h2 className="text-xl font-bold">{user.displayName || "Vibe User"}</h2>
-                      <p className="text-zinc-500 text-sm">+1 555 019 2834</p>
+                      <h2 className="text-2xl font-black tracking-tight text-white">{user.displayName || "Vibe User"}</h2>
+                      <p className="text-zinc-500 text-xs font-mono uppercase tracking-widest mt-1">Online • Encrypted</p>
                    </div>
                 </div>
 
                 {/* Appearance Section */}
-                <div className="bg-zinc-900/80 rounded-2xl p-4 space-y-6">
-                   <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Appearance</h3>
+                <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6">
+                   <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
                    
                     {/* Alignment */}
-                    <div className="space-y-2">
-                      <label className="text-white text-sm">Message Alignment</label>
-                      <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-zinc-800">
-                          <button onClick={() => setAlignment('left')} className={`flex-1 h-8 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600'}`}><AlignLeft size={16}/></button>
-                          <button onClick={() => setAlignment('center')} className={`flex-1 h-8 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600'}`}><AlignCenter size={16}/></button>
-                          <button onClick={() => setAlignment('right')} className={`flex-1 h-8 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600'}`}><AlignRight size={16}/></button>
+                    <div className="space-y-3">
+                      <label className="text-white text-sm font-medium">Message Alignment</label>
+                      <div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800">
+                          <button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button>
+                          <button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button>
+                          <button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button>
                       </div>
                     </div>
 
                     {/* Scale */}
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         <div className="flex justify-between">
-                            <label className="text-white text-sm">Wallpaper Scale</label>
-                            <span className="text-zinc-500 text-xs">{bgScale >= 100 ? 'Cover' : `${bgScale}%`}</span>
+                            <label className="text-white text-sm font-medium">Wallpaper Scale</label>
+                            <span className="text-zinc-500 text-xs font-mono">{bgScale >= 100 ? 'COVER' : `${bgScale}%`}</span>
                         </div>
-                        <input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                        <input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" />
                     </div>
 
                      {/* Opacity */}
-                     <div className="space-y-2">
+                     <div className="space-y-3">
                         <div className="flex justify-between">
-                            <label className="text-white text-sm">Opacity</label>
-                            <span className="text-zinc-500 text-xs">{Math.round(bgOpacity * 100)}%</span>
+                            <label className="text-white text-sm font-medium">Opacity</label>
+                            <span className="text-zinc-500 text-xs font-mono">{Math.round(bgOpacity * 100)}%</span>
                         </div>
-                        <input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                        <input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" />
                     </div>
                 </div>
 
                 {/* Wallpaper Grid */}
-                <div className="bg-zinc-900/80 rounded-2xl p-4 space-y-4">
-                     <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Wallpapers</h3>
-                     <div className="grid grid-cols-4 gap-2">
+                <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-4">
+                     <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
+                     <div className="grid grid-cols-4 gap-3">
                           {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
                               <button 
                                 key={num}
                                 onClick={() => setBgIndex(num)}
-                                className={`aspect-square rounded-lg overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-orange-500 scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                                className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-orange-500 scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}
                               >
                                   <img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} />
                               </button>

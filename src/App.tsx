@@ -8,7 +8,6 @@ import {
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
-// Added useUser to imports
 import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers, useUser } from './useFirebaseSync';
 import Auth from './components/Auth';
 
@@ -30,16 +29,30 @@ const HACKER_CONFIG: CategoryConfig = {
     colorClass: 'bg-green-500' 
 };
 
-// --- UTILS ---
-const isSameDay = (d1: number, d2: number) => {
-    const date1 = new Date(d1);
-    const date2 = new Date(d2);
+// --- ROBUST DATE UTILS (CRASH FIX) ---
+const normalizeDate = (d: any): number => {
+    try {
+        if (!d) return Date.now();
+        if (typeof d === 'number') return d;
+        if (typeof d.toMillis === 'function') return d.toMillis();
+        if (d.seconds) return d.seconds * 1000;
+        const parsed = new Date(d).getTime();
+        return isNaN(parsed) ? Date.now() : parsed;
+    } catch { return Date.now(); }
+};
+
+const isSameDay = (d1: any, d2: any) => {
+    const t1 = normalizeDate(d1);
+    const t2 = normalizeDate(d2);
+    const date1 = new Date(t1);
+    const date2 = new Date(t2);
     return date1.getDate() === date2.getDate() &&
            date1.getMonth() === date2.getMonth() &&
            date1.getFullYear() === date2.getFullYear();
 };
 
-const getDateLabel = (timestamp: number) => {
+const getDateLabel = (d: any) => {
+    const timestamp = normalizeDate(d);
     const date = new Date(timestamp);
     const today = new Date();
     const yesterday = new Date();
@@ -74,27 +87,16 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
-// --- SUB-COMPONENT: REAL CHAT LIST ITEM ---
-// This handles fetching the specific user details for each row
+// --- CHAT LIST ITEM ---
 const ChatListItem = ({ chat, active, isEditing, onSelect, onClick }: any) => {
-    // 1. Get the other user's data using the hook
     const otherUser = useUser(chat.otherUserId);
-    
-    // 2. Handle Loading vs Missing Data
-    const isLoading = !otherUser && chat.otherUserId;
-    const displayName = otherUser?.displayName || (isLoading ? 'Loading...' : 'Unknown User');
+    const displayName = otherUser?.displayName || 'Unknown';
     const photoURL = otherUser?.photoURL;
-
-    // 3. Fallback initials if no picture
-    const initial = displayName && displayName !== 'Unknown User' && displayName !== 'Loading...' 
-        ? displayName[0].toUpperCase() 
-        : '?';
+    const initial = displayName ? displayName[0].toUpperCase() : '?';
+    const safeDate = getDateLabel(normalizeDate(chat.timestamp));
 
     return (
-        <div 
-            onClick={isEditing ? onSelect : onClick}
-            className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
-        >
+        <div onClick={isEditing ? onSelect : onClick} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}>
             {isEditing && (
                 <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200">
                     <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${active ? 'bg-orange-500 border-orange-500 scale-110' : 'border-zinc-700 bg-black/40'}`}>
@@ -102,33 +104,17 @@ const ChatListItem = ({ chat, active, isEditing, onSelect, onClick }: any) => {
                     </div>
                 </div>
             )}
-            
             <div className="w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-lg shadow-black/30 overflow-hidden relative">
-                {photoURL ? (
-                    <img 
-                        src={photoURL} 
-                        className="w-full h-full object-cover" 
-                        alt="avatar" 
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }} 
-                    />
-                ) : null}
-                {/* Show initial if image is missing or loading */}
+                {photoURL ? (<img src={photoURL} className="w-full h-full object-cover" alt="avatar" onError={(e) => { e.currentTarget.style.display = 'none'; }} />) : null}
                 <span className={`absolute ${photoURL ? '-z-10' : ''}`}>{initial}</span>
             </div>
-            
             <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
                 <div className="flex justify-between items-baseline">
-                    <span className={`font-bold text-base tracking-tight truncate ${isLoading ? 'text-zinc-500 animate-pulse' : 'text-white'}`}>
-                        {displayName}
-                    </span>
-                    <span className="text-[10px] text-zinc-500 font-mono">
-                        {chat.timestamp ? getDateLabel(chat.timestamp.toMillis ? chat.timestamp.toMillis() : Date.now()) : ''}
-                    </span>
+                    <span className="font-bold text-white text-base tracking-tight truncate">{displayName}</span>
+                    <span className="text-[10px] text-zinc-500 font-mono">{safeDate}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                    <span className="text-zinc-400 text-sm truncate opacity-70">
-                        {chat.lastMessage}
-                    </span>
+                    <span className="text-zinc-400 text-sm truncate opacity-70">{chat.lastMessage}</span>
                 </div>
             </div>
         </div>
@@ -137,49 +123,36 @@ const ChatListItem = ({ chat, active, isEditing, onSelect, onClick }: any) => {
 
 function App() {
   const { user, loading: authLoading } = useFirebaseSync();
-  const { notes, addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
+  const { notes = [], addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
   const { chats: realChats, createChat } = useChats(user?.uid || null);
   
-  // --- NAVIGATION STATE ---
   const [currentView, setCurrentView] = useState<'list' | 'room'>('list');
   const [activeTab, setActiveTab] = useState<'contacts' | 'calls' | 'chats' | 'settings'>('chats');
   const [activeChatId, setActiveChatId] = useState<string | null>(null); 
-
-  // --- EDIT MODE STATE ---
   const [isEditing, setIsEditing] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
-
-  // --- CONTACTS SEARCH STATE ---
   const [contactSearchQuery, setContactSearchQuery] = useState('');
   const [contactSearchResults, setContactSearchResults] = useState<any[]>([]);
   const [isSearchingContacts, setIsSearchingContacts] = useState(false);
-
-  // --- PROFILE STATE ---
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
-  const [profileName, setProfileName] = useState(user?.displayName || "Vibe User");
+  const [profileName, setProfileName] = useState("Vibe User");
   const [profileHandle, setProfileHandle] = useState("@neo");
   const [profileBio, setProfileBio] = useState("Status: Online");
   const [profilePic, setProfilePic] = useState<string | null>(null);
-  const profileInputRef = useRef<HTMLInputElement>(null);
-
-  // --- APP STATE ---
   const [categories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
   const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
   const [bgIndex, setBgIndex] = useState<number>(1);
   const [bgOpacity, setBgOpacity] = useState<number>(0.45);
   const [bgScale, setBgScale] = useState<number>(100);
-
   const [transcript, setTranscript] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
-  
-  // Search State for Header
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  
   const searchInputRef = useRef<HTMLInputElement>(null);
-
   const textareaRef = useRef<HTMLTextAreaElement>(null); 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -195,14 +168,11 @@ function App() {
     const anims = ['logoEntrance', 'logoHeartbeat', 'logoGlitch', 'logoWobble'];
     const seed = Date.now(); return anims[seed % anims.length];
   });
-
-  // Secret / Hacker Mode
   const [secretTaps, setSecretTaps] = useState(0);
   const tapTimeoutRef = useRef<any>(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  // MESSAGES HOOK
   const { messages: activeMessages, sendMessage } = useMessages(
     (activeChatId && activeChatId !== 'saved_messages') ? activeChatId : null
   );
@@ -215,15 +185,17 @@ function App() {
     selection: isHackerMode ? 'selection:bg-green-500/30 selection:text-green-400' : 'selection:bg-[#da7756]/30 selection:text-[#da7756]'
   };
 
-  const t = TRANSLATIONS;
+  // Find current config for UI labels
+  const currentConfig = activeFilter === 'all' ? null : (activeFilter === 'secret' ? HACKER_CONFIG : categories.find(c => c.id === activeFilter));
 
-  // --- LOGIC ---
   useEffect(() => { const timer = setTimeout(() => { setIsStartup(false); }, 4500); return () => clearTimeout(timer); }, []);
 
-  // Sync Profile on Load
   useEffect(() => {
     if (user) {
-        syncUserProfile(user);
+         setProfileName(localStorage.getItem('vibenotes_profile_name') || user.displayName || 'Vibe User');
+         setProfileHandle(localStorage.getItem('vibenotes_profile_handle') || '@neo');
+         setProfilePic(localStorage.getItem('vibenotes_profile_pic') || null);
+         syncUserProfile(user);
     }
   }, [user]);
 
@@ -238,30 +210,14 @@ function App() {
     }
   };
 
-  // Edit Mode Logic
-  const toggleEditMode = () => {
-    if (isEditing) {
-        setSelectedChatIds(new Set());
-    }
-    setIsEditing(!isEditing);
-  };
-
+  const toggleEditMode = () => { if (isEditing) setSelectedChatIds(new Set()); setIsEditing(!isEditing); };
   const toggleChatSelection = (id: string) => {
     const newSet = new Set(selectedChatIds);
-    if (newSet.has(id)) {
-        newSet.delete(id);
-    } else {
-        newSet.add(id);
-    }
+    if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
     setSelectedChatIds(newSet);
   };
+  const handleDeleteSelected = () => { setSelectedChatIds(new Set()); setIsEditing(false); };
 
-  const handleDeleteSelected = () => {
-    setSelectedChatIds(new Set());
-    setIsEditing(false);
-  };
-
-  // Profile Edit Logic
   const handleProfileSave = () => {
       setIsEditingProfile(false);
       setShowAvatarSelector(false);
@@ -269,7 +225,7 @@ function App() {
       localStorage.setItem('vibenotes_profile_handle', profileHandle);
       localStorage.setItem('vibenotes_profile_bio', profileBio);
       if (profilePic) localStorage.setItem('vibenotes_profile_pic', profilePic);
-      if (user) syncUserProfile(user); // Push to cloud immediately
+      if (user) syncUserProfile(user); 
   };
 
   const handleAvatarUpload = async (file: File) => {
@@ -279,49 +235,32 @@ function App() {
           setShowAvatarSelector(false);
       } catch(e) { console.error(e); }
   };
-
-  // STRICT ROBOT SELECTION
-  const handleSelectPreset = (num: number) => {
-      setProfilePic(`/robot${num}.jpeg?v=1`);
-      setShowAvatarSelector(false); 
-  };
+  const handleSelectPreset = (num: number) => { setProfilePic(`/robot${num}.jpeg?v=1`); setShowAvatarSelector(false); };
 
   const handleImageUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) return alert('Please select an image file');
     setIsUploadingImage(true);
     try {
       const url = await compressImage(file);
-      if (url.length > 800000) return alert('Image too large.');
       setImageUrl(url);
     } catch (e) { console.error(e); } finally { setIsUploadingImage(false); }
   };
-
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData.items;
     for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
-        e.preventDefault(); const file = items[i].getAsFile();
-        if (file) await handleImageUpload(file); break;
-      }
+      if (items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = items[i].getAsFile(); if (file) await handleImageUpload(file); break; }
     }
   };
 
-  // --- CONTACTS LOGIC ---
   const handleSearchContacts = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!contactSearchQuery.trim()) return;
-      
       setIsSearchingContacts(true);
       try {
           const results = await searchUsers(contactSearchQuery);
           setContactSearchResults(results.filter((u: any) => u.uid !== user?.uid));
-      } catch (err) {
-          console.error(err);
-      } finally {
-          setIsSearchingContacts(false);
-      }
+      } catch (err) { console.error(err); } finally { setIsSearchingContacts(false); }
   };
-
   const startNewChat = async (otherUid: string) => {
       if (!otherUid) return;
       try {
@@ -332,55 +271,43 @@ function App() {
               setContactSearchQuery('');
               setContactSearchResults([]);
           }
-      } catch (e) {
-          console.error("Failed to create chat", e);
-      }
+      } catch (e) { console.error("Failed to create chat", e); }
   };
 
-  // Matrix Effect
   useEffect(() => {
     if (!showSecretAnim || currentView !== 'room') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-
     const FONT_SIZE = 24;
     const FADE_SPEED = 0.1;
     const MASTER_SPEED = 50;
     const STUTTER_AMOUNT = 0.85;  
     const RAIN_BUILDUP = 50; 
-    
     const COLOR_HEAD = '#FFF'; 
     const COLOR_TRAIL = '#0D0'; 
     const GLOW_COLOR = '#0F0'; 
     const GLOW_INTENSITY = 10;     
-
     const binary = '010101010101'; 
     const nums = '0123456789';
     const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const rareKatakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ'; 
     const alphabet = binary + nums + latin + rareKatakana;
-
     const columns = canvas.width / FONT_SIZE;
     const drops: number[] = [];
     for(let x = 0; x < columns; x++) { drops[x] = Math.floor(Math.random() * -RAIN_BUILDUP); }
-    
     const draw = () => {
         ctx.fillStyle = `rgba(0, 0, 0, ${FADE_SPEED})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.font = `bold ${FONT_SIZE}px monospace`;
-        
         for(let i = 0; i < drops.length; i++) {
             if (Math.random() > STUTTER_AMOUNT) continue;
-            
             const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
             const x = i * FONT_SIZE;
             const y = drops[i] * FONT_SIZE;
-            
             if (y > 0) {
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = COLOR_TRAIL; 
@@ -390,31 +317,18 @@ function App() {
                 ctx.fillStyle = COLOR_HEAD;
                 ctx.fillText(text, x, y);
             }
-            
-            if(y > canvas.height && Math.random() > 0.975) {
-                drops[i] = 0;
-            }
+            if(y > canvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
         }
     };
-    
     const interval = setInterval(draw, MASTER_SPEED);
-    
-    const handleResize = () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    };
+    const handleResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
     window.addEventListener('resize', handleResize);
-    
-    return () => {
-        clearInterval(interval);
-        window.removeEventListener('resize', handleResize);
-    };
+    return () => { clearInterval(interval); window.removeEventListener('resize', handleResize); };
   }, [showSecretAnim, currentView]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
   
-  // Load Settings
   useEffect(() => { 
       try { 
           const savedAlignment = localStorage.getItem('vibenotes_alignment'); 
@@ -425,17 +339,6 @@ function App() {
           if (savedOpacity) setBgOpacity(parseFloat(savedOpacity));
           const savedScale = localStorage.getItem('vibenotes_bg_scale');
           if (savedScale) setBgScale(parseInt(savedScale));
-
-          // Load Profile
-          const savedName = localStorage.getItem('vibenotes_profile_name');
-          if (savedName) setProfileName(savedName);
-          const savedHandle = localStorage.getItem('vibenotes_profile_handle');
-          if (savedHandle) setProfileHandle(savedHandle);
-          const savedBio = localStorage.getItem('vibenotes_profile_bio');
-          if (savedBio) setProfileBio(savedBio);
-          const savedPic = localStorage.getItem('vibenotes_profile_pic');
-          if (savedPic) setProfilePic(savedPic);
-
       } catch (e) {} 
   }, []);
 
@@ -445,15 +348,6 @@ function App() {
   useEffect(() => { localStorage.setItem('vibenotes_bg_scale', bgScale.toString()); }, [bgScale]);
   useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
 
-  // --- HELPER: GET CURRENT CONFIG ---
-  const getCurrentConfig = () => {
-      if (activeFilter === 'secret') return activeSecretConfig;
-      if (activeFilter === 'all') return null; 
-      return categories.find(c => c.id === activeFilter) || categories[0];
-  };
-  const currentConfig = getCurrentConfig();
-
-  // --- ACTIONS ---
   const cycleFilter = () => {
       if (activeFilter === 'secret') { setActiveFilter('all'); return; }
       const order: (CategoryId | 'all')[] = ['all', ...categories.map(c => c.id)];
@@ -462,32 +356,15 @@ function App() {
       const nextIndex = (currentIndex + 1) % order.length; setActiveFilter(order[nextIndex]);
   };
 
-  const handleCancelEdit = () => { setEditingNote(null); setTranscript(''); setImageUrl(''); };
-  
-  const handleDeleteNote = async (id: string) => { 
-      const noteToDelete = notes.find(n => n.id === id);
-      if (noteToDelete && (noteToDelete.category === 'to-do' || noteToDelete.category === 'todo')) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 4500); }
-      await deleteNoteFromFirebase(id); if (editingNote?.id === id) handleCancelEdit();
-  };
-
-  const togglePin = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
-  const handleToggleExpand = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
-
-  // --- MAIN SEND ACTION (UPDATED FOR MESSAGES) ---
   const handleMainAction = async () => {
     if (!transcript.trim() && !imageUrl) return;
-    
-    // Notes Logic
-    if (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages') {
-        // Can't send empty to "All" unless editing
-        return; 
-    }
+    if (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages') return; 
 
     try {
         if (activeChatId === 'saved_messages' || activeChatId === null) {
-            // --- NOTES MODE ---
+            // NOTES
             if (editingNote) {
-                const updates: Partial<Note> = { text: transcript.trim() };
+                const updates: Partial<Note> = { text: transcript.trim(), editedAt: Date.now() }; 
                 if (imageUrl !== editingNote.imageUrl) updates.imageUrl = imageUrl || undefined;
                 await updateNote(editingNote.id, updates);
                 setEditingNote(null);
@@ -497,16 +374,12 @@ function App() {
                 scrollToBottom(); 
             }
         } else {
-            // --- MESSAGING MODE ---
-            // This is where we send a message to a person
+            // MESSAGES
             if (user) {
                 await sendMessage(transcript.trim(), imageUrl, user.uid);
             }
         }
-        
-        setTranscript(''); 
-        setImageUrl('');
-        scrollToBottom();
+        setTranscript(''); setImageUrl(''); scrollToBottom();
     } catch (e) { console.error(e); }
   };
 
@@ -515,8 +388,33 @@ function App() {
     setEditingNote(note); setTranscript(note.text); setImageUrl(note.imageUrl || ''); 
     setTimeout(() => { textareaRef.current?.focus(); textareaRef.current?.select(); }, 50);
   };
+  const handleDeleteNote = async (id: string) => { await deleteNoteFromFirebase(id); };
+  const handleToggleExpand = async (id: string) => {
+      const n = notes.find(n => n.id === id);
+      if(n) await updateNote(id, { isExpanded: !n.isExpanded });
+  };
+  const togglePin = async (id: string) => {
+      const n = notes.find(n => n.id === id);
+      if(n) await updateNote(id, { isPinned: !n.isPinned });
+  };
 
-  const filteredNotes = notes.filter(n => {
+  // --- DATA CLEANING (THE CRASH FIX) ---
+  const safeNotes = (notes || []).map(n => {
+      const date = normalizeDate(n.date);
+      // Ensure we have a valid fallback category if one is missing in the DB
+      const fallbackCat = (DEFAULT_CATEGORIES && DEFAULT_CATEGORIES.length > 0) ? DEFAULT_CATEGORIES[0].id : 'default';
+      const validCategory = categories.some(c => c.id === n.category) || n.category === 'secret' ? n.category : fallbackCat;
+      
+      return { 
+          ...n, 
+          id: n.id || Math.random().toString(), 
+          text: n.text || '', 
+          date, 
+          category: validCategory 
+      };
+  });
+
+  const filteredNotes = safeNotes.filter(n => {
       const matchesSearch = n.text.toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchesSearch) return false;
       if (activeFilter === 'all') return n.category !== 'secret';
@@ -524,7 +422,9 @@ function App() {
       return n.category === activeFilter;
   }).sort((a, b) => { 
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1; 
-      return a.date - b.date; 
+      const timeA = a.editedAt ? normalizeDate(a.editedAt) : a.date;
+      const timeB = b.editedAt ? normalizeDate(b.editedAt) : b.date;
+      return timeB - timeA; 
   });
 
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
@@ -532,195 +432,73 @@ function App() {
   if (authLoading) return <div className="min-h-screen bg-black" />;
   if (!user) return <Auth />;
 
-  // --- RENDER HELPERS ---
-
-  // Checkbox Component
-  const SelectCheckbox = ({ selected }: { selected: boolean }) => (
-      <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${selected ? 'bg-orange-500 border-orange-500 scale-110' : 'border-zinc-700 bg-black/40'}`}>
-          {selected && <Check size={14} className="text-black" strokeWidth={4} />}
+  const BottomTabBar = () => (
+      <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-2xl border border-white/5 rounded-full shadow-2xl shadow-black/50 p-1.5 flex gap-1 z-50">
+         <button onClick={() => setActiveTab('contacts')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Globe size={22} className={`transition-all duration-300 ${activeTab === 'contacts' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'contacts' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}/></button>
+         <button onClick={() => setActiveTab('calls')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Zap size={22} className={`transition-all duration-300 ${activeTab === 'calls' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'calls' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}/></button>
+         <button onClick={() => setActiveTab('chats')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><MessageSquareDashed size={22} className={`transition-all duration-300 ${activeTab === 'chats' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'chats' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}/></button>
+         <button onClick={() => setActiveTab('settings')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Cpu size={22} className={`transition-all duration-300 ${activeTab === 'settings' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'settings' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}/></button>
       </div>
   );
-
-  // Bottom Tab Bar - REIMAGINED "VIBE DOCK"
-  const BottomTabBar = () => {
-    if (isEditing) {
-        return (
-            <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-full shadow-2xl p-2 px-6 flex justify-between items-center text-[10px] font-medium text-zinc-400 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
-               <button onClick={() => {}} className="flex flex-col items-center gap-1 text-zinc-500 hover:text-[#da7756] transition-colors">
-                  <Archive size={18} />
-               </button>
-               <button onClick={() => {}} className="flex flex-col items-center gap-1 text-zinc-500 hover:text-[#da7756] transition-colors">
-                  <CheckCheck size={18} />
-               </button>
-               <button onClick={handleDeleteSelected} className="flex flex-col items-center gap-1 text-zinc-500 hover:text-[#da7756] transition-colors">
-                  <Trash2 size={18} />
-               </button>
-            </div>
-        );
-    }
-
-    return (
-        <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-2xl border border-white/5 rounded-full shadow-2xl shadow-black/50 p-1.5 flex gap-1 z-50">
-           
-           <button onClick={() => setActiveTab('contacts')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group">
-              <Globe 
-                size={22} 
-                className={`transition-all duration-300 ${activeTab === 'contacts' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`}
-                style={activeTab === 'contacts' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}
-              />
-              {activeTab === 'contacts' && <div className="absolute bottom-2 w-1 h-1 rounded-full" style={{ backgroundColor: accentColor }}></div>}
-           </button>
-
-           <button onClick={() => setActiveTab('calls')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group">
-              <Zap 
-                size={22} 
-                className={`transition-all duration-300 ${activeTab === 'calls' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`}
-                style={activeTab === 'calls' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}
-              />
-              {activeTab === 'calls' && <div className="absolute bottom-2 w-1 h-1 rounded-full" style={{ backgroundColor: accentColor }}></div>}
-           </button>
-
-           <button onClick={() => setActiveTab('chats')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group">
-              <MessageSquareDashed 
-                size={22} 
-                className={`transition-all duration-300 ${activeTab === 'chats' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`}
-                style={activeTab === 'chats' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}
-              />
-              {activeTab === 'chats' && <div className="absolute bottom-2 w-1 h-1 rounded-full" style={{ backgroundColor: accentColor }}></div>}
-           </button>
-
-           <button onClick={() => setActiveTab('settings')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group">
-              <Cpu 
-                size={22} 
-                className={`transition-all duration-300 ${activeTab === 'settings' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`}
-                style={activeTab === 'settings' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}
-              />
-              {activeTab === 'settings' && <div className="absolute bottom-2 w-1 h-1 rounded-full" style={{ backgroundColor: accentColor }}></div>}
-           </button>
-
-        </div>
-    );
-  };
 
   return (
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
-      {/* GLOBAL WALLPAPER */}
       <div className="fixed inset-0 z-0 pointer-events-none select-none overflow-hidden bg-black">
-        <div 
-            className="absolute inset-0 transition-opacity duration-300"
-            style={{ 
-                backgroundImage: `url(/bg${bgIndex}.jpg)`,
-                backgroundSize: bgScale >= 100 ? 'cover' : `${bgScale}%`,
-                backgroundPosition: 'center',
-                backgroundRepeat: 'repeat',
-                opacity: bgOpacity
-            }}
-        />
+        <div className="absolute inset-0 transition-opacity duration-300" style={{ backgroundImage: `url(/bg${bgIndex}.jpg)`, backgroundSize: bgScale >= 100 ? 'cover' : `${bgScale}%`, backgroundPosition: 'center', backgroundRepeat: 'repeat', opacity: bgOpacity }} />
       </div>
 
-      {/* === VIEW 1: MAIN LIST (TABS) === */}
       {currentView === 'list' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in fade-in slide-in-from-left-5 duration-300">
-           
-           {/* Header for Chats Tab */}
            {activeTab === 'chats' && (
              <div className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
-                <div>
-                    <h1 className="text-3xl font-black text-white tracking-tighter">FEED</h1>
-                    <p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mt-1">
-                        {isEditing && selectedChatIds.size > 0 ? `${selectedChatIds.size} SELECTED` : 'Encrypted'}
-                    </p>
-                </div>
-                
-                <div className="flex gap-4 items-center mb-1">
-                    <button 
-                        onClick={toggleEditMode} 
-                        className="text-xs font-bold uppercase tracking-wider text-zinc-500 transition-colors"
-                        onMouseEnter={(e) => e.currentTarget.style.color = accentColor}
-                        onMouseLeave={(e) => e.currentTarget.style.color = '#71717a'} // zinc-500
-                    >
-                        {isEditing ? 'Done' : 'Select'}
-                    </button>
-                    <button 
-                        className="text-zinc-500 transition-colors"
-                        onMouseEnter={(e) => e.currentTarget.style.color = accentColor}
-                        onMouseLeave={(e) => e.currentTarget.style.color = '#71717a'}
-                    >
-                        <PenLine size={20} />
-                    </button>
-                </div>
+                <div><h1 className="text-3xl font-black text-white tracking-tighter">FEED</h1><p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mt-1">Encrypted</p></div>
+                <div className="flex gap-4 items-center mb-1"><button className="text-zinc-500 transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = '#71717a'}><PenLine size={20} /></button></div>
              </div>
            )}
 
-            {/* Header for Settings Tab */}
-            {activeTab === 'settings' && (
+           {activeTab === 'settings' && (
              <div className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <h1 className="text-3xl font-black text-white tracking-tighter">SYSTEM</h1>
              </div>
            )}
 
-           {/* Header for Contacts Tab */}
            {activeTab === 'contacts' && (
              <div className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <h1 className="text-3xl font-black text-white tracking-tighter">CONTACTS</h1>
              </div>
            )}
 
-           {/* CONTENT: CHATS */}
+           {/* CHATS TAB */}
            {activeTab === 'chats' && (
              <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
-                {/* Search Bar */}
                 <div className="px-4 mb-4">
                    <div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-zinc-700">
                       <Search size={16} className="text-zinc-500" />
-                      <input 
-                        type="text" 
-                        placeholder="Search frequency..." 
-                        className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-medium"
-                      />
+                      <input type="text" placeholder="Search frequency..." className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-medium"/>
                    </div>
                 </div>
 
                 {/* SAVED MESSAGES (NOTES) */}
-                <div 
-                  onClick={() => { 
-                      if (isEditing) toggleChatSelection('saved_messages'); 
-                      else { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }
-                  }}
-                  className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent ${isEditing && selectedChatIds.has('saved_messages') ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
-                >
-                    {isEditing && (
-                        <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200">
-                            <SelectCheckbox selected={selectedChatIds.has('saved_messages')} />
-                        </div>
-                    )}
-
-                    {/* VIBENOTES LOGO AS AVATAR */}
+                <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5`}>
                     <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
                         <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50">
-                            {isStartup && (<><div className="absolute inset-[-4px] border rounded-xl animate-[spin_1s_linear_infinite] opacity-50" style={{ borderColor: `${accentColor}80` }} /><div className="absolute inset-0 rounded-xl animate-ping opacity-75" style={{ backgroundColor: accentColor, animationDuration: '4.5s' }} /></>)}
-                            {activeFilter === 'secret' ? (
-                                <Terminal className="text-zinc-500 transition-colors" style={{ color: isStartup ? undefined : HACKER_GREEN }} size={24} />
-                            ) : (
-                                <div className={`w-3 h-3 rounded-sm relative z-10 transition-all duration-300 ${isStartup ? 'animate-bounce' : ''}`} style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80`, animation: isStartup ? `${startupAnimName} 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` : undefined }} />
-                            )}
+                            {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
                         </div>
                     </div>
-
                     <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
                         <div className="flex justify-between items-baseline">
                             <span className="font-bold text-white text-base tracking-tight">Notes</span>
-                            <span className="text-[10px] text-zinc-500 font-mono">{notes.length > 0 ? getDateLabel(notes[notes.length-1].date) : ''}</span>
+                            <span className="text-[10px] text-zinc-500 font-mono">{notes.length > 0 ? getDateLabel(notes[0].date) : ''}</span>
                         </div>
                         <div className="text-zinc-400 text-sm truncate pr-4 flex items-center gap-1">
                            <span className="text-[10px] font-bold uppercase tracking-wider px-1 rounded bg-white/10" style={{ color: accentColor }}>You</span>
-                           <span className="opacity-70 truncate">{notes.length > 0 ? notes[notes.length-1].text : 'No notes yet'}</span>
+                           <span className="opacity-70 truncate">{notes.length > 0 ? notes[0].text : 'No notes yet'}</span>
                         </div>
                     </div>
                 </div>
 
-                {/* DYNAMIC CHATS (REAL) */}
+                {/* REAL CHATS */}
                 {realChats.map(chat => (
                   <ChatListItem 
                     key={chat.id} 
@@ -734,260 +512,85 @@ function App() {
              </div>
            )}
 
-           {/* CONTENT: CONTACTS (NEW) */}
+           {/* CONTACTS TAB */}
            {activeTab === 'contacts' && (
              <div className="flex-1 overflow-y-auto p-4 pb-24">
                 <div className="space-y-6">
-                    {/* Search Input */}
                     <form onSubmit={handleSearchContacts} className="relative">
                         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-3 gap-3 focus-within:border-orange-500/50 transition-colors">
                             <AtSign size={18} className="text-zinc-500" />
-                            <input 
-                                type="text" 
-                                value={contactSearchQuery}
-                                onChange={(e) => setContactSearchQuery(e.target.value)}
-                                placeholder="Search by handle (e.g. @neo)" 
-                                className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-mono"
-                            />
-                            <button 
-                                type="submit"
-                                disabled={isSearchingContacts}
-                                className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all disabled:opacity-50"
-                            >
-                                <Search size={16} />
-                            </button>
+                            <input type="text" value={contactSearchQuery} onChange={(e) => setContactSearchQuery(e.target.value)} placeholder="Search by handle (e.g. @neo)" className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-mono"/>
+                            <button type="submit" disabled={isSearchingContacts} className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all disabled:opacity-50"><Search size={16} /></button>
                         </div>
                     </form>
 
-                    {/* Results Area */}
                     <div className="space-y-3">
                         {isSearchingContacts ? (
-                            <div className="flex justify-center py-10">
-                                <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                            </div>
+                            <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div></div>
                         ) : contactSearchResults.length > 0 ? (
                             contactSearchResults.map((u) => (
                                 <div key={u.uid} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden">
-                                        {u.photoURL ? (
-                                            <img src={u.photoURL} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-xl">🤖</div>
-                                        )}
+                                        {u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}
                                     </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-white">{u.displayName}</h3>
-                                        <p className="text-xs text-zinc-500 font-mono">{u.handle}</p>
-                                    </div>
-                                    <button 
-                                        onClick={() => startNewChat(u.uid)}
-                                        className="w-10 h-10 rounded-full bg-orange-500/10 text-orange-500 flex items-center justify-center hover:bg-orange-500 hover:text-white transition-all"
-                                    >
-                                        <MessageCircle size={20} />
-                                    </button>
+                                    <div className="flex-1"><h3 className="font-bold text-white">{u.displayName}</h3><p className="text-xs text-zinc-500 font-mono">{u.handle}</p></div>
+                                    <button onClick={() => startNewChat(u.uid)} className="w-10 h-10 rounded-full bg-orange-500/10 text-orange-500 flex items-center justify-center hover:bg-orange-500 hover:text-white transition-all"><MessageCircle size={20} /></button>
                                 </div>
                             ))
                         ) : contactSearchQuery && !isSearchingContacts ? (
-                            <div className="text-center py-10 text-zinc-500 text-sm">
-                                No users found with handle "{contactSearchQuery}"
-                            </div>
+                            <div className="text-center py-10 text-zinc-500 text-sm">No users found with handle "{contactSearchQuery}"</div>
                         ) : (
-                            <div className="text-center py-10 opacity-30">
-                                <UserPlus size={48} className="mx-auto mb-4 text-zinc-600" />
-                                <p className="text-zinc-500 text-sm">Search for a handle to start connecting.</p>
-                            </div>
+                            <div className="text-center py-10 opacity-30"><UserPlus size={48} className="mx-auto mb-4 text-zinc-600" /><p className="text-zinc-500 text-sm">Search for a handle to start connecting.</p></div>
                         )}
                     </div>
                 </div>
              </div>
            )}
 
-           {/* CONTENT: SETTINGS */}
+           {/* SETTINGS TAB */}
            {activeTab === 'settings' && (
              <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
-                
-                {/* IDENTITY CARD (Edit Mode) */}
                 <div className="relative overflow-hidden bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col gap-6 backdrop-blur-xl group">
-                   
-                   {/* Edit Trigger */}
                    <div className="absolute top-4 right-4">
-                        {isEditingProfile ? (
-                            <button 
-                                onClick={handleProfileSave} 
-                                className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-500 transition-all"
-                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = CLAUDE_ORANGE; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = CLAUDE_ORANGE; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#27272a'; e.currentTarget.style.color = '#71717a'; e.currentTarget.style.borderColor = '#3f3f46'; }}
-                            >
-                                <Check size={16} strokeWidth={3} />
-                            </button>
-                        ) : (
-                            <button onClick={() => setIsEditingProfile(true)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 hover:text-white transition-all">
-                                <Edit size={14} />
-                            </button>
-                        )}
+                        {isEditingProfile ? (<button onClick={handleProfileSave} className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center"><Check size={16} strokeWidth={3} /></button>) : (<button onClick={() => setIsEditingProfile(true)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 hover:text-white"><Edit size={14} /></button>)}
                    </div>
-
                    <div className="flex items-center gap-5">
-                       {/* Avatar */}
                        <div className="relative">
-                           <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center text-3xl shadow-xl overflow-hidden">
-                               {profilePic ? (
-                                   <img 
-                                        key={profilePic} 
-                                        src={profilePic} 
-                                        alt="Profile" 
-                                        className="w-full h-full object-cover" 
-                                        onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.style.backgroundColor = '#27272a'; }}
-                                   />
-                               ) : (
-                                   <span>😎</span>
-                               )}
+                           <div className="w-20 h-20 rounded-2xl bg-zinc-800 flex items-center justify-center text-3xl shadow-xl overflow-hidden">
+                               {profilePic ? (<img key={profilePic} src={profilePic} className="w-full h-full object-cover" />) : (<span>😎</span>)}
                            </div>
-                           
                            {isEditingProfile && (
-                               <>
-                                   {/* UPLOAD BUTTON */}
-                                   <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-zinc-800 border border-zinc-700 rounded-full flex items-center justify-center text-white cursor-pointer shadow-lg active:scale-95 transition-transform hover:bg-zinc-700 z-10">
-                                       <Camera size={14} />
-                                       <input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleAvatarUpload(e.target.files[0]); }} />
-                                   </label>
-                                   
-                                   {/* PRESET TRIGGER */}
-                                   <button 
-                                     onClick={() => setShowAvatarSelector(!showAvatarSelector)}
-                                     className="absolute -bottom-2 -left-2 w-8 h-8 bg-zinc-800 border border-zinc-700 rounded-full flex items-center justify-center text-white cursor-pointer shadow-lg active:scale-95 transition-transform hover:bg-zinc-700 z-10"
-                                   >
-                                       <Grid size={14} />
-                                   </button>
-                               </>
+                               <><label className="absolute -bottom-2 -right-2 w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-white cursor-pointer"><Camera size={14} /><input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleAvatarUpload(e.target.files[0]); }} /></label><button onClick={() => setShowAvatarSelector(!showAvatarSelector)} className="absolute -bottom-2 -left-2 w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-white cursor-pointer"><Grid size={14} /></button></>
                            )}
                        </div>
-
                        <div className="flex-1 min-w-0 space-y-1">
-                           {isEditingProfile ? (
-                               <input 
-                                   ref={profileInputRef}
-                                   type="text" 
-                                   value={profileName} 
-                                   onChange={(e) => setProfileName(e.target.value)}
-                                   className="bg-transparent border-b border-white/20 text-white text-xl font-bold w-full focus:outline-none focus:border-orange-500 py-1"
-                                   placeholder="Display Name"
-                               />
-                           ) : (
-                               <h2 className="text-2xl font-black tracking-tight text-white truncate">{profileName}</h2>
-                           )}
-                           
-                           {isEditingProfile ? (
-                                <div className="flex items-center gap-1 text-zinc-500">
-                                    <AtSign size={12} />
-                                    <input 
-                                        type="text" 
-                                        value={profileHandle} 
-                                        onChange={(e) => setProfileHandle(e.target.value)}
-                                        className="bg-transparent border-b border-white/20 text-white text-sm font-mono w-full focus:outline-none focus:border-orange-500"
-                                        placeholder="handle"
-                                    />
-                                </div>
-                           ) : (
-                               <p className="text-zinc-400 text-xs font-mono tracking-wide">{profileHandle}</p>
-                           )}
+                           {isEditingProfile ? (<input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-xl font-bold w-full focus:outline-none focus:border-orange-500 py-1" placeholder="Display Name"/>) : (<h2 className="text-2xl font-black tracking-tight text-white truncate">{profileName}</h2>)}
+                           {isEditingProfile ? (<div className="flex items-center gap-1 text-zinc-500"><AtSign size={12} /><input type="text" value={profileHandle} onChange={(e) => setProfileHandle(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-sm font-mono w-full focus:outline-none focus:border-orange-500" placeholder="handle"/></div>) : (<p className="text-zinc-400 text-xs font-mono tracking-wide">{profileHandle}</p>)}
                        </div>
                    </div>
-
-                   {/* AVATAR SELECTOR GRID */}
                    {isEditingProfile && showAvatarSelector && (
                        <div className="grid grid-cols-6 gap-2 pt-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                           {Array.from({ length: 7 }, (_, i) => i + 1).map((num) => (
-                               <button 
-                                   key={num}
-                                   onClick={() => handleSelectPreset(num)}
-                                   className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-orange-500 transition-colors bg-black/40 flex items-center justify-center text-xl relative"
-                               >
-                                   <img 
-                                     src={`/robot${num}.jpeg?v=1`} 
-                                     className="w-full h-full object-cover relative z-10" 
-                                     alt={`Bot ${num}`}
-                                     onError={(e) => { 
-                                        e.currentTarget.style.display = 'none'; 
-                                     }}
-                                   />
-                                   <span className="absolute z-0">🤖</span>
-                               </button>
-                           ))}
+                           {Array.from({ length: 7 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => handleSelectPreset(num)} className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-orange-500 transition-colors bg-black/40 flex items-center justify-center text-xl relative"><img src={`/robot${num}.jpeg?v=1`} className="w-full h-full object-cover" /></button>))}
                        </div>
                    )}
-
-                   {/* Bio / Status */}
                    <div className="pt-2 border-t border-white/5">
-                        {isEditingProfile ? (
-                            <div className="flex items-center gap-2">
-                                <Activity size={14} className="text-zinc-500" />
-                                <input 
-                                    type="text" 
-                                    value={profileBio} 
-                                    onChange={(e) => setProfileBio(e.target.value)}
-                                    className="bg-transparent border-b border-white/20 text-zinc-300 text-xs font-mono w-full focus:outline-none focus:border-orange-500 py-1"
-                                    placeholder="Status..."
-                                />
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 text-zinc-500 text-xs font-mono uppercase tracking-widest">
-                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                                {profileBio}
-                            </div>
-                        )}
+                        {isEditingProfile ? (<div className="flex items-center gap-2"><Activity size={14} className="text-zinc-500" /><input type="text" value={profileBio} onChange={(e) => setProfileBio(e.target.value)} className="bg-transparent border-b border-white/20 text-zinc-300 text-xs font-mono w-full focus:outline-none focus:border-orange-500 py-1" placeholder="Status..."/></div>) : (<div className="flex items-center gap-2 text-zinc-500 text-xs font-mono uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>{profileBio}</div>)}
                    </div>
                 </div>
 
-                {/* Appearance Section */}
                 <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6">
                    <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
-                   
-                    {/* Alignment */}
-                    <div className="space-y-3">
-                      <label className="text-white text-sm font-medium">Message Alignment</label>
-                      <div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800">
-                          <button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button>
-                          <button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button>
-                          <button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button>
-                      </div>
-                    </div>
-
-                    {/* Scale */}
-                    <div className="space-y-3">
-                        <div className="flex justify-between">
-                            <label className="text-white text-sm font-medium">Wallpaper Scale</label>
-                            <span className="text-zinc-500 text-xs font-mono">{bgScale >= 100 ? 'COVER' : `${bgScale}%`}</span>
-                        </div>
-                        <input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" />
-                    </div>
-
-                     {/* Opacity */}
-                     <div className="space-y-3">
-                        <div className="flex justify-between">
-                            <label className="text-white text-sm font-medium">Opacity</label>
-                            <span className="text-zinc-500 text-xs font-mono">{Math.round(bgOpacity * 100)}%</span>
-                        </div>
-                        <input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" />
-                    </div>
+                    <div className="space-y-3"><label className="text-white text-sm font-medium">Message Alignment</label><div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800"><button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button><button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button><button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button></div></div>
+                    <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Wallpaper Scale</label><span className="text-zinc-500 text-xs font-mono">{bgScale >= 100 ? 'COVER' : `${bgScale}%`}</span></div><input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
+                     <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Opacity</label><span className="text-zinc-500 text-xs font-mono">{Math.round(bgOpacity * 100)}%</span></div><input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
                 </div>
 
-                {/* Wallpaper Grid */}
                 <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-4">
                      <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
                      <div className="grid grid-cols-4 gap-3">
-                          {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
-                              <button 
-                                key={num}
-                                onClick={() => setBgIndex(num)}
-                                className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-orange-500 scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}
-                              >
-                                  <img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} />
-                              </button>
-                          ))}
+                          {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => setBgIndex(num)} className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-orange-500 scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}><img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} /></button>))}
                       </div>
                 </div>
-
              </div>
            )}
 
@@ -995,143 +598,85 @@ function App() {
         </div>
       )}
 
-      {/* === VIEW 2: CHAT ROOM (NOTES) === */}
       {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
-           
-           {/* HEADER (Restored to Original + Back Icon) */}
             <div className="fixed top-0 left-0 right-0 z-40">
                 <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative">
                     <div className="flex items-center gap-3 w-full">
-                        
-                        {/* 1. Back Icon (Arrow) - UPDATED HOVER LOGIC */}
-                        <button 
-                            onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
-                            className="w-10 h-10 flex items-center justify-center text-zinc-400 transition-colors active:scale-95"
-                            onMouseEnter={(e) => e.currentTarget.style.color = accentColor}
-                            onMouseLeave={(e) => e.currentTarget.style.color = '#a1a1aa'} // zinc-400
-                        >
-                            <ChevronLeft size={28} />
-                        </button>
-
-                        {/* 2. Logo / Secret Trigger (Original) */}
+                        <button onClick={() => { setCurrentView('list'); setActiveChatId(null); }} className="w-10 h-10 flex items-center justify-center text-zinc-400 transition-colors active:scale-95" onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = '#a1a1aa'}><ChevronLeft size={28} /></button>
                         <button onClick={handleSecretTrigger} className="w-10 h-10 bg-transparent flex items-center justify-center rounded-xl active:scale-95 transition-transform relative overflow-visible group/logo">
-                            {isStartup && (<><div className="absolute inset-[-4px] border rounded-xl animate-[spin_1s_linear_infinite] opacity-50" style={{ borderColor: `${accentColor}80` }} /><div className="absolute inset-0 rounded-xl animate-ping opacity-75" style={{ backgroundColor: accentColor, animationDuration: '4.5s' }} /></>)}
-                            {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" style={{ color: isStartup ? undefined : HACKER_GREEN }} size={24} />) : (<div className={`w-3 h-3 rounded-sm relative z-10 transition-all duration-300 ${isStartup ? 'animate-bounce' : ''}`} style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80`, animation: isStartup ? `${startupAnimName} 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards` : undefined }} />)}
+                            {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" style={{ color: isStartup ? undefined : HACKER_GREEN }} size={24} />) : (<div className={`w-3 h-3 rounded-sm relative z-10 transition-all duration-300 ${isStartup ? 'animate-bounce' : ''}`} style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
                         </button>
-                        
-                        {/* 3. Search Bar (Original) */}
                         <div className="relative flex items-center h-10 ml-auto">
                             <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-500 transition-all active:scale-95 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`} onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}><Search size={20} /></button>
                             <div className={`absolute right-0 bg-zinc-900 border border-zinc-800 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
                                 <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
-                                <input ref={searchInputRef} type="text" placeholder={t.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
+                                <input ref={searchInputRef} type="text" placeholder={TRANSLATIONS.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
                                 <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
                             </div>
                         </div>
-
                     </div>
                 </header>
             </div>
 
-           {/* Secret Canvas Layer */}
            {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}
 
-           {/* Messages List (Reuse your logic) */}
            <div ref={listRef} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
               <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${getAlignmentClass()}`}>
-                {/* RENDER EITHER NOTES OR MESSAGES */}
-                {(activeChatId === 'saved_messages' ? filteredNotes : activeMessages).map((item, index) => {
-                    // Normalize data structure between Notes and Messages
-                    const date = item.date || item.timestamp;
-                    const id = item.id;
-                    const prevItem = (activeChatId === 'saved_messages' ? filteredNotes : activeMessages)[index - 1];
-                    const prevDate = prevItem ? (prevItem.date || prevItem.timestamp) : null;
-                    const showHeader = !prevItem || !isSameDay(date, prevDate);
-                    
-                    // Create a Note-like object for NoteCard
-                    const noteObj = {
-                        id: id,
-                        text: item.text,
-                        date: date,
-                        category: item.category || 'default', // Messages won't have category usually
-                        isPinned: item.isPinned || false,
-                        isExpanded: true, // Messages always expanded
-                        imageUrl: item.imageUrl
-                    };
+                
+                {activeChatId === 'saved_messages' ? (
+                    // --- NOTES RENDER ---
+                    filteredNotes.map((note, index) => {
+                        const prevNote = filteredNotes[index - 1];
+                        const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
+                        return (
+                            <React.Fragment key={note.id}>
+                                {showHeader && (<div className="flex justify-center my-4 opacity-70 w-full select-none"><span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">{getDateLabel(note.date)}</span></div>)}
+                                <div onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
+                                    <NoteCard note={note} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onToggleExpand={handleToggleExpand} />
+                                </div>
+                            </React.Fragment>
+                        );
+                    })
+                ) : (
+                    // --- MESSAGES RENDER ---
+                    activeMessages.map((msg, index) => {
+                        const prevMsg = activeMessages[index - 1];
+                        const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
+                        
+                        const msgNote = {
+                            id: msg.id,
+                            text: msg.text,
+                            date: normalizeDate(msg.timestamp), 
+                            category: 'default',
+                            isPinned: false,
+                            isExpanded: true,
+                            imageUrl: msg.imageUrl
+                        };
 
-                    return (
-                        <React.Fragment key={id}>
-                             {showHeader && (
-                                 <div className="flex justify-center my-4 opacity-70 w-full select-none">
-                                    <span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">
-                                        {getDateLabel(date)}
-                                    </span>
-                                 </div>
-                             )}
-                            <div 
-                              onDoubleClick={() => activeChatId === 'saved_messages' ? handleToggleExpand(id) : null} 
-                              className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}
-                            >
-                                <NoteCard 
-                                    note={noteObj} 
-                                    categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
-                                    selectedVoice={selectedVoice} 
-                                    onDelete={activeChatId === 'saved_messages' ? handleDeleteNote : undefined} 
-                                    onPin={togglePin} 
-                                    onCategoryClick={(cat) => setActiveFilter(cat)} 
-                                    onEdit={() => activeChatId === 'saved_messages' ? handleEditClick(noteObj) : null} 
-                                    onToggleExpand={handleToggleExpand} 
-                                />
-                            </div>
-                        </React.Fragment>
-                    );
-                })}
+                        return (
+                            <React.Fragment key={msg.id}>
+                                {showHeader && (<div className="flex justify-center my-4 opacity-70 w-full select-none"><span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">{getDateLabel(msg.timestamp)}</span></div>)}
+                                <div className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'}`}>
+                                    <NoteCard note={msgNote} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={undefined} onPin={undefined} onCategoryClick={undefined} onEdit={undefined} onToggleExpand={undefined} />
+                                </div>
+                            </React.Fragment>
+                        );
+                    })
+                )}
                 <div ref={bottomRef} className="h-0 w-full shrink-0" />
               </div>
            </div>
 
-           {/* Input Footer */}
            <div className="flex-none w-full p-2 pb-6 md:pb-3 bg-black/60 backdrop-blur-xl z-50 border-t border-zinc-800/50">
              <div className="max-w-2xl mx-auto flex items-end gap-2">
-                 
-                 {/* RESTORED CATEGORY BUTTON (Only show in Notes mode) */}
-                 {activeChatId === 'saved_messages' && (
-                     <button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">
-                        {activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}
-                     </button>
-                 )}
-                 
+                 {activeChatId === 'saved_messages' && (<button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">{activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}</button>)}
                  <div className="flex-1 bg-zinc-900/50 border border-zinc-700/50 rounded-2xl flex items-center px-3 py-1.5 focus-within:border-blue-500/50 transition-colors gap-2 relative">
-                    {imageUrl && (
-                        <div className="relative flex-shrink-0">
-                            <div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div>
-                            <button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"><X size={10} /></button>
-                        </div>
-                    )}
-                    <textarea 
-                        ref={textareaRef} 
-                        value={transcript} 
-                        onChange={(e) => setTranscript(e.target.value)} 
-                        onPaste={(e) => handlePaste(e)} 
-                        onFocus={() => { scrollToBottom('auto'); }}
-                        placeholder={editingNote ? "Edit..." : (activeChatId !== 'saved_messages' ? "Message..." : (activeFilter === 'all' ? "Select category..." : `${currentConfig?.label}...`))} 
-                        rows={1} 
-                        className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-1 ${isHackerMode ? 'font-mono' : ''}`} 
-                        style={isHackerMode ? { color: HACKER_GREEN } : undefined} 
-                    />
+                    {imageUrl && (<div className="relative flex-shrink-0"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"><X size={10} /></button></div>)}
+                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} onFocus={() => { scrollToBottom('auto'); }} placeholder={editingNote ? "Edit..." : (activeChatId !== 'saved_messages' ? TRANSLATIONS.typePlaceholder : (activeFilter === 'all' ? "Select category..." : `${currentConfig?.label}...`))} rows={1} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-1 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
                     {(!transcript && !editingNote) && (<label className="cursor-pointer text-zinc-400 hover:text-white"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>)}
                 </div>
-
-                <button 
-                  onClick={handleMainAction} 
-                  disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages')} 
-                  className={`flex-shrink-0 w-8 h-8 mb-1 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg`}
-                  style={(transcript.trim() || imageUrl) && (activeFilter !== 'all' || activeChatId !== 'saved_messages')
-                      ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } 
-                      : { backgroundColor: 'transparent', color: '#71717a', boxShadow: 'none' }
-                  }
-                >
+                <button onClick={handleMainAction} disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages')} className={`flex-shrink-0 w-8 h-8 mb-1 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg`} style={(transcript.trim() || imageUrl) && (activeFilter !== 'all' || activeChatId !== 'saved_messages') ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: 'transparent', color: '#71717a', boxShadow: 'none' }}>
                     {editingNote ? <Check size={18} strokeWidth={3} /> : <ArrowUp size={20} strokeWidth={3} />}
                 </button>
              </div>

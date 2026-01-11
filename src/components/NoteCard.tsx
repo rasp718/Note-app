@@ -10,18 +10,8 @@ const triggerHaptic = () => {
   }
 };
 
-// --- TELEGRAM-STYLE MENU ITEM ---
-const ContextMenuItem = ({ 
-  icon: Icon, 
-  label, 
-  onClick, 
-  accentColor
-}: { 
-  icon: React.ElementType, 
-  label: string, 
-  onClick: () => void, 
-  accentColor: string
-}) => {
+// --- CONTEXT MENU ITEM ---
+const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
   const [isHovered, setIsHovered] = useState(false);
   const handleAction = () => { triggerHaptic(); onClick(); };
 
@@ -35,16 +25,15 @@ const ContextMenuItem = ({
       className="w-full flex items-center gap-3 px-3 py-3 text-sm transition-colors duration-150 cursor-pointer select-none active:bg-white/10"
       style={{ backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent' }}
     >
-      <Icon size={18} style={{ color: isHovered ? accentColor : '#a1a1aa', transition: 'color 0.15s ease' }} />
-      <span className="font-medium" style={{ color: isHovered ? accentColor : '#f4f4f5', transition: 'color 0.15s ease' }}>{label}</span>
+      <Icon size={18} style={{ color: isHovered ? accentColor : '#a1a1aa' }} />
+      <span className="font-medium" style={{ color: isHovered ? accentColor : '#f4f4f5' }}>{label}</span>
     </button>
   );
 };
 
 // --- INLINE ACTION BUTTON ---
-const InlineActionButton = ({ onClick, icon: Icon, accentColor }: { onClick: (e: React.MouseEvent) => void, icon: React.ElementType, accentColor: string }) => {
+const InlineActionButton = ({ onClick, icon: Icon, accentColor }: any) => {
   const [isHovered, setIsHovered] = useState(false);
-  
   return (
     <button
       type="button"
@@ -63,37 +52,49 @@ interface NoteCardProps {
   note: Note;
   categories: CategoryConfig[];
   selectedVoice: SpeechSynthesisVoice | null;
-  onDelete: (id: string) => void;
-  onPin: (id: string) => void;
-  onCategoryClick: (category: CategoryId) => void;
-  onEdit: () => void;
-  onToggleExpand: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onPin?: (id: string) => void;
+  onCategoryClick?: (category: CategoryId) => void;
+  onEdit?: () => void;
+  onToggleExpand?: (id: string) => void;
 }
 
 export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onToggleExpand }) => {
+  // CRASH GUARD 1: If note is null or undefined, do not render anything
+  if (!note) return null;
+
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimer = useRef<any>(null);
   const isLongPress = useRef(false); 
 
-  const category = categories.find(c => c.id === note.category) || categories[0];
-  const isHacker = category.label === 'Hacker' || category.label === 'Anon';
-  const isSecret = category.id === 'secret' && !isHacker;
+  // CRASH GUARD 2: Safe Data Handling for Categories
+  const safeCategories = Array.isArray(categories) ? categories : [];
+  const defaultCat = { id: 'default', label: 'Note', emoji: '📝', colorClass: 'bg-zinc-500' };
+  
+  // Safe find logic using optional chaining
+  const category = safeCategories.find((c: any) => c?.id === note.category) || safeCategories[0] || defaultCat;
+
+  const isHacker = category?.label === 'Hacker' || category?.label === 'Anon';
+  const isSecret = category?.id === 'secret' && !isHacker;
   const CLAUDE_ORANGE = '#da7756';
   const HACKER_GREEN = '#4ade80';
   const accentColor = isHacker ? HACKER_GREEN : isSecret ? '#ef4444' : CLAUDE_ORANGE;
   const borderColor = isHacker ? 'rgba(74, 222, 128, 0.2)' : '#27272a'; 
-  const isExpanded = note.isExpanded !== false;
-  const lines = note.text.split('\n');
-  const isSingleLine = lines.length === 1 && !note.imageUrl && !isExpanded;
+  const isExpanded = !!note.isExpanded;
+  
+  // CRASH GUARD 3: Safe text conversion
+  const safeText = String(note.text || '');
+  const lines = safeText.split('\n');
   const isCompact = lines.length === 1 && !note.imageUrl;
+  const safeEmoji = category?.emoji || '📝';
 
   useEffect(() => {
-    const closeMenu = (e: Event) => { if (e.type === 'scroll') return; setContextMenu(null); };
+    const closeMenu = (e: any) => { if (e.type === 'scroll') return; setContextMenu(null); };
     if (contextMenu) {
       setTimeout(() => {
         window.addEventListener('click', closeMenu); window.addEventListener('touchstart', closeMenu);
@@ -106,11 +107,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     };
   }, [contextMenu]);
 
-  const handleSpeakNote = (e?: React.MouseEvent) => {
+  const handleSpeakNote = (e?: any) => {
     e?.stopPropagation(); 
-    if ('speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       if (isSpeaking) { window.speechSynthesis.cancel(); setIsSpeaking(false); return; }
-      const utterance = new SpeechSynthesisUtterance(note.text);
+      const utterance = new SpeechSynthesisUtterance(safeText);
       if (selectedVoice) utterance.voice = selectedVoice;
       utterance.onend = () => setIsSpeaking(false);
       setIsSpeaking(true);
@@ -118,26 +119,39 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     }
   };
 
-  const handleCopy = async () => { try { await navigator.clipboard.writeText(note.text); } catch (err) {} };
-  const handleContextMenu = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); openMenu(e.clientX, e.clientY); };
+  const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
+  
+  const handleContextMenu = (e: any) => { 
+      e.preventDefault(); e.stopPropagation(); 
+      if(onDelete) openMenu(e.clientX, e.clientY); 
+  };
+
   const openMenu = (clientX: number, clientY: number) => {
     triggerHaptic();
     const menuW = 200; const menuH = 260; 
     let x = clientX; let y = clientY;
-    if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 20;
-    if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 20;
-    if (x < 10) x = 10; if (y < 10) y = 10;
-    setContextMenu({ x, y });
+    if (typeof window !== 'undefined') {
+        if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 20;
+        if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 20;
+    }
+    setContextMenu({ x: Math.max(10, x), y: Math.max(10, y) });
   };
 
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const formatTime = (timestamp: any) => {
+    try {
+        const t = Number(timestamp);
+        if (isNaN(t) || t === 0) return '';
+        return new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    } catch (e) { return ''; }
   };
 
-  const handleCategoryClick = (e: React.MouseEvent) => { e.stopPropagation(); triggerHaptic(); onCategoryClick(note.category); };
+  const handleCategoryClick = (e: any) => { 
+      e.stopPropagation(); 
+      if (onCategoryClick) { triggerHaptic(); onCategoryClick(note.category); }
+  };
   
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.targetTouches.length !== 1) return;
+  const handleTouchStart = (e: any) => {
+    if (e.targetTouches.length !== 1 || !onDelete) return;
     touchStartX.current = e.targetTouches[0].clientX; touchStartY.current = e.targetTouches[0].clientY;
     setIsSwiping(false); isLongPress.current = false;
     longPressTimer.current = setTimeout(() => {
@@ -145,8 +159,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     }, 600); 
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStartX.current || !touchStartY.current) return;
+  const handleTouchMove = (e: any) => {
+    if (!touchStartX.current || !touchStartY.current || !onDelete) return;
     const currentX = e.targetTouches[0].clientX; const currentY = e.targetTouches[0].clientY;
     const diffX = currentX - touchStartX.current; const diffY = currentY - touchStartY.current;
     if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }
@@ -158,7 +172,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const handleTouchEnd = () => {
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
     if (isLongPress.current) { touchStartX.current = null; touchStartY.current = null; return; }
-    if (swipeOffset < -100) { triggerHaptic(); onDelete(note.id); }
+    if (swipeOffset < -100 && onDelete && note.id) { triggerHaptic(); onDelete(note.id); }
     setSwipeOffset(0); setIsSwiping(false); touchStartX.current = null; touchStartY.current = null;
   };
 
@@ -167,94 +181,49 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   return (
     <>
       <div className="relative w-fit max-w-[88%] md:max-w-full overflow-visible rounded-xl group" onContextMenu={handleContextMenu}>
-        
-        {/* Swipe Indicator */}
         <div className={`absolute inset-0 flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: isHacker ? '#16a34a' : CLAUDE_ORANGE }}>
           <Trash2 className="text-white animate-pulse" size={24} />
         </div>
-
         <div className={`bg-zinc-900 border rounded-xl ${paddingClass} hover:border-zinc-700 relative w-full`} style={{ borderColor: borderColor, transform: `translateX(${swipeOffset}px)`, transition: isSwiping ? 'none' : 'transform 0.3s ease-out' }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           {isExpanded ? (
-            // EXPANDED VIEW
             <div className="flex flex-col gap-1">
               {note.imageUrl && (
                 <div className="mb-1 rounded-lg overflow-hidden border bg-zinc-950 flex justify-center max-w-full" style={{ borderColor: borderColor }}>
-                  <img src={note.imageUrl} alt="Note attachment" className="w-full md:w-auto h-auto md:max-h-96 object-contain" />
+                  <img src={note.imageUrl} alt="Attachment" className="w-full md:w-auto h-auto md:max-h-96 object-contain" />
                 </div>
               )}
-
-              {/* Block Layout to allow float-right behavior */}
               <div className="block w-full">
-                  {/* Text Content */}
-                  <span className="text-base leading-snug whitespace-pre-wrap break-words text-zinc-300">
-                    {note.text}
-                  </span>
-
-                  {/* Footer (Float Right) - Sits on same line if space permits */}
+                  <span className="text-base leading-snug whitespace-pre-wrap break-words text-zinc-300">{safeText}</span>
                   <div className="float-right ml-2 mt-1 flex items-center gap-1.5 align-bottom">
-                      <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={accentColor} />
+                      {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={accentColor} />}
                       <InlineActionButton onClick={handleSpeakNote} icon={Volume2} accentColor={accentColor} />
-                      
-                      {/* Timestamp */}
-                      <span className="text-[10px] uppercase tracking-wider font-medium ml-0.5 select-none" style={{ color: accentColor }}>
-                        {formatTime(note.date)}
-                      </span>
-
-                      {/* Category Icon */}
-                      <button onClick={handleCategoryClick} className="w-4 h-4 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer ml-0.5" style={{ borderColor: borderColor }}>
-                        <span className="text-[9px] grayscale">{category.emoji}</span>
-                      </button>
+                      <span className="text-[10px] uppercase tracking-wider font-medium ml-0.5 select-none" style={{ color: accentColor }}>{formatTime(note.date)}</span>
+                      {onCategoryClick && (<button onClick={handleCategoryClick} className="w-4 h-4 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer ml-0.5" style={{ borderColor: borderColor }}><span className="text-[9px] grayscale">{safeEmoji}</span></button>)}
                   </div>
               </div>
             </div>
           ) : (
-             isSingleLine ? (
-                // Compact Single Line
-                <div className="flex items-center justify-between gap-2">
-                   <div className="flex-1 min-w-0" onClick={() => onToggleExpand(note.id)}>
-                      <p className="text-base truncate cursor-pointer text-left text-zinc-300">{lines[0]}</p>
-                   </div>
-                   
-                   <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: accentColor }}>{formatTime(note.date)}</span>
-                      <button onClick={handleCategoryClick} className="w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer" style={{ borderColor: borderColor }}>
-                          <span className="text-[9px] grayscale">{category.emoji}</span>
-                       </button>
-                   </div>
-                </div>
-              ) : (
-                // Compact Multi Line
-                <div className="flex gap-2">
-                   <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <div onClick={() => onToggleExpand(note.id)} className="cursor-pointer">
-                         <p className="text-base leading-tight truncate mb-1 text-left text-zinc-300">
-                           {lines[0] || <span className="italic opacity-50">Attachment</span>}
-                         </p>
-                         {lines.length > 1 && <p className="text-sm leading-snug truncate text-left opacity-70 text-zinc-300">{lines[1]}</p>}
-                      </div>
-                   </div>
-                   {note.imageUrl && (
-                     <div className="flex-shrink-0 w-12 h-10 rounded bg-zinc-800 border overflow-hidden" style={{ borderColor: borderColor }}>
-                       <img src={note.imageUrl} alt="" className="w-full h-full object-cover" />
-                     </div>
-                   )}
-                   
-                   <div className="flex flex-col justify-center items-end gap-1 flex-shrink-0">
-                      <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: accentColor }}>{formatTime(note.date)}</span>
-                      <button onClick={handleCategoryClick} className="w-4 h-4 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer" style={{ borderColor: borderColor }}>
-                         <span className="text-[9px] grayscale">{category.emoji}</span>
-                      </button>
-                   </div>
-                </div>
-              )
+             <div className="flex gap-2">
+                 <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <div onClick={() => onToggleExpand && onToggleExpand(note.id)} className="cursor-pointer">
+                       <p className="text-base leading-tight truncate mb-1 text-left text-zinc-300">{lines[0] || <span className="italic opacity-50">Image</span>}</p>
+                       {lines.length > 1 && <p className="text-sm leading-snug truncate text-left opacity-70 text-zinc-300">{lines[1]}</p>}
+                    </div>
+                 </div>
+                 {note.imageUrl && (<div className="flex-shrink-0 w-12 h-10 rounded bg-zinc-800 border overflow-hidden" style={{ borderColor: borderColor }}><img src={note.imageUrl} alt="" className="w-full h-full object-cover" /></div>)}
+                 <div className="flex flex-col justify-center items-end gap-1 flex-shrink-0">
+                    <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: accentColor }}>{formatTime(note.date)}</span>
+                    {onCategoryClick && (<button onClick={handleCategoryClick} className="w-4 h-4 flex items-center justify-center rounded-full bg-black/50 border active:scale-90 transition-transform cursor-pointer" style={{ borderColor: borderColor }}><span className="text-[9px] grayscale">{safeEmoji}</span></button>)}
+                 </div>
+             </div>
           )}
         </div>
       </div>
-      {contextMenu && createPortal(
+      {contextMenu && onDelete && typeof document !== 'undefined' && createPortal(
         <div className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'rgba(24, 24, 27, 0.95)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
           <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={accentColor} />
-          <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={accentColor} />
-          <ContextMenuItem icon={Pin} label={note.isPinned ? "Unpin" : "Pin"} onClick={() => { onPin(note.id); setContextMenu(null); }} accentColor={accentColor} />
+          {onEdit && <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={accentColor} />}
+          {onPin && <ContextMenuItem icon={Pin} label={note.isPinned ? "Unpin" : "Pin"} onClick={() => { onPin(note.id); setContextMenu(null); }} accentColor={accentColor} />}
           <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={accentColor} />
           <div className="h-px bg-white/10 mx-3 my-1" />
           <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { onDelete(note.id); setContextMenu(null); }} accentColor={accentColor} />

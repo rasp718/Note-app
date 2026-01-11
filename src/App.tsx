@@ -89,8 +89,8 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
-// --- CHAT LIST ITEM ---
-const ChatListItem = ({ chat, active, isEditing, onSelect, onClick }: any) => {
+// --- CHAT LIST ITEM (UPDATED WITH ANIMATION) ---
+const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any) => {
     const otherUser = useUser(chat.otherUserId);
     const displayName = otherUser?.displayName || 'Unknown';
     const photoURL = otherUser?.photoURL;
@@ -98,7 +98,12 @@ const ChatListItem = ({ chat, active, isEditing, onSelect, onClick }: any) => {
     const safeDate = getDateLabel(normalizeDate(chat.timestamp));
 
     return (
-        <div onClick={isEditing ? onSelect : onClick} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}>
+        <div 
+            onClick={isEditing ? onSelect : onClick} 
+            // Staggered Animation Logic using index
+            style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'backwards' }}
+            className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent animate-in slide-in-from-bottom-2 fade-in duration-300 ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
+        >
             {isEditing && (
                 <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200">
                     <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${active ? 'bg-orange-500 border-orange-500 scale-110' : 'border-zinc-700 bg-black/40'}`}>
@@ -408,23 +413,19 @@ function App() {
       if(n) await updateNote(id, { isPinned: !n.isPinned });
   };
 
-  // --- SAFE NOTES & SORTING (FIXED DATE LOGIC) ---
   const safeNotes = (notes || []).map(n => {
       const date = normalizeDate(n.date);
       const editedAt = n.editedAt ? normalizeDate(n.editedAt) : undefined;
       const fallbackCat = (DEFAULT_CATEGORIES && DEFAULT_CATEGORIES.length > 0) ? DEFAULT_CATEGORIES[0].id : 'default';
       const validCategory = categories.some(c => c.id === n.category) || n.category === 'secret' ? n.category : fallbackCat;
-      
-      // FIX: Determine effective date. If editedAt is newer, use it as the main date.
       const effectiveDate = editedAt && editedAt > date ? editedAt : date;
 
       return { 
           ...n, 
           id: n.id || Math.random().toString(), 
           text: n.text || '', 
-          // CRITICAL FIX: Overwrite 'date' with 'effectiveDate' so headers and timestamps use the edit time.
           date: effectiveDate, 
-          originalDate: date, // Keep original if needed internally
+          originalDate: date, 
           editedAt,
           category: validCategory 
       };
@@ -438,7 +439,6 @@ function App() {
       return n.category === activeFilter;
   }).sort((a, b) => { 
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1; 
-      // Sort by the new effective date
       return a.date - b.date; 
   });
 
@@ -493,7 +493,7 @@ function App() {
                    </div>
                 </div>
 
-                <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5`}>
+                <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-bottom-2 fade-in duration-300`}>
                     <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
                         <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50">
                             {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
@@ -511,7 +511,7 @@ function App() {
                     </div>
                 </div>
 
-                {realChats.map(chat => (
+                {realChats.map((chat, index) => (
                   <ChatListItem 
                     key={chat.id} 
                     chat={chat} 
@@ -519,6 +519,7 @@ function App() {
                     isEditing={isEditing}
                     onSelect={() => toggleChatSelection(chat.id)}
                     onClick={() => { setActiveChatId(chat.id); setCurrentView('room'); scrollToBottom('auto'); }}
+                    index={index}
                   />
                 ))}
              </div>
@@ -647,9 +648,9 @@ function App() {
                                      {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}
                                 </div>
                                 {activeFilter === 'secret' ? (
-                                    <div className="animate-in fade-in duration-300">
-                                        <h3 className="font-bold text-green-500 text-base leading-tight font-mono tracking-tight">SYSTEM_ROOT</h3>
-                                        <p className="text-green-700 text-[10px] font-mono uppercase tracking-widest">Encrypted // 2048-bit</p>
+                                    <div className="animate-pulse flex flex-col justify-center">
+                                        <h3 className="font-bold text-green-500 text-base leading-tight font-mono tracking-tight drop-shadow-[0_0_8px_rgba(74,222,128,0.8)]">SYSTEM_ROOT</h3>
+                                        <p className="text-green-700 text-[10px] font-mono uppercase tracking-widest drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]">Encrypted // 2048-bit</p>
                                     </div>
                                 ) : (
                                     <div className="animate-in fade-in duration-300">

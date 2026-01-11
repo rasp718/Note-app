@@ -4,7 +4,7 @@ import {
   Check, Terminal, Plus, PenLine, AlignLeft, AlignCenter, AlignRight, Scan, 
   ChevronLeft, MessageSquareDashed, Bookmark, Edit, Moon, Book,
   Archive, Trash2, CheckCheck, Circle, Globe, Zap, Cpu, SlidersHorizontal,
-  User, AtSign, Activity, Camera, Save, Grid, UserPlus, MessageCircle, MoreVertical, Phone
+  User, AtSign, Activity, Camera, Save, Grid, UserPlus, MessageCircle, MoreVertical, Phone, PaintBucket
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
@@ -19,7 +19,6 @@ const TRANSLATIONS = {
 };
 
 // --- THEME CONSTANTS ---
-// Darker Orange for better text contrast
 const CLAUDE_ORANGE = '#c25e3e'; 
 const HACKER_GREEN = '#4ade80';
 
@@ -153,6 +152,9 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   
+  // New State for Bubble Style
+  const [bubbleStyle, setBubbleStyle] = useState<string>('orange_solid');
+
   // --- CHAT DATA HOOKS ---
   const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
   const otherChatUser = useUser(currentChatObject?.otherUserId);
@@ -197,6 +199,12 @@ function App() {
          syncUserProfile(user);
     }
   }, [user]);
+
+  // Load Saved Bubble Style
+  useEffect(() => {
+      const savedBubble = localStorage.getItem('vibenotes_bubble_style');
+      if (savedBubble) setBubbleStyle(savedBubble);
+  }, []);
 
   const handleSecretTrigger = () => {
     setSecretTaps(prev => prev + 1);
@@ -345,6 +353,12 @@ function App() {
   useEffect(() => { localStorage.setItem('vibenotes_bg_opacity', bgOpacity.toString()); }, [bgOpacity]);
   useEffect(() => { localStorage.setItem('vibenotes_bg_scale', bgScale.toString()); }, [bgScale]);
   useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
+
+  // Save Bubble Style change
+  const changeBubbleStyle = (style: string) => {
+      setBubbleStyle(style);
+      localStorage.setItem('vibenotes_bubble_style', style);
+  };
 
   const cycleFilter = () => {
       if (activeFilter === 'secret') { setActiveFilter('all'); return; }
@@ -562,6 +576,18 @@ function App() {
                 <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6">
                    <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
                     <div className="space-y-3"><label className="text-white text-sm font-medium">Message Alignment</label><div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800"><button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button><button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button><button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button></div></div>
+                    
+                    {/* NEW: Chat Bubble Style Selector */}
+                    <div className="space-y-3">
+                        <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
+                        <div className="grid grid-cols-4 gap-2">
+                            <button onClick={() => changeBubbleStyle('orange_solid')} className={`h-10 rounded-lg border-2 transition-all ${bubbleStyle === 'orange_solid' ? 'border-white bg-[#c25e3e]' : 'border-zinc-700 bg-[#c25e3e]/50'}`} title="Orange Solid"></button>
+                            <button onClick={() => changeBubbleStyle('orange_glass')} className={`h-10 rounded-lg border-2 transition-all ${bubbleStyle === 'orange_glass' ? 'border-white bg-[#c25e3e]/40' : 'border-zinc-700 bg-[#c25e3e]/20'}`} title="Orange Glass"></button>
+                            <button onClick={() => changeBubbleStyle('cyberpunk')} className={`h-10 rounded-lg border-2 transition-all bg-black ${bubbleStyle === 'cyberpunk' ? 'border-green-500 shadow-[0_0_10px_#4ade80]' : 'border-zinc-700'}`} title="Cyberpunk"></button>
+                            <button onClick={() => changeBubbleStyle('graffiti')} className={`h-10 rounded-lg border-2 transition-all bg-gradient-to-r from-purple-600 to-pink-600 ${bubbleStyle === 'graffiti' ? 'border-white' : 'border-zinc-700 opacity-50'}`} title="Street"></button>
+                        </div>
+                    </div>
+
                     <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Wallpaper Scale</label><span className="text-zinc-500 text-xs font-mono">{bgScale >= 100 ? 'COVER' : `${bgScale}%`}</span></div><input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
                      <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Opacity</label><span className="text-zinc-500 text-xs font-mono">{Math.round(bgOpacity * 100)}%</span></div><input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
                 </div>
@@ -588,7 +614,6 @@ function App() {
                             <ChevronLeft size={28} />
                         </button>
                         
-                        {/* HEADER CONTENT: IF CHAT, SHOW AVATAR + NAME */}
                         {activeChatId !== 'saved_messages' ? (
                            <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors">
                                <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 relative">
@@ -604,7 +629,6 @@ function App() {
                                </div>
                            </div>
                         ) : (
-                            // NOTES HEADER
                            <div onClick={handleSecretTrigger} className="flex items-center gap-3 flex-1 min-w-0">
                                 <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden">
                                      {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}
@@ -617,7 +641,6 @@ function App() {
                         )}
 
                         <div className="flex items-center gap-1">
-                            {/* SEARCH BTN */}
                              <div className="relative flex items-center h-10">
                                 <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-400 transition-all active:scale-95 rounded-full hover:bg-white/5 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={22} /></button>
                                 <div className={`absolute right-0 bg-zinc-900 border border-zinc-800 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
@@ -626,7 +649,6 @@ function App() {
                                     <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
                                 </div>
                             </div>
-                            {/* EXTRA MENU BTN (Visual only for now) */}
                             {activeChatId !== 'saved_messages' && (
                                 <button className="w-10 h-10 flex items-center justify-center text-zinc-400 rounded-full hover:bg-white/5"><Phone size={22} /></button>
                             )}
@@ -641,7 +663,6 @@ function App() {
               <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
                 {activeChatId === 'saved_messages' ? (
-                    // --- NOTES RENDER ---
                     filteredNotes.map((note, index) => {
                         const prevNote = filteredNotes[index - 1];
                         const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
@@ -655,7 +676,6 @@ function App() {
                         );
                     })
                 ) : (
-                    // --- MESSAGES RENDER (WHATSAPP STYLE) ---
                     activeMessages.map((msg, index) => {
                         const prevMsg = activeMessages[index - 1];
                         const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
@@ -664,18 +684,28 @@ function App() {
                         const isLastInSequence = !nextMsg || nextMsg.senderId !== msg.senderId;
                         const showAvatar = !isMe && isLastInSequence;
 
-                        // STYLING:
-                        // Updated to match WhatsApp Contrast (Darker Orange for you, Dark Gray for them)
-                        // Faint border handled in NoteCard.tsx via variants
-                        const customColors = isMe ? {
-                            bg: isHackerMode ? 'bg-green-900/90' : `bg-[${CLAUDE_ORANGE}]`, // Dark Orange
-                            border: 'border-transparent', // Handled by NoteCard class logic
-                            text: 'text-white'
-                        } : {
-                            bg: 'bg-[#27272a]', // Zinc-800 equivalent
-                            border: 'border-transparent',
-                            text: 'text-zinc-100'
-                        };
+                        // --- STYLE SELECTOR LOGIC ---
+                        let customColors;
+                        if (isMe) {
+                            switch(bubbleStyle) {
+                                case 'orange_glass':
+                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]/20 backdrop-blur-md`, border: `border-[${CLAUDE_ORANGE}]/50`, text: 'text-white' };
+                                    break;
+                                case 'cyberpunk':
+                                    customColors = { bg: 'bg-black', border: 'border-green-500', text: 'text-green-400', shadow: 'shadow-[0_0_10px_rgba(74,222,128,0.3)]', font: 'font-mono' };
+                                    break;
+                                case 'graffiti':
+                                    customColors = { bg: 'bg-gradient-to-r from-purple-600 to-pink-600', border: 'border-white', text: 'text-white font-bold', shadow: 'shadow-lg' };
+                                    break;
+                                case 'orange_solid':
+                                default:
+                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]`, border: 'border-transparent', text: 'text-white' };
+                                    break;
+                            }
+                        } else {
+                            // "Them" is always neutral dark gray
+                            customColors = { bg: 'bg-[#27272a]', border: 'border-transparent', text: 'text-zinc-100' };
+                        }
 
                         const msgNote = {
                             id: msg.id,
@@ -692,7 +722,6 @@ function App() {
                                 {showHeader && (<div className="flex justify-center my-6 opacity-60 w-full select-none"><span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full border border-white/5">{getDateLabel(msg.timestamp)}</span></div>)}
                                 
                                 <div className={`flex w-full mb-1 items-end ${isMe ? 'justify-end' : 'justify-start gap-2'}`}>
-                                    
                                     {!isMe && (
                                         <div className="flex-shrink-0 w-8 h-8 relative z-10">
                                             {showAvatar ? (

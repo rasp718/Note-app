@@ -58,7 +58,8 @@ interface NoteCardProps {
   onEdit?: () => void;
   onToggleExpand?: (id: string) => void;
   variant?: 'default' | 'sent' | 'received';
-  customColors?: { bg: string; border: string; text: string };
+  // UPDATED: Added shadow and font support
+  customColors?: { bg: string; border: string; text: string; shadow?: string; font?: string };
 }
 
 export const NoteCard: React.FC<NoteCardProps> = ({ 
@@ -86,19 +87,20 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const HACKER_GREEN = '#4ade80';
   const accentColor = isHacker ? HACKER_GREEN : isSecret ? '#ef4444' : CLAUDE_ORANGE;
   
-  // --- BORDER LOGIC ---
-  // For Notes (default): Use strict borders
-  // For Chat (sent/received): Use faint white border that pops on hover
+  // --- STYLE EXTRACTION ---
   const borderStyle = variant === 'default'
     ? { borderColor: customColors?.border || (isHacker ? 'rgba(74, 222, 128, 0.2)' : '#27272a') }
-    : {}; // Handled by Tailwind classes for chat
+    : {}; 
 
+  // Allow custom borders for styles like "Cyberpunk" or "Glass"
   const chatBorderClasses = variant !== 'default' 
-    ? 'border border-white/5 hover:border-white/20 transition-colors duration-300' 
+    ? (customColors?.border ? customColors.border : 'border border-white/5')
     : 'border';
 
   const bgColor = customColors?.bg || 'bg-zinc-900';
   const textColor = customColors?.text || 'text-zinc-300';
+  const shadowClass = customColors?.shadow || 'shadow-sm';
+  const fontClass = customColors?.font || '';
   
   const isExpanded = !!note.isExpanded;
   const safeText = String(note.text || '');
@@ -140,16 +142,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
       ? (isCompact ? 'px-3 py-2' : 'p-3') 
       : 'px-4 py-2';
 
-  // --- BUBBLE SHAPE LOGIC (WhatsApp Style) ---
   let radiusClass = 'rounded-2xl'; 
-  if (variant === 'sent') {
-      // Sent: Sharp Bottom Right
-      radiusClass = 'rounded-2xl rounded-br-none';
-  }
-  if (variant === 'received') {
-      // Received: Sharp Bottom Left
-      radiusClass = 'rounded-2xl rounded-bl-none';
-  }
+  if (variant === 'sent') radiusClass = 'rounded-2xl rounded-br-none';
+  if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
 
   const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
 
@@ -163,7 +158,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
            </div>
         )}
         
-        <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} relative transition-all duration-200 shadow-sm`} 
+        <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} ${fontClass} relative transition-all duration-200`} 
              style={{ ...borderStyle, transform: `translateX(${swipeOffset}px)` }} 
              onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           
@@ -178,7 +173,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>
                   <div className="float-right ml-3 mt-1.5 flex items-center gap-1.5 align-bottom">
                       {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={accentColor} />}
-                      <span className="text-[10px] opacity-50 font-medium ml-0.5 select-none translate-y-[2px]" style={{ color: customColors?.text || accentColor }}>{formatTime(note.date)}</span>
+                      <span className="text-[10px] opacity-60 font-medium ml-0.5 select-none translate-y-[2px]" style={{ color: customColors?.text || accentColor }}>{formatTime(note.date)}</span>
                   </div>
               </div>
             </div>

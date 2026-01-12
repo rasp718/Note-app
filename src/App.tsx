@@ -812,11 +812,32 @@ function App() {
                     filteredNotes.map((note, index) => {
                         const prevNote = filteredNotes[index - 1];
                         const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
+                        
+                        // Define Note Glow Colors
+                        const noteColors = isHackerMode 
+                             ? { bg: 'bg-black', border: 'border border-green-500/30 hover:border-green-500 transition-colors', text: 'text-green-500' }
+                             : { 
+                                 bg: 'bg-zinc-900/50 backdrop-blur-md', 
+                                 // INTENSE ORANGE GLOW ON HOVER
+                                 border: 'border border-white/5 hover:border-orange-500/50 hover:shadow-[0_0_15px_rgba(234,88,12,0.2)] transition-all duration-300', 
+                                 text: 'text-zinc-100' 
+                               };
+
                         return (
                             <React.Fragment key={note.id}>
                                 {showHeader && (<div className="flex justify-center my-4 opacity-70 w-full select-none"><span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">{getDateLabel(note.date)}</span></div>)}
                                 <div onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
-                                    <NoteCard note={note} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onToggleExpand={handleToggleExpand} />
+                                    <NoteCard 
+                                        note={note} 
+                                        categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
+                                        selectedVoice={selectedVoice} 
+                                        onDelete={handleDeleteNote} 
+                                        onPin={togglePin} 
+                                        onCategoryClick={(cat) => setActiveFilter(cat)} 
+                                        onEdit={() => handleEditClick(note)} 
+                                        onToggleExpand={handleToggleExpand}
+                                        customColors={noteColors}
+                                    />
                                 </div>
                             </React.Fragment>
                         );
@@ -835,25 +856,25 @@ function App() {
                         let customColors;
                         if (isMe) {
                             switch(bubbleStyle) {
-                                case 'clear': // Clear White Border
-                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20 hover:border-white/50', text: 'text-white' };
+                                case 'clear': 
+                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20 hover:border-orange-500/50 hover:shadow-[0_0_10px_rgba(234,88,12,0.2)] transition-all', text: 'text-white' };
                                     break;
-                                case 'clear_orange': // Clear Orange Glow
-                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-orange-500/30 hover:border-orange-500 shadow-[0_0_10px_rgba(234,88,12,0.1)] hover:shadow-[0_0_15px_rgba(234,88,12,0.3)]', text: 'text-white' };
+                                case 'clear_orange': 
+                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-orange-500/30 hover:border-orange-500 shadow-[0_0_10px_rgba(234,88,12,0.1)] hover:shadow-[0_0_15px_rgba(234,88,12,0.3)] transition-all', text: 'text-white' };
                                     break;
                                 case 'orange_glass':
-                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]/30 backdrop-blur-md`, border: `border-[${CLAUDE_ORANGE}]/50`, text: 'text-white' };
+                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]/30 backdrop-blur-md`, border: `border-[${CLAUDE_ORANGE}]/50 hover:border-[${CLAUDE_ORANGE}] transition-all`, text: 'text-white' };
                                     break;
                                 case 'orange_solid':
                                 default:
-                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]`, border: 'border-transparent', text: 'text-white' };
+                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]`, border: 'border-transparent hover:ring-1 hover:ring-white/30 transition-all', text: 'text-white' };
                                     break;
                             }
                         } else {
-                            // "Them" is now dark glassy gray
+                            // RECEIVED MESSAGES - INTENSE HOVER GLOW ADDED
                             customColors = { 
                                 bg: 'bg-zinc-900/50 backdrop-blur-md', 
-                                border: 'border border-white/5 hover:border-white/20', 
+                                border: 'border border-white/5 hover:border-orange-500/50 hover:shadow-[0_0_15px_rgba(234,88,12,0.15)] transition-all duration-300', 
                                 text: 'text-zinc-100' 
                             };
                         }

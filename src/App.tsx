@@ -89,7 +89,7 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
-// --- CHAT LIST ITEM (UPDATED ANIMATION) ---
+// --- CHAT LIST ITEM (ANIMATED) ---
 const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any) => {
     const otherUser = useUser(chat.otherUserId);
     const displayName = otherUser?.displayName || 'Unknown';
@@ -100,9 +100,9 @@ const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any
     return (
         <div 
             onClick={isEditing ? onSelect : onClick} 
-            // Dramatic entrance: Slide from right, fade in, staggered delay
-            style={{ animationDelay: `${index * 0.08}s`, animationFillMode: 'backwards' }}
-            className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent animate-in slide-in-from-right-10 fade-in duration-500 ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
+            // Staggered Animation: Slide from right
+            style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'backwards' }}
+            className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent animate-in slide-in-from-right-8 fade-in duration-500 ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
         >
             {isEditing && (
                 <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200">
@@ -466,68 +466,69 @@ function App() {
       {currentView === 'list' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in fade-in slide-in-from-left-5 duration-300">
            {activeTab === 'chats' && (
-             <div className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
+             <div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <div><h1 className="text-3xl font-black text-white tracking-tighter">FEED</h1><p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mt-1">Encrypted</p></div>
                 <div className="flex gap-4 items-center mb-1"><button className="text-zinc-500 transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = '#71717a'}><PenLine size={20} /></button></div>
              </div>
            )}
 
            {activeTab === 'settings' && (
-             <div className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
+             <div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <h1 className="text-3xl font-black text-white tracking-tighter">SYSTEM</h1>
              </div>
            )}
 
            {activeTab === 'contacts' && (
-             <div className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
+             <div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <h1 className="text-3xl font-black text-white tracking-tighter">CONTACTS</h1>
              </div>
            )}
 
-           {activeTab === 'chats' && (
-             <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
-                <div className="px-4 mb-4">
-                   <div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-zinc-700">
-                      <Search size={16} className="text-zinc-500" />
-                      <input type="text" placeholder="Search frequency..." className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-medium"/>
-                   </div>
-                </div>
+           {/* MAIN CONTENT AREA WITH KEY FOR ANIMATION RESET */}
+           <div key={activeTab + 'content'} className="flex-1 overflow-y-auto no-scrollbar pb-24">
+               {activeTab === 'chats' && (
+                 <>
+                    <div className="px-4 mb-4">
+                       <div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-zinc-700">
+                          <Search size={16} className="text-zinc-500" />
+                          <input type="text" placeholder="Search frequency..." className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-medium"/>
+                       </div>
+                    </div>
 
-                <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-left-4 fade-in duration-500`}>
-                    <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
-                        <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50">
-                            {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
+                    <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-left-8 fade-in duration-500`}>
+                        <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
+                            <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50">
+                                {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
+                            </div>
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+                            <div className="flex justify-between items-baseline">
+                                <span className="font-bold text-white text-base tracking-tight">Notes</span>
+                                <span className="text-[10px] text-zinc-500 font-mono">{notes.length > 0 ? getDateLabel(notes[0].date) : ''}</span>
+                            </div>
+                            <div className="text-zinc-400 text-sm truncate pr-4 flex items-center gap-1">
+                               <span className="text-[10px] font-bold uppercase tracking-wider px-1 rounded bg-white/10" style={{ color: accentColor }}>You</span>
+                               <span className="opacity-70 truncate">{notes.length > 0 ? notes[0].text : 'No notes yet'}</span>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                        <div className="flex justify-between items-baseline">
-                            <span className="font-bold text-white text-base tracking-tight">Notes</span>
-                            <span className="text-[10px] text-zinc-500 font-mono">{notes.length > 0 ? getDateLabel(notes[0].date) : ''}</span>
-                        </div>
-                        <div className="text-zinc-400 text-sm truncate pr-4 flex items-center gap-1">
-                           <span className="text-[10px] font-bold uppercase tracking-wider px-1 rounded bg-white/10" style={{ color: accentColor }}>You</span>
-                           <span className="opacity-70 truncate">{notes.length > 0 ? notes[0].text : 'No notes yet'}</span>
-                        </div>
-                    </div>
-                </div>
 
-                {realChats.map((chat, index) => (
-                  <ChatListItem 
-                    key={chat.id} 
-                    chat={chat} 
-                    active={isEditing ? selectedChatIds.has(chat.id) : false} 
-                    isEditing={isEditing}
-                    onSelect={() => toggleChatSelection(chat.id)}
-                    onClick={() => { setActiveChatId(chat.id); setCurrentView('room'); scrollToBottom('auto'); }}
-                    index={index}
-                  />
-                ))}
-             </div>
-           )}
+                    {realChats.map((chat, index) => (
+                      <ChatListItem 
+                        key={chat.id} 
+                        chat={chat} 
+                        active={isEditing ? selectedChatIds.has(chat.id) : false} 
+                        isEditing={isEditing}
+                        onSelect={() => toggleChatSelection(chat.id)}
+                        onClick={() => { setActiveChatId(chat.id); setCurrentView('room'); scrollToBottom('auto'); }}
+                        index={index}
+                      />
+                    ))}
+                 </>
+               )}
 
-           {activeTab === 'contacts' && (
-             <div className="flex-1 overflow-y-auto p-4 pb-24">
-                <div className="space-y-6">
+               {activeTab === 'contacts' && (
+                 <div className="p-4 space-y-6">
                     <form onSubmit={handleSearchContacts} className="relative">
                         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-3 gap-3 focus-within:border-orange-500/50 transition-colors">
                             <AtSign size={18} className="text-zinc-500" />
@@ -540,7 +541,7 @@ function App() {
                             <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div></div>
                         ) : contactSearchResults.length > 0 ? (
                             contactSearchResults.map((u) => (
-                                <div key={u.uid} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4">
+                                <div key={u.uid} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-2 fade-in duration-300">
                                     <div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden">
                                         {u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}
                                     </div>
@@ -553,75 +554,81 @@ function App() {
                         )}
                     </div>
                 </div>
-             </div>
-           )}
+               )}
 
-           {activeTab === 'settings' && (
-             <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
-                <div className="relative overflow-hidden bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col gap-6 backdrop-blur-xl group">
-                   <div className="absolute top-4 right-4">
-                        {isEditingProfile ? (<button onClick={handleProfileSave} className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center"><Check size={16} strokeWidth={3} /></button>) : (<button onClick={() => setIsEditingProfile(true)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 hover:text-white"><Edit size={14} /></button>)}
-                   </div>
-                   <div className="flex items-center gap-5">
-                       <div className="relative">
-                           <div className="w-20 h-20 rounded-2xl bg-zinc-800 flex items-center justify-center text-3xl shadow-xl overflow-hidden">
-                               {profilePic ? (<img key={profilePic} src={profilePic} className="w-full h-full object-cover" />) : (<span>😎</span>)}
+               {activeTab === 'settings' && (
+                 <div className="p-4 space-y-6">
+                    <div className="relative overflow-hidden bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col gap-6 backdrop-blur-xl group">
+                       <div className="absolute top-4 right-4">
+                            {isEditingProfile ? (<button onClick={handleProfileSave} className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center"><Check size={16} strokeWidth={3} /></button>) : (<button onClick={() => setIsEditingProfile(true)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 hover:text-white"><Edit size={14} /></button>)}
+                       </div>
+                       <div className="flex items-center gap-5">
+                           <div className="relative">
+                               <div className="w-20 h-20 rounded-2xl bg-zinc-800 flex items-center justify-center text-3xl shadow-xl overflow-hidden">
+                                   {profilePic ? (<img key={profilePic} src={profilePic} className="w-full h-full object-cover" />) : (<span>😎</span>)}
+                               </div>
+                               {isEditingProfile && (
+                                   <><label className="absolute -bottom-2 -right-2 w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-white cursor-pointer"><Camera size={14} /><input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleAvatarUpload(e.target.files[0]); }} /></label><button onClick={() => setShowAvatarSelector(!showAvatarSelector)} className="absolute -bottom-2 -left-2 w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-white cursor-pointer"><Grid size={14} /></button></>
+                               )}
                            </div>
-                           {isEditingProfile && (
-                               <><label className="absolute -bottom-2 -right-2 w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-white cursor-pointer"><Camera size={14} /><input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleAvatarUpload(e.target.files[0]); }} /></label><button onClick={() => setShowAvatarSelector(!showAvatarSelector)} className="absolute -bottom-2 -left-2 w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-white cursor-pointer"><Grid size={14} /></button></>
-                           )}
+                           <div className="flex-1 min-w-0 space-y-1">
+                               {isEditingProfile ? (<input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-xl font-bold w-full focus:outline-none focus:border-orange-500 py-1" placeholder="Display Name"/>) : (<h2 className="text-2xl font-black tracking-tight text-white truncate">{profileName}</h2>)}
+                               {isEditingProfile ? (<div className="flex items-center gap-1 text-zinc-500"><AtSign size={12} /><input type="text" value={profileHandle} onChange={(e) => setProfileHandle(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-sm font-mono w-full focus:outline-none focus:border-orange-500" placeholder="handle"/></div>) : (<p className="text-zinc-400 text-xs font-mono tracking-wide">{profileHandle}</p>)}
+                           </div>
                        </div>
-                       <div className="flex-1 min-w-0 space-y-1">
-                           {isEditingProfile ? (<input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-xl font-bold w-full focus:outline-none focus:border-orange-500 py-1" placeholder="Display Name"/>) : (<h2 className="text-2xl font-black tracking-tight text-white truncate">{profileName}</h2>)}
-                           {isEditingProfile ? (<div className="flex items-center gap-1 text-zinc-500"><AtSign size={12} /><input type="text" value={profileHandle} onChange={(e) => setProfileHandle(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-sm font-mono w-full focus:outline-none focus:border-orange-500" placeholder="handle"/></div>) : (<p className="text-zinc-400 text-xs font-mono tracking-wide">{profileHandle}</p>)}
+                       {isEditingProfile && showAvatarSelector && (
+                           <div className="grid grid-cols-6 gap-2 pt-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                               {Array.from({ length: 7 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => handleSelectPreset(num)} className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-orange-500 transition-colors bg-black/40 flex items-center justify-center text-xl relative"><img src={`/robot${num}.jpeg?v=1`} className="w-full h-full object-cover" /></button>))}
+                           </div>
+                       )}
+                       <div className="pt-2 border-t border-white/5">
+                            {isEditingProfile ? (<div className="flex items-center gap-2"><Activity size={14} className="text-zinc-500" /><input type="text" value={profileBio} onChange={(e) => setProfileBio(e.target.value)} className="bg-transparent border-b border-white/20 text-zinc-300 text-xs font-mono w-full focus:outline-none focus:border-orange-500 py-1" placeholder="Status..."/></div>) : (<div className="flex items-center gap-2 text-zinc-500 text-xs font-mono uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>{profileBio}</div>)}
                        </div>
-                   </div>
-                   {isEditingProfile && showAvatarSelector && (
-                       <div className="grid grid-cols-6 gap-2 pt-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                           {Array.from({ length: 7 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => handleSelectPreset(num)} className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-orange-500 transition-colors bg-black/40 flex items-center justify-center text-xl relative"><img src={`/robot${num}.jpeg?v=1`} className="w-full h-full object-cover" /></button>))}
-                       </div>
-                   )}
-                   <div className="pt-2 border-t border-white/5">
-                        {isEditingProfile ? (<div className="flex items-center gap-2"><Activity size={14} className="text-zinc-500" /><input type="text" value={profileBio} onChange={(e) => setProfileBio(e.target.value)} className="bg-transparent border-b border-white/20 text-zinc-300 text-xs font-mono w-full focus:outline-none focus:border-orange-500 py-1" placeholder="Status..."/></div>) : (<div className="flex items-center gap-2 text-zinc-500 text-xs font-mono uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>{profileBio}</div>)}
-                   </div>
-                </div>
-
-                <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6">
-                   <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
-                    <div className="space-y-3"><label className="text-white text-sm font-medium">Message Alignment</label><div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800"><button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button><button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button><button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button></div></div>
-                    
-                    {/* NEW: Chat Bubble Style Selector */}
-                    <div className="space-y-3">
-                        <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
-                        <div className="grid grid-cols-4 gap-2">
-                            {/* Original Styles */}
-                            <button onClick={() => changeBubbleStyle('orange_solid')} className={`h-10 rounded-lg border-2 transition-all ${bubbleStyle === 'orange_solid' ? 'border-white bg-[#c25e3e]' : 'border-zinc-700 bg-[#c25e3e]/50'}`} title="Orange Solid"></button>
-                            <button onClick={() => changeBubbleStyle('orange_glass')} className={`h-10 rounded-lg border-2 transition-all ${bubbleStyle === 'orange_glass' ? 'border-white bg-[#c25e3e]/40' : 'border-zinc-700 bg-[#c25e3e]/20'}`} title="Orange Glass"></button>
-                            <button onClick={() => changeBubbleStyle('clear')} className={`h-10 rounded-lg border-2 transition-all bg-white/5 ${bubbleStyle === 'clear' ? 'border-white' : 'border-zinc-700 opacity-50'}`} title="Clear"></button>
-                            
-                            {/* New Styles */}
-                            <button onClick={() => changeBubbleStyle('solid_ocean')} className={`h-10 rounded-lg border-2 transition-all bg-gradient-to-br from-blue-600 to-cyan-500 ${bubbleStyle === 'solid_ocean' ? 'border-white' : 'border-zinc-700 opacity-50'}`} title="Ocean"></button>
-                            <button onClick={() => changeBubbleStyle('solid_crimson')} className={`h-10 rounded-lg border-2 transition-all bg-gradient-to-br from-red-600 to-rose-500 ${bubbleStyle === 'solid_crimson' ? 'border-white' : 'border-zinc-700 opacity-50'}`} title="Crimson"></button>
-                            <button onClick={() => changeBubbleStyle('neon_glass')} className={`h-10 rounded-lg border-2 transition-all bg-black/40 border-cyan-400 ${bubbleStyle === 'neon_glass' ? 'shadow-[0_0_10px_#22d3ee]' : 'border-zinc-700 opacity-50'}`} title="Neon Glass"></button>
-                            
-                            {/* Legacy Styles */}
-                            <button onClick={() => changeBubbleStyle('cyberpunk')} className={`h-10 rounded-lg border-2 transition-all bg-black ${bubbleStyle === 'cyberpunk' ? 'border-green-500 shadow-[0_0_10px_#4ade80]' : 'border-zinc-700'}`} title="Cyberpunk"></button>
-                            <button onClick={() => changeBubbleStyle('graffiti')} className={`h-10 rounded-lg border-2 transition-all bg-gradient-to-r from-purple-600 to-pink-600 ${bubbleStyle === 'graffiti' ? 'border-white' : 'border-zinc-700 opacity-50'}`} title="Street"></button>
-                        </div>
                     </div>
 
-                    <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Wallpaper Scale</label><span className="text-zinc-500 text-xs font-mono">{bgScale >= 100 ? 'COVER' : `${bgScale}%`}</span></div><input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
-                     <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Opacity</label><span className="text-zinc-500 text-xs font-mono">{Math.round(bgOpacity * 100)}%</span></div><input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
-                </div>
+                    <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6">
+                       <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
+                        <div className="space-y-3"><label className="text-white text-sm font-medium">Message Alignment</label><div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800"><button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button><button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button><button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button></div></div>
+                        
+                        {/* CHAT BUBBLE STYLE SELECTOR */}
+                        <div className="space-y-3">
+                            <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button onClick={() => changeBubbleStyle('orange_solid')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'orange_solid' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Orange Solid">
+                                    <div className="absolute inset-0 bg-[#c25e3e]" />
+                                    <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Solid</span>
+                                </button>
+                                
+                                <button onClick={() => changeBubbleStyle('orange_glass')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'orange_glass' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Orange Glass">
+                                    <div className="absolute inset-0 bg-[#c25e3e]/30 backdrop-blur-md" />
+                                    <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Glass</span>
+                                </button>
 
-                <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-4">
-                     <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
-                     <div className="grid grid-cols-4 gap-3">
-                          {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => setBgIndex(num)} className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-orange-500 scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}><img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} /></button>))}
-                      </div>
-                </div>
-             </div>
-           )}
+                                <button onClick={() => changeBubbleStyle('clear')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'clear' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Clear White">
+                                    <div className="absolute inset-0 bg-white/5 border border-white/20" />
+                                    <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Clear</span>
+                                </button>
+
+                                <button onClick={() => changeBubbleStyle('clear_orange')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'clear_orange' ? 'border-orange-500 ring-1 ring-orange-500/50' : 'border-white/5 hover:border-orange-500/50'}`} title="Clear Orange">
+                                    <div className="absolute inset-0 bg-white/5 border border-orange-500/30" />
+                                    <span className="relative z-10 text-xs font-bold text-orange-200 uppercase tracking-wider">Glow</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Wallpaper Scale</label><span className="text-zinc-500 text-xs font-mono">{bgScale >= 100 ? 'COVER' : `${bgScale}%`}</span></div><input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
+                         <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Opacity</label><span className="text-zinc-500 text-xs font-mono">{Math.round(bgOpacity * 100)}%</span></div><input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-4">
+                         <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
+                         <div className="grid grid-cols-4 gap-3">
+                              {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => setBgIndex(num)} className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-orange-500 scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}><img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} /></button>))}
+                          </div>
+                    </div>
+                 </div>
+               )}
+           </div>
 
            <BottomTabBar />
         </div>
@@ -656,9 +663,9 @@ function App() {
                                      {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}
                                 </div>
                                 {activeFilter === 'secret' ? (
-                                    <div className="animate-in fade-in duration-300">
-                                        <h3 className="font-bold text-green-500 text-base leading-tight font-mono tracking-tight">SYSTEM_ROOT</h3>
-                                        <p className="text-green-700 text-[10px] font-mono uppercase tracking-widest">Encrypted // 2048-bit</p>
+                                    <div className="animate-pulse flex flex-col justify-center">
+                                        <h3 className="font-bold text-green-500 text-base leading-tight font-mono tracking-tight drop-shadow-[0_0_8px_rgba(74,222,128,0.8)]">SYSTEM_ROOT</h3>
+                                        <p className="text-green-700 text-[10px] font-mono uppercase tracking-widest drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]">Encrypted // 2048-bit</p>
                                     </div>
                                 ) : (
                                     <div className="animate-in fade-in duration-300">
@@ -719,26 +726,14 @@ function App() {
                         let customColors;
                         if (isMe) {
                             switch(bubbleStyle) {
-                                case 'clear': // NEW CLEAR STYLE
-                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/10 hover:border-white/40 transition-colors duration-300', text: 'text-white' };
+                                case 'clear': // Clear White Border
+                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20 hover:border-white/50', text: 'text-white' };
+                                    break;
+                                case 'clear_orange': // Clear Orange Glow
+                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-orange-500/30 hover:border-orange-500 shadow-[0_0_10px_rgba(234,88,12,0.1)] hover:shadow-[0_0_15px_rgba(234,88,12,0.3)]', text: 'text-white' };
                                     break;
                                 case 'orange_glass':
-                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]/20 backdrop-blur-md`, border: `border-[${CLAUDE_ORANGE}]/50`, text: 'text-white' };
-                                    break;
-                                case 'neon_glass': // NEW NEON GLASS
-                                    customColors = { bg: 'bg-black/40 backdrop-blur-md', border: 'border border-cyan-400', text: 'text-cyan-50', shadow: 'shadow-[0_0_8px_rgba(34,211,238,0.5)]' };
-                                    break;
-                                case 'solid_ocean': // NEW SOLID OCEAN
-                                    customColors = { bg: 'bg-gradient-to-br from-blue-600 to-cyan-500', border: 'border-transparent', text: 'text-white' };
-                                    break;
-                                case 'solid_crimson': // NEW SOLID CRIMSON
-                                    customColors = { bg: 'bg-gradient-to-br from-red-600 to-rose-500', border: 'border-transparent', text: 'text-white' };
-                                    break;
-                                case 'cyberpunk':
-                                    customColors = { bg: 'bg-black', border: 'border-green-500', text: 'text-green-400', shadow: 'shadow-[0_0_10px_rgba(74,222,128,0.3)]', font: 'font-mono' };
-                                    break;
-                                case 'graffiti':
-                                    customColors = { bg: 'bg-gradient-to-r from-purple-600 to-pink-600', border: 'border-white', text: 'text-white font-bold', shadow: 'shadow-lg' };
+                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]/30 backdrop-blur-md`, border: `border-[${CLAUDE_ORANGE}]/50`, text: 'text-white' };
                                     break;
                                 case 'orange_solid':
                                 default:
@@ -746,8 +741,12 @@ function App() {
                                     break;
                             }
                         } else {
-                            // "Them" is always neutral dark gray
-                            customColors = { bg: 'bg-[#27272a]', border: 'border-transparent', text: 'text-zinc-100' };
+                            // "Them" is now dark glassy gray
+                            customColors = { 
+                                bg: 'bg-zinc-900/50 backdrop-blur-md', 
+                                border: 'border border-white/5 hover:border-white/20', 
+                                text: 'text-zinc-100' 
+                            };
                         }
 
                         const msgNote = {

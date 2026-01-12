@@ -89,7 +89,7 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
-// --- CHAT LIST ITEM (UPDATED WITH ANIMATION) ---
+// --- CHAT LIST ITEM (UPDATED ANIMATION) ---
 const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any) => {
     const otherUser = useUser(chat.otherUserId);
     const displayName = otherUser?.displayName || 'Unknown';
@@ -100,9 +100,9 @@ const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any
     return (
         <div 
             onClick={isEditing ? onSelect : onClick} 
-            // Staggered Animation Logic using index
-            style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'backwards' }}
-            className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent animate-in slide-in-from-bottom-2 fade-in duration-300 ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
+            // Dramatic entrance: Slide from right, fade in, staggered delay
+            style={{ animationDelay: `${index * 0.08}s`, animationFillMode: 'backwards' }}
+            className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent animate-in slide-in-from-right-10 fade-in duration-500 ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
         >
             {isEditing && (
                 <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200">
@@ -493,7 +493,7 @@ function App() {
                    </div>
                 </div>
 
-                <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-bottom-2 fade-in duration-300`}>
+                <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-left-4 fade-in duration-500`}>
                     <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
                         <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50">
                             {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
@@ -593,10 +593,18 @@ function App() {
                     {/* NEW: Chat Bubble Style Selector */}
                     <div className="space-y-3">
                         <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
-                        <div className="grid grid-cols-5 gap-2">
+                        <div className="grid grid-cols-4 gap-2">
+                            {/* Original Styles */}
                             <button onClick={() => changeBubbleStyle('orange_solid')} className={`h-10 rounded-lg border-2 transition-all ${bubbleStyle === 'orange_solid' ? 'border-white bg-[#c25e3e]' : 'border-zinc-700 bg-[#c25e3e]/50'}`} title="Orange Solid"></button>
                             <button onClick={() => changeBubbleStyle('orange_glass')} className={`h-10 rounded-lg border-2 transition-all ${bubbleStyle === 'orange_glass' ? 'border-white bg-[#c25e3e]/40' : 'border-zinc-700 bg-[#c25e3e]/20'}`} title="Orange Glass"></button>
                             <button onClick={() => changeBubbleStyle('clear')} className={`h-10 rounded-lg border-2 transition-all bg-white/5 ${bubbleStyle === 'clear' ? 'border-white' : 'border-zinc-700 opacity-50'}`} title="Clear"></button>
+                            
+                            {/* New Styles */}
+                            <button onClick={() => changeBubbleStyle('solid_ocean')} className={`h-10 rounded-lg border-2 transition-all bg-gradient-to-br from-blue-600 to-cyan-500 ${bubbleStyle === 'solid_ocean' ? 'border-white' : 'border-zinc-700 opacity-50'}`} title="Ocean"></button>
+                            <button onClick={() => changeBubbleStyle('solid_crimson')} className={`h-10 rounded-lg border-2 transition-all bg-gradient-to-br from-red-600 to-rose-500 ${bubbleStyle === 'solid_crimson' ? 'border-white' : 'border-zinc-700 opacity-50'}`} title="Crimson"></button>
+                            <button onClick={() => changeBubbleStyle('neon_glass')} className={`h-10 rounded-lg border-2 transition-all bg-black/40 border-cyan-400 ${bubbleStyle === 'neon_glass' ? 'shadow-[0_0_10px_#22d3ee]' : 'border-zinc-700 opacity-50'}`} title="Neon Glass"></button>
+                            
+                            {/* Legacy Styles */}
                             <button onClick={() => changeBubbleStyle('cyberpunk')} className={`h-10 rounded-lg border-2 transition-all bg-black ${bubbleStyle === 'cyberpunk' ? 'border-green-500 shadow-[0_0_10px_#4ade80]' : 'border-zinc-700'}`} title="Cyberpunk"></button>
                             <button onClick={() => changeBubbleStyle('graffiti')} className={`h-10 rounded-lg border-2 transition-all bg-gradient-to-r from-purple-600 to-pink-600 ${bubbleStyle === 'graffiti' ? 'border-white' : 'border-zinc-700 opacity-50'}`} title="Street"></button>
                         </div>
@@ -648,9 +656,9 @@ function App() {
                                      {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}
                                 </div>
                                 {activeFilter === 'secret' ? (
-                                    <div className="animate-pulse flex flex-col justify-center">
-                                        <h3 className="font-bold text-green-500 text-base leading-tight font-mono tracking-tight drop-shadow-[0_0_8px_rgba(74,222,128,0.8)]">SYSTEM_ROOT</h3>
-                                        <p className="text-green-700 text-[10px] font-mono uppercase tracking-widest drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]">Encrypted // 2048-bit</p>
+                                    <div className="animate-in fade-in duration-300">
+                                        <h3 className="font-bold text-green-500 text-base leading-tight font-mono tracking-tight">SYSTEM_ROOT</h3>
+                                        <p className="text-green-700 text-[10px] font-mono uppercase tracking-widest">Encrypted // 2048-bit</p>
                                     </div>
                                 ) : (
                                     <div className="animate-in fade-in duration-300">
@@ -716,6 +724,15 @@ function App() {
                                     break;
                                 case 'orange_glass':
                                     customColors = { bg: `bg-[${CLAUDE_ORANGE}]/20 backdrop-blur-md`, border: `border-[${CLAUDE_ORANGE}]/50`, text: 'text-white' };
+                                    break;
+                                case 'neon_glass': // NEW NEON GLASS
+                                    customColors = { bg: 'bg-black/40 backdrop-blur-md', border: 'border border-cyan-400', text: 'text-cyan-50', shadow: 'shadow-[0_0_8px_rgba(34,211,238,0.5)]' };
+                                    break;
+                                case 'solid_ocean': // NEW SOLID OCEAN
+                                    customColors = { bg: 'bg-gradient-to-br from-blue-600 to-cyan-500', border: 'border-transparent', text: 'text-white' };
+                                    break;
+                                case 'solid_crimson': // NEW SOLID CRIMSON
+                                    customColors = { bg: 'bg-gradient-to-br from-red-600 to-rose-500', border: 'border-transparent', text: 'text-white' };
                                     break;
                                 case 'cyberpunk':
                                     customColors = { bg: 'bg-black', border: 'border-green-500', text: 'text-green-400', shadow: 'shadow-[0_0_10px_rgba(74,222,128,0.3)]', font: 'font-mono' };

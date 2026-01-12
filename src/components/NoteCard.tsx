@@ -17,7 +17,6 @@ const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
 
 const InlineActionButton = ({ onClick, icon: Icon, accentColor }: any) => {
   const [isHovered, setIsHovered] = useState(false);
-  // CHANGED: Hover color is now forced to white/light gray instead of accentColor
   return (
     <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? '#ffffff' : '#71717a' }}><Icon size={12} /></button>
   );
@@ -106,7 +105,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
         <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} ${fontClass} relative transition-all duration-200`} style={{ ...borderStyle, transform: `translateX(${swipeOffset}px)` }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           {isExpanded ? (
             <div className="flex flex-col gap-1 min-w-[80px]">
-              {note.imageUrl && ( <div className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full"><img src={note.imageUrl} alt="Attachment" className="w-full md:w-auto h-auto md:max-h-96 object-contain" /></div>)}
+              {/* Changed md:w-auto to w-full to prevent layout shift */}
+              {note.imageUrl && ( <div className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full"><img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" /></div>)}
               <div className="block w-full">
                   <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>
                   <div className="float-right ml-3 mt-1.5 flex items-center gap-1.5 align-bottom">
@@ -120,7 +120,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
              <div className="flex gap-2">
                  <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <div onClick={() => onToggleExpand && onToggleExpand(note.id)} className="cursor-pointer">
-                       <p className={`text-base leading-tight truncate mb-1 text-left ${textColor}`}>{lines[0] || <span className="italic opacity-50">Image</span>}</p>
+                       {/* Removed fallback "Image" text */}
+                       <p className={`text-base leading-tight truncate mb-1 text-left ${textColor}`}>{lines[0]}</p>
                        {lines.length > 1 && <p className={`text-sm leading-snug truncate text-left opacity-70 ${textColor}`}>{lines[1]}</p>}
                     </div>
                  </div>

@@ -4,7 +4,8 @@ import {
   Check, Terminal, Plus, PenLine, AlignLeft, AlignCenter, AlignRight, Scan, 
   ChevronLeft, MessageSquareDashed, Bookmark, Edit, Moon, Book,
   Archive, Trash2, CheckCheck, Circle, Globe, Zap, Cpu, SlidersHorizontal,
-  User, AtSign, Activity, Camera, Save, Grid, UserPlus, MessageCircle, MoreVertical, Phone, PaintBucket
+  User, AtSign, Activity, Camera, Save, Grid, UserPlus, MessageCircle, MoreVertical, Phone, PaintBucket,
+  Sun, Sunset
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
@@ -89,7 +90,7 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
-// --- CHAT LIST ITEM (ANIMATED) ---
+// --- CHAT LIST ITEM ---
 const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any) => {
     const otherUser = useUser(chat.otherUserId);
     const displayName = otherUser?.displayName || 'Unknown';
@@ -159,7 +160,10 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   
+  // Settings State
   const [bubbleStyle, setBubbleStyle] = useState<string>('orange_solid');
+  const [redModeIntensity, setRedModeIntensity] = useState<number>(0);
+  const [isAutoRedMode, setIsAutoRedMode] = useState<boolean>(false);
 
   const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
   const otherChatUser = useUser(currentChatObject?.otherUserId);
@@ -205,10 +209,53 @@ function App() {
     }
   }, [user]);
 
+  // Load User Preferences
   useEffect(() => {
       const savedBubble = localStorage.getItem('vibenotes_bubble_style');
       if (savedBubble) setBubbleStyle(savedBubble);
+      
+      const savedRed = localStorage.getItem('vibenotes_red_intensity');
+      if (savedRed) setRedModeIntensity(parseInt(savedRed));
+
+      const savedAutoRed = localStorage.getItem('vibenotes_red_auto');
+      if (savedAutoRed) setIsAutoRedMode(savedAutoRed === 'true');
   }, []);
+
+  // --- NIGHT SHIFT (RED MODE) LOGIC ---
+  useEffect(() => {
+    if (!isAutoRedMode) return;
+
+    const checkTime = () => {
+        const hour = new Date().getHours();
+        // If it's 6PM (18) or later, OR before 6AM (6) -> Night time
+        if (hour >= 18 || hour < 6) {
+            // Only set if we aren't already manually adjusting wildly
+            if (redModeIntensity !== 50) setRedModeIntensity(50);
+        } else {
+            if (redModeIntensity !== 0) setRedModeIntensity(0);
+        }
+    };
+
+    checkTime(); // Check immediately
+    const interval = setInterval(checkTime, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [isAutoRedMode]);
+
+  const handleRedModeChange = (val: number) => {
+      setRedModeIntensity(val);
+      localStorage.setItem('vibenotes_red_intensity', val.toString());
+      if (isAutoRedMode) {
+          // If user manually moves slider, disable auto to avoid fighting
+          setIsAutoRedMode(false);
+          localStorage.setItem('vibenotes_red_auto', 'false');
+      }
+  };
+
+  const toggleAutoRedMode = () => {
+      const newState = !isAutoRedMode;
+      setIsAutoRedMode(newState);
+      localStorage.setItem('vibenotes_red_auto', newState.toString());
+  };
 
   const handleSecretTrigger = () => {
     setSecretTaps(prev => prev + 1);
@@ -459,9 +506,19 @@ function App() {
   return (
     <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
+      {/* BACKGROUND IMAGE */}
       <div className="fixed inset-0 z-0 pointer-events-none select-none overflow-hidden bg-black">
         <div className="absolute inset-0 transition-opacity duration-300" style={{ backgroundImage: `url(/bg${bgIndex}.jpg)`, backgroundSize: bgScale >= 100 ? 'cover' : `${bgScale}%`, backgroundPosition: 'center', backgroundRepeat: 'repeat', opacity: bgOpacity }} />
       </div>
+
+      {/* --- NEW: RED LIGHT MODE OVERLAY --- */}
+      <div 
+        className="fixed inset-0 z-0 pointer-events-none mix-blend-overlay transition-opacity duration-1000"
+        style={{ 
+            backgroundColor: '#ff4500', // Warm orange-red
+            opacity: redModeIntensity / 100 // Convert 0-100 to 0.0-1.0
+        }} 
+      />
 
       {currentView === 'list' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in fade-in slide-in-from-left-5 duration-300">
@@ -484,7 +541,7 @@ function App() {
              </div>
            )}
 
-           {/* MAIN CONTENT AREA WITH KEY FOR ANIMATION RESET */}
+           {/* MAIN CONTENT AREA */}
            <div key={activeTab + 'content'} className="flex-1 overflow-y-auto no-scrollbar pb-24">
                {activeTab === 'chats' && (
                  <>
@@ -613,6 +670,35 @@ function App() {
                                     <div className="absolute inset-0 bg-white/5 border border-orange-500/30" />
                                     <span className="relative z-10 text-xs font-bold text-orange-200 uppercase tracking-wider">Glow</span>
                                 </button>
+                            </div>
+                        </div>
+
+                        {/* --- NIGHT MODE SETTINGS --- */}
+                        <div className="space-y-4 pt-2 border-t border-white/5">
+                            <div className="flex justify-between items-center">
+                                <label className="text-white text-sm font-medium flex items-center gap-2"><Moon size={14}/> Night Shift</label>
+                                <button 
+                                    onClick={toggleAutoRedMode} 
+                                    className={`text-xs px-2 py-1 rounded-md border transition-colors ${isAutoRedMode ? 'bg-orange-500 border-orange-500 text-white' : 'bg-transparent border-zinc-700 text-zinc-500'}`}
+                                >
+                                    Auto (Sunset)
+                                </button>
+                            </div>
+                            
+                            <div className={`space-y-2 transition-opacity ${isAutoRedMode ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                                <div className="flex justify-between">
+                                    <Sun size={12} className="text-zinc-500" />
+                                    <Sunset size={12} className="text-orange-500" />
+                                </div>
+                                <input 
+                                    type="range" 
+                                    min="0" 
+                                    max="80" 
+                                    step="5" 
+                                    value={redModeIntensity} 
+                                    onChange={(e) => handleRedModeChange(parseInt(e.target.value))} 
+                                    className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500" 
+                                />
                             </div>
                         </div>
 

@@ -219,34 +219,72 @@ function App() {
       if (savedAutoRed) setIsAutoRedMode(savedAutoRed === 'true');
   }, []);
 
+  // --- AUTO RED MODE LOGIC ---
   useEffect(() => {
     if (!isAutoRedMode) return;
+    
     const checkTime = () => {
         const hour = new Date().getHours();
+        // 6 PM to 6 AM = Night Mode
         if (hour >= 18 || hour < 6) {
-            if (redModeIntensity !== 50) setRedModeIntensity(50);
+            if (redModeIntensity !== 50) {
+                setRedModeIntensity(50);
+                localStorage.setItem('vibenotes_red_intensity', '50');
+            }
         } else {
-            if (redModeIntensity !== 0) setRedModeIntensity(0);
+            if (redModeIntensity !== 0) {
+                setRedModeIntensity(0);
+                localStorage.setItem('vibenotes_red_intensity', '0');
+            }
         }
     };
+    
     checkTime(); 
     const interval = setInterval(checkTime, 60000); 
     return () => clearInterval(interval);
-  }, [isAutoRedMode]);
+  }, [isAutoRedMode, redModeIntensity]);
 
-  const handleRedModeChange = (val: number) => {
-      setRedModeIntensity(val);
-      localStorage.setItem('vibenotes_red_intensity', val.toString());
-      if (isAutoRedMode) {
-          setIsAutoRedMode(false);
-          localStorage.setItem('vibenotes_red_auto', 'false');
-      }
-  };
+  // --- MOBILE KEYBOARD VIEWPORT FIX ---
+  useEffect(() => {
+    if (currentView !== 'room') return;
+
+    const handleVisualResize = () => {
+        setTimeout(() => {
+            scrollToBottom('auto');
+        }, 100);
+    };
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleVisualResize);
+        window.visualViewport.addEventListener('scroll', handleVisualResize);
+    }
+
+    return () => {
+        if (window.visualViewport) {
+            window.visualViewport.removeEventListener('resize', handleVisualResize);
+            window.visualViewport.removeEventListener('scroll', handleVisualResize);
+        }
+    };
+  }, [currentView, activeChatId]);
 
   const toggleAutoRedMode = () => {
       const newState = !isAutoRedMode;
       setIsAutoRedMode(newState);
       localStorage.setItem('vibenotes_red_auto', newState.toString());
+      
+      if (!newState) {
+          // If turning OFF, immediately reset to normal mode (0 intensity)
+          setRedModeIntensity(0);
+          localStorage.setItem('vibenotes_red_intensity', '0');
+      } else {
+          // If turning ON, check time immediately to set state
+          const hour = new Date().getHours();
+          if (hour >= 18 || hour < 6) {
+              setRedModeIntensity(50);
+          } else {
+              setRedModeIntensity(0);
+          }
+      }
   };
 
   const changeBubbleStyle = (style: string) => {
@@ -496,7 +534,7 @@ function App() {
   );
 
   return (
-    <div className={`fixed inset-0 w-full bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
+    <div className={`fixed top-0 left-0 w-full h-[100dvh] bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
       <div className="fixed inset-0 z-0 pointer-events-none select-none overflow-hidden bg-black">
         <div className="absolute inset-0 transition-opacity duration-300" style={{ backgroundImage: `url(/bg${bgIndex}.jpg)`, backgroundSize: bgScale >= 100 ? 'cover' : `${bgScale}%`, backgroundPosition: 'center', backgroundRepeat: 'repeat', opacity: bgOpacity }} />
@@ -540,7 +578,7 @@ function App() {
                    {activeTab === 'chats' && (
                      <>
                         <div className="px-4 mb-4">
-                           {/* FEED SEARCH INPUT - CHANGED TO ORANGE GLOW */}
+                           {/* FEED SEARCH INPUT - ORANGE GLOW */}
                            <div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-orange-500/50">
                               <Search size={16} className="text-zinc-500" />
                               <input type="text" placeholder="Search frequency..." className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-medium"/>
@@ -669,33 +707,20 @@ function App() {
                                 </div>
                             </div>
 
-                            {/* --- NIGHT MODE SETTINGS --- */}
+                            {/* --- AUTO NIGHT SHIFT TOGGLE (SIMPLIFIED) --- */}
                             <div className="space-y-4 pt-2 border-t border-white/5">
-                                <div className="flex justify-between items-center">
-                                    <label className="text-white text-sm font-medium flex items-center gap-2"><Moon size={14}/> Night Shift</label>
-                                    <button 
-                                        onClick={toggleAutoRedMode} 
-                                        className={`text-xs px-2 py-1 rounded-md border transition-colors ${isAutoRedMode ? 'bg-orange-500 border-orange-500 text-white' : 'bg-transparent border-zinc-700 text-zinc-500'}`}
-                                    >
-                                        Auto (Sunset)
-                                    </button>
-                                </div>
-                                
-                                <div className={`space-y-2 transition-opacity ${isAutoRedMode ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                                    <div className="flex justify-between">
-                                        <Sun size={12} className="text-zinc-500" />
-                                        <Sunset size={12} className="text-orange-500" />
+                                <button 
+                                    onClick={toggleAutoRedMode} 
+                                    className={`w-full py-3 rounded-xl border flex items-center justify-between px-4 transition-all ${isAutoRedMode ? 'bg-orange-500/10 border-orange-500 text-orange-500' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}
+                                >
+                                    <span className="font-medium flex items-center gap-2 text-sm"><Moon size={16} /> Auto Night Shift</span>
+                                    <div className={`w-10 h-6 rounded-full relative transition-colors ${isAutoRedMode ? 'bg-orange-500' : 'bg-zinc-700'}`}>
+                                        <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${isAutoRedMode ? 'translate-x-4' : 'translate-x-0'}`} />
                                     </div>
-                                    <input 
-                                        type="range" 
-                                        min="0" 
-                                        max="80" 
-                                        step="5" 
-                                        value={redModeIntensity} 
-                                        onChange={(e) => handleRedModeChange(parseInt(e.target.value))} 
-                                        className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500" 
-                                    />
-                                </div>
+                                </button>
+                                <p className="text-xs text-zinc-500 px-1">
+                                    {isAutoRedMode ? "Automatically enables red filter after sunset (6 PM - 6 AM)." : "Night shift is disabled."}
+                                </p>
                             </div>
 
                             <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Wallpaper Scale</label><span className="text-zinc-500 text-xs font-mono">{bgScale >= 100 ? 'COVER' : `${bgScale}%`}</span></div><input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
@@ -880,7 +905,7 @@ function App() {
            <div className="flex-none w-full p-2 pb-6 md:pb-3 bg-black/60 backdrop-blur-xl z-50 border-t border-zinc-800/50">
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  {activeChatId === 'saved_messages' && (<button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">{activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}</button>)}
-                 {/* MAIN CHAT INPUT - CHANGED FOCUS FROM BLUE TO ORANGE */}
+                 {/* MAIN CHAT INPUT - ORANGE GLOW */}
                  <div className="flex-1 bg-zinc-900/50 border border-zinc-700/50 rounded-2xl flex items-center px-3 py-1.5 focus-within:border-orange-500/50 transition-colors gap-2 relative">
                     {imageUrl && (<div className="relative flex-shrink-0"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"><X size={10} /></button></div>)}
                     <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} onFocus={() => { scrollToBottom('auto'); }} placeholder={editingNote ? "Edit..." : (activeChatId !== 'saved_messages' ? TRANSLATIONS.typePlaceholder : (activeFilter === 'all' ? "Select category..." : (isHackerMode ? ">_" : `${currentConfig?.label}...`)))} rows={1} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-1 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />

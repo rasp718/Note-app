@@ -818,8 +818,8 @@ function App() {
                              ? { bg: 'bg-black', border: 'border border-green-500/30 hover:border-green-500 transition-colors', text: 'text-green-500' }
                              : { 
                                  bg: 'bg-zinc-900/50 backdrop-blur-md', 
-                                 // INTENSE ORANGE GLOW ON HOVER
-                                 border: 'border border-white/5 hover:border-orange-500/50 hover:shadow-[0_0_15px_rgba(234,88,12,0.2)] transition-all duration-300', 
+                                 // NO OUTLINE, NO GLOW
+                                 border: 'border-transparent', 
                                  text: 'text-zinc-100' 
                                };
 
@@ -856,25 +856,25 @@ function App() {
                         let customColors;
                         if (isMe) {
                             switch(bubbleStyle) {
-                                case 'clear': 
-                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20 hover:border-orange-500/50 hover:shadow-[0_0_10px_rgba(234,88,12,0.2)] transition-all', text: 'text-white' };
+                                case 'clear': // Clear White Border
+                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20', text: 'text-white' };
                                     break;
-                                case 'clear_orange': 
-                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-orange-500/30 hover:border-orange-500 shadow-[0_0_10px_rgba(234,88,12,0.1)] hover:shadow-[0_0_15px_rgba(234,88,12,0.3)] transition-all', text: 'text-white' };
+                                case 'clear_orange': // Clear Orange Glow
+                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-orange-500/30 shadow-[0_0_10px_rgba(234,88,12,0.1)]', text: 'text-white' };
                                     break;
                                 case 'orange_glass':
-                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]/30 backdrop-blur-md`, border: `border-[${CLAUDE_ORANGE}]/50 hover:border-[${CLAUDE_ORANGE}] transition-all`, text: 'text-white' };
+                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]/30 backdrop-blur-md`, border: `border-[${CLAUDE_ORANGE}]/50`, text: 'text-white' };
                                     break;
                                 case 'orange_solid':
                                 default:
-                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]`, border: 'border-transparent hover:ring-1 hover:ring-white/30 transition-all', text: 'text-white' };
+                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]`, border: 'border-transparent', text: 'text-white' };
                                     break;
                             }
                         } else {
-                            // RECEIVED MESSAGES - INTENSE HOVER GLOW ADDED
+                            // "Them" is now DARK GRAY with NO BORDER and NO HOVER GLOW
                             customColors = { 
-                                bg: 'bg-zinc-900/50 backdrop-blur-md', 
-                                border: 'border border-white/5 hover:border-orange-500/50 hover:shadow-[0_0_15px_rgba(234,88,12,0.15)] transition-all duration-300', 
+                                bg: 'bg-zinc-800', 
+                                border: 'border-transparent', 
                                 text: 'text-zinc-100' 
                             };
                         }

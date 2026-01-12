@@ -55,8 +55,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const HACKER_GREEN = '#4ade80';
   const accentColor = isHacker ? HACKER_GREEN : isSecret ? '#ef4444' : CLAUDE_ORANGE;
   
-  const borderStyle = variant === 'default' ? { borderColor: customColors?.border || (isHacker ? 'rgba(74, 222, 128, 0.2)' : '#27272a') } : {}; 
-  const chatBorderClasses = variant !== 'default' ? (customColors?.border ? customColors.border : 'border border-white/5') : 'border';
+  // REMOVED: Default borders logic. Now defaults to empty style unless customColors.border is explicitly passed.
+  const borderStyle = customColors?.border ? { borderColor: customColors.border } : {};
+  // CHANGED: Chat borders default to 'border-none' instead of 'border'
+  const chatBorderClasses = variant !== 'default' ? (customColors?.border ? customColors.border : 'border-none') : 'border-none';
+  
   const bgColor = customColors?.bg || 'bg-zinc-900';
   const textColor = customColors?.text || 'text-zinc-300';
   const shadowClass = customColors?.shadow || 'shadow-sm';
@@ -104,7 +107,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
         <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} ${fontClass} relative transition-all duration-200`} style={{ ...borderStyle, transform: `translateX(${swipeOffset}px)` }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           {isExpanded ? (
             <div className="flex flex-col gap-1 min-w-[80px]">
-              {note.imageUrl && ( <div className="mb-1 rounded-lg overflow-hidden border bg-zinc-950 flex justify-center max-w-full" style={{ borderColor: 'rgba(255,255,255,0.1)' }}><img src={note.imageUrl} alt="Attachment" className="w-full md:w-auto h-auto md:max-h-96 object-contain" /></div>)}
+              {note.imageUrl && ( <div className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full"><img src={note.imageUrl} alt="Attachment" className="w-full md:w-auto h-auto md:max-h-96 object-contain" /></div>)}
               <div className="block w-full">
                   <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>
                   <div className="float-right ml-3 mt-1.5 flex items-center gap-1.5 align-bottom">
@@ -122,7 +125,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                        {lines.length > 1 && <p className={`text-sm leading-snug truncate text-left opacity-70 ${textColor}`}>{lines[1]}</p>}
                     </div>
                  </div>
-                 {note.imageUrl && (<div className="flex-shrink-0 w-12 h-10 rounded bg-zinc-800 border overflow-hidden" style={{ borderColor: 'rgba(255,255,255,0.1)' }}><img src={note.imageUrl} alt="" className="w-full h-full object-cover" /></div>)}
+                 {note.imageUrl && (<div className="flex-shrink-0 w-12 h-10 rounded bg-zinc-800 border-none overflow-hidden"><img src={note.imageUrl} alt="" className="w-full h-full object-cover" /></div>)}
                  <div className="flex flex-col justify-center items-end gap-1 flex-shrink-0">
                     <span className="text-[10px] opacity-60 font-medium" style={{ color: customColors?.text || accentColor }}>{formatTime(note.date)}</span>
                  </div>

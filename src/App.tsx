@@ -191,7 +191,7 @@ function App() {
   const activeSecretConfig = HACKER_CONFIG;
   const isHackerMode = activeFilter === 'secret' || editingNote?.category === 'secret';
   
-  // PRIMARY ACCENT for Buttons/Headers
+  // PRIMARY ACCENT for Buttons/Headers (ORANGE)
   const accentColor = isHackerMode ? HACKER_GREEN : CLAUDE_ORANGE;
   // NAVIGATION ACCENT for Bottom Tab Bar (White for minimal)
   const navAccentColor = isHackerMode ? HACKER_GREEN : '#ffffff';
@@ -691,7 +691,7 @@ function App() {
                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
                             <div className="space-y-3"><label className="text-white text-sm font-medium">Message Alignment</label><div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800"><button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button><button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button><button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button></div></div>
                             
-                            {/* CHAT BUBBLE STYLE SELECTOR - KEEPS MINIMALIST AS DEFAULT */}
+                            {/* CHAT BUBBLE STYLE SELECTOR */}
                             <div className="space-y-3">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
                                 <div className="grid grid-cols-2 gap-3">
@@ -709,10 +709,11 @@ function App() {
                                         <div className="absolute inset-0 bg-white/5 border border-white/20" />
                                         <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Clear</span>
                                     </button>
-
-                                    <button onClick={() => changeBubbleStyle('clear_zinc')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'clear_zinc' ? 'border-zinc-400 ring-1 ring-zinc-400/50' : 'border-white/5 hover:border-zinc-400/50'}`} title="Clear Zinc">
-                                        <div className="absolute inset-0 bg-white/5 border border-zinc-400/30" />
-                                        <span className="relative z-10 text-xs font-bold text-zinc-200 uppercase tracking-wider">Glow</span>
+                                    
+                                    {/* CHANGED: REPLACED GLOW WITH SOLID GRAY */}
+                                    <button onClick={() => changeBubbleStyle('solid_gray')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'solid_gray' ? 'border-zinc-400 ring-1 ring-zinc-400/50' : 'border-white/5 hover:border-zinc-400/50'}`} title="Solid Gray">
+                                        <div className="absolute inset-0 bg-zinc-700" />
+                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Solid Gray</span>
                                     </button>
                                 </div>
                             </div>
@@ -862,15 +863,15 @@ function App() {
                         const isLastInSequence = !nextMsg || nextMsg.senderId !== msg.senderId;
                         const showAvatar = !isMe && isLastInSequence;
 
-                        // --- STYLE SELECTOR LOGIC (MINIMALIST DEFAULT) ---
+                        // --- STYLE SELECTOR LOGIC ---
                         let customColors;
                         if (isMe) {
                             switch(bubbleStyle) {
                                 case 'clear': 
                                     customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20', text: 'text-white' };
                                     break;
-                                case 'clear_zinc': 
-                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-zinc-400/30 shadow-[0_0_10px_rgba(161,161,170,0.1)]', text: 'text-white' };
+                                case 'solid_gray': // REPLACED GLOW WITH SOLID GRAY
+                                    customColors = { bg: 'bg-zinc-700', border: 'border-transparent', text: 'text-white' };
                                     break;
                                 case 'minimal_glass':
                                     customColors = { bg: `bg-white/20 backdrop-blur-md`, border: `border-white/50`, text: 'text-white' };

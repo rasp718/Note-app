@@ -17,8 +17,9 @@ const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
 
 const InlineActionButton = ({ onClick, icon: Icon, accentColor }: any) => {
   const [isHovered, setIsHovered] = useState(false);
+  // CHANGED: Hover color is now forced to white/light gray instead of accentColor
   return (
-    <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? accentColor : '#71717a' }}><Icon size={12} /></button>
+    <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? '#ffffff' : '#71717a' }}><Icon size={12} /></button>
   );
 };
 
@@ -55,9 +56,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const HACKER_GREEN = '#4ade80';
   const accentColor = isHacker ? HACKER_GREEN : isSecret ? '#ef4444' : CLAUDE_ORANGE;
   
-  // REMOVED: Default borders logic. Now defaults to empty style unless customColors.border is explicitly passed.
   const borderStyle = customColors?.border ? { borderColor: customColors.border } : {};
-  // CHANGED: Chat borders default to 'border-none' instead of 'border'
   const chatBorderClasses = variant !== 'default' ? (customColors?.border ? customColors.border : 'border-none') : 'border-none';
   
   const bgColor = customColors?.bg || 'bg-zinc-900';

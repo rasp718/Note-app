@@ -20,7 +20,8 @@ const TRANSLATIONS = {
 };
 
 // --- THEME CONSTANTS ---
-const CLAUDE_ORANGE = '#c25e3e'; 
+// Main Accent (Send Button, Header Icons)
+const CLAUDE_ORANGE = '#da7756'; 
 const HACKER_GREEN = '#4ade80';
 
 const HACKER_CONFIG: CategoryConfig = {
@@ -107,8 +108,8 @@ const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any
         >
             {isEditing && (
                 <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200">
-                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${active ? 'bg-orange-500 border-orange-500 scale-110' : 'border-zinc-700 bg-black/40'}`}>
-                        {active && <Check size={14} className="text-black" strokeWidth={4} />}
+                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${active ? 'bg-[#da7756] border-[#da7756] scale-110' : 'border-zinc-700 bg-black/40'}`}>
+                        {active && <Check size={14} className="text-white" strokeWidth={4} />}
                     </div>
                 </div>
             )}
@@ -160,7 +161,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   
-  const [bubbleStyle, setBubbleStyle] = useState<string>('orange_solid');
+  const [bubbleStyle, setBubbleStyle] = useState<string>('minimal_solid');
   const [redModeIntensity, setRedModeIntensity] = useState<number>(0);
   const [isAutoRedMode, setIsAutoRedMode] = useState<boolean>(false);
 
@@ -189,10 +190,15 @@ function App() {
 
   const activeSecretConfig = HACKER_CONFIG;
   const isHackerMode = activeFilter === 'secret' || editingNote?.category === 'secret';
+  
+  // PRIMARY ACCENT for Buttons/Headers
   const accentColor = isHackerMode ? HACKER_GREEN : CLAUDE_ORANGE;
+  // NAVIGATION ACCENT for Bottom Tab Bar (White for minimal)
+  const navAccentColor = isHackerMode ? HACKER_GREEN : '#ffffff';
+  
   const currentTheme = {
     font: isHackerMode ? 'font-mono' : 'font-sans',
-    selection: isHackerMode ? 'selection:bg-green-500/30 selection:text-green-400' : 'selection:bg-[#da7756]/30 selection:text-[#da7756]'
+    selection: isHackerMode ? 'selection:bg-green-500/30 selection:text-green-400' : 'selection:bg-white/20 selection:text-white'
   };
 
   const currentConfig = activeFilter === 'all' ? null : (activeFilter === 'secret' ? HACKER_CONFIG : categories.find(c => c.id === activeFilter));
@@ -526,10 +532,11 @@ function App() {
 
   const BottomTabBar = () => (
       <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-2xl border border-white/5 rounded-full shadow-2xl shadow-black/50 p-1.5 flex gap-1 z-50">
-         <button onClick={() => setActiveTab('contacts')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Globe size={22} className={`transition-all duration-300 ${activeTab === 'contacts' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'contacts' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}/></button>
-         <button onClick={() => setActiveTab('calls')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Zap size={22} className={`transition-all duration-300 ${activeTab === 'calls' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'calls' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}/></button>
-         <button onClick={() => setActiveTab('chats')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><MessageSquareDashed size={22} className={`transition-all duration-300 ${activeTab === 'chats' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'chats' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}/></button>
-         <button onClick={() => setActiveTab('settings')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Cpu size={22} className={`transition-all duration-300 ${activeTab === 'settings' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'settings' ? { color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}60)` } : {}}/></button>
+         {/* NAVIGATION BUTTONS - WHITE ACCENT (MINIMALIST) */}
+         <button onClick={() => setActiveTab('contacts')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Globe size={22} className={`transition-all duration-300 ${activeTab === 'contacts' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'contacts' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
+         <button onClick={() => setActiveTab('calls')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Zap size={22} className={`transition-all duration-300 ${activeTab === 'calls' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'calls' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
+         <button onClick={() => setActiveTab('chats')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><MessageSquareDashed size={22} className={`transition-all duration-300 ${activeTab === 'chats' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'chats' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
+         <button onClick={() => setActiveTab('settings')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Cpu size={22} className={`transition-all duration-300 ${activeTab === 'settings' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'settings' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
       </div>
   );
 
@@ -555,6 +562,7 @@ function App() {
              <div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <div className="max-w-2xl mx-auto w-full flex items-end justify-between">
                     <div><h1 className="text-3xl font-black text-white tracking-tighter">FEED</h1><p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mt-1">Encrypted</p></div>
+                    {/* Pen Icon turns Orange on Hover (Keep this accent) */}
                     <div className="flex gap-4 items-center mb-1"><button className="text-zinc-500 transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = '#71717a'}><PenLine size={20} /></button></div>
                 </div>
              </div>
@@ -578,8 +586,8 @@ function App() {
                    {activeTab === 'chats' && (
                      <>
                         <div className="px-4 mb-4">
-                           {/* FEED SEARCH INPUT - ORANGE GLOW */}
-                           <div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-orange-500/50">
+                           {/* FEED SEARCH INPUT - REMAINS MINIMALIST (WHITE GLOW) */}
+                           <div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-white/50">
                               <Search size={16} className="text-zinc-500" />
                               <input type="text" placeholder="Search frequency..." className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-medium"/>
                            </div>
@@ -587,6 +595,7 @@ function App() {
 
                         <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-left-8 fade-in duration-500`}>
                             <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
+                                {/* MAIN HEADER ICON - KEEPS ORANGE ACCENT */}
                                 <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50">
                                     {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
                                 </div>
@@ -620,8 +629,8 @@ function App() {
                    {activeTab === 'contacts' && (
                      <div className="p-4 space-y-6">
                         <form onSubmit={handleSearchContacts} className="relative">
-                            {/* CONTACTS SEARCH INPUT - ORANGE GLOW */}
-                            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-3 gap-3 focus-within:border-orange-500/50 transition-colors">
+                            {/* CONTACTS SEARCH INPUT - WHITE GLOW */}
+                            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-3 gap-3 focus-within:border-white/50 transition-colors">
                                 <AtSign size={18} className="text-zinc-500" />
                                 <input type="text" value={contactSearchQuery} onChange={(e) => setContactSearchQuery(e.target.value)} placeholder="Search by handle (e.g. @neo)" className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-mono"/>
                                 <button type="submit" disabled={isSearchingContacts} className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all disabled:opacity-50"><Search size={16} /></button>
@@ -629,7 +638,7 @@ function App() {
                         </form>
                         <div className="space-y-3">
                             {isSearchingContacts ? (
-                                <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div></div>
+                                <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div></div>
                             ) : contactSearchResults.length > 0 ? (
                                 contactSearchResults.map((u) => (
                                     <div key={u.uid} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-2 fade-in duration-300">
@@ -637,7 +646,8 @@ function App() {
                                             {u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}
                                         </div>
                                         <div className="flex-1"><h3 className="font-bold text-white">{u.displayName}</h3><p className="text-xs text-zinc-500 font-mono">{u.handle}</p></div>
-                                        <button onClick={() => startNewChat(u.uid)} className="w-10 h-10 rounded-full bg-orange-500/10 text-orange-500 flex items-center justify-center hover:bg-orange-500 hover:text-white transition-all"><MessageCircle size={20} /></button>
+                                        {/* Button Uses White/Minimalist still */}
+                                        <button onClick={() => startNewChat(u.uid)} className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all"><MessageCircle size={20} /></button>
                                     </div>
                                 ))
                             ) : (
@@ -651,7 +661,7 @@ function App() {
                      <div className="p-4 space-y-6">
                         <div className="relative overflow-hidden bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col gap-6 backdrop-blur-xl group">
                            <div className="absolute top-4 right-4">
-                                {isEditingProfile ? (<button onClick={handleProfileSave} className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center"><Check size={16} strokeWidth={3} /></button>) : (<button onClick={() => setIsEditingProfile(true)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 hover:text-white"><Edit size={14} /></button>)}
+                                {isEditingProfile ? (<button onClick={handleProfileSave} className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center"><Check size={16} strokeWidth={3} /></button>) : (<button onClick={() => setIsEditingProfile(true)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 hover:text-white"><Edit size={14} /></button>)}
                            </div>
                            <div className="flex items-center gap-5">
                                <div className="relative">
@@ -663,17 +673,17 @@ function App() {
                                    )}
                                </div>
                                <div className="flex-1 min-w-0 space-y-1">
-                                   {isEditingProfile ? (<input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-xl font-bold w-full focus:outline-none focus:border-orange-500 py-1" placeholder="Display Name"/>) : (<h2 className="text-2xl font-black tracking-tight text-white truncate">{profileName}</h2>)}
-                                   {isEditingProfile ? (<div className="flex items-center gap-1 text-zinc-500"><AtSign size={12} /><input type="text" value={profileHandle} onChange={(e) => setProfileHandle(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-sm font-mono w-full focus:outline-none focus:border-orange-500" placeholder="handle"/></div>) : (<p className="text-zinc-400 text-xs font-mono tracking-wide">{profileHandle}</p>)}
+                                   {isEditingProfile ? (<input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-xl font-bold w-full focus:outline-none focus:border-white py-1" placeholder="Display Name"/>) : (<h2 className="text-2xl font-black tracking-tight text-white truncate">{profileName}</h2>)}
+                                   {isEditingProfile ? (<div className="flex items-center gap-1 text-zinc-500"><AtSign size={12} /><input type="text" value={profileHandle} onChange={(e) => setProfileHandle(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-sm font-mono w-full focus:outline-none focus:border-white" placeholder="handle"/></div>) : (<p className="text-zinc-400 text-xs font-mono tracking-wide">{profileHandle}</p>)}
                                </div>
                            </div>
                            {isEditingProfile && showAvatarSelector && (
                                <div className="grid grid-cols-6 gap-2 pt-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                                   {Array.from({ length: 7 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => handleSelectPreset(num)} className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-orange-500 transition-colors bg-black/40 flex items-center justify-center text-xl relative"><img src={`/robot${num}.jpeg?v=1`} className="w-full h-full object-cover" /></button>))}
+                                   {Array.from({ length: 7 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => handleSelectPreset(num)} className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-white transition-colors bg-black/40 flex items-center justify-center text-xl relative"><img src={`/robot${num}.jpeg?v=1`} className="w-full h-full object-cover" /></button>))}
                                </div>
                            )}
                            <div className="pt-2 border-t border-white/5">
-                                {isEditingProfile ? (<div className="flex items-center gap-2"><Activity size={14} className="text-zinc-500" /><input type="text" value={profileBio} onChange={(e) => setProfileBio(e.target.value)} className="bg-transparent border-b border-white/20 text-zinc-300 text-xs font-mono w-full focus:outline-none focus:border-orange-500 py-1" placeholder="Status..."/></div>) : (<div className="flex items-center gap-2 text-zinc-500 text-xs font-mono uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>{profileBio}</div>)}
+                                {isEditingProfile ? (<div className="flex items-center gap-2"><Activity size={14} className="text-zinc-500" /><input type="text" value={profileBio} onChange={(e) => setProfileBio(e.target.value)} className="bg-transparent border-b border-white/20 text-zinc-300 text-xs font-mono w-full focus:outline-none focus:border-white py-1" placeholder="Status..."/></div>) : (<div className="flex items-center gap-2 text-zinc-500 text-xs font-mono uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>{profileBio}</div>)}
                            </div>
                         </div>
 
@@ -681,17 +691,17 @@ function App() {
                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
                             <div className="space-y-3"><label className="text-white text-sm font-medium">Message Alignment</label><div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800"><button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button><button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button><button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button></div></div>
                             
-                            {/* CHAT BUBBLE STYLE SELECTOR */}
+                            {/* CHAT BUBBLE STYLE SELECTOR - KEEPS MINIMALIST AS DEFAULT */}
                             <div className="space-y-3">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <button onClick={() => changeBubbleStyle('orange_solid')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'orange_solid' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Orange Solid">
-                                        <div className="absolute inset-0 bg-[#c25e3e]" />
-                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Solid</span>
+                                    <button onClick={() => changeBubbleStyle('minimal_solid')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'minimal_solid' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Minimal Solid">
+                                        <div className="absolute inset-0 bg-white" />
+                                        <span className="relative z-10 text-xs font-bold text-black uppercase tracking-wider">Minimal</span>
                                     </button>
                                     
-                                    <button onClick={() => changeBubbleStyle('orange_glass')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'orange_glass' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Orange Glass">
-                                        <div className="absolute inset-0 bg-[#c25e3e]/30 backdrop-blur-md" />
+                                    <button onClick={() => changeBubbleStyle('minimal_glass')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'minimal_glass' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Minimal Glass">
+                                        <div className="absolute inset-0 bg-white/20 backdrop-blur-md" />
                                         <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Glass</span>
                                     </button>
 
@@ -700,22 +710,22 @@ function App() {
                                         <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Clear</span>
                                     </button>
 
-                                    <button onClick={() => changeBubbleStyle('clear_orange')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'clear_orange' ? 'border-orange-500 ring-1 ring-orange-500/50' : 'border-white/5 hover:border-orange-500/50'}`} title="Clear Orange">
-                                        <div className="absolute inset-0 bg-white/5 border border-orange-500/30" />
-                                        <span className="relative z-10 text-xs font-bold text-orange-200 uppercase tracking-wider">Glow</span>
+                                    <button onClick={() => changeBubbleStyle('clear_zinc')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'clear_zinc' ? 'border-zinc-400 ring-1 ring-zinc-400/50' : 'border-white/5 hover:border-zinc-400/50'}`} title="Clear Zinc">
+                                        <div className="absolute inset-0 bg-white/5 border border-zinc-400/30" />
+                                        <span className="relative z-10 text-xs font-bold text-zinc-200 uppercase tracking-wider">Glow</span>
                                     </button>
                                 </div>
                             </div>
 
-                            {/* --- AUTO NIGHT SHIFT TOGGLE (SIMPLIFIED) --- */}
+                            {/* --- AUTO NIGHT SHIFT TOGGLE --- */}
                             <div className="space-y-4 pt-2 border-t border-white/5">
                                 <button 
                                     onClick={toggleAutoRedMode} 
-                                    className={`w-full py-3 rounded-xl border flex items-center justify-between px-4 transition-all ${isAutoRedMode ? 'bg-orange-500/10 border-orange-500 text-orange-500' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}
+                                    className={`w-full py-3 rounded-xl border flex items-center justify-between px-4 transition-all ${isAutoRedMode ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}
                                 >
                                     <span className="font-medium flex items-center gap-2 text-sm"><Moon size={16} /> Auto Night Shift</span>
-                                    <div className={`w-10 h-6 rounded-full relative transition-colors ${isAutoRedMode ? 'bg-orange-500' : 'bg-zinc-700'}`}>
-                                        <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${isAutoRedMode ? 'translate-x-4' : 'translate-x-0'}`} />
+                                    <div className={`w-10 h-6 rounded-full relative transition-colors ${isAutoRedMode ? 'bg-white' : 'bg-zinc-700'}`}>
+                                        <div className={`absolute top-1 left-1 bg-black w-4 h-4 rounded-full transition-transform ${isAutoRedMode ? 'translate-x-4' : 'translate-x-0'}`} />
                                     </div>
                                 </button>
                                 <p className="text-xs text-zinc-500 px-1">
@@ -730,7 +740,7 @@ function App() {
                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-4">
                              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
                              <div className="grid grid-cols-4 gap-3">
-                                  {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => setBgIndex(num)} className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-orange-500 scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}><img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} /></button>))}
+                                  {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => setBgIndex(num)} className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-white scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}><img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} /></button>))}
                               </div>
                         </div>
                      </div>
@@ -767,6 +777,7 @@ function App() {
                            </div>
                         ) : (
                            <div onClick={handleSecretTrigger} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer select-none">
+                                {/* KEEPS ORANGE ICON IN HEADER */}
                                 <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden">
                                      {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}
                                 </div>
@@ -787,8 +798,8 @@ function App() {
                         <div className="flex items-center gap-1">
                              <div className="relative flex items-center h-10">
                                 <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-400 transition-all active:scale-95 rounded-full hover:bg-white/5 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={22} /></button>
-                                {/* ROOM SEARCH EXPANDABLE - ORANGE GLOW */}
-                                <div className={`absolute right-0 bg-zinc-900 border border-zinc-800 focus-within:border-orange-500/50 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
+                                {/* ROOM SEARCH - WHITE GLOW */}
+                                <div className={`absolute right-0 bg-zinc-900 border border-zinc-800 focus-within:border-white/50 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
                                     <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
                                     <input ref={searchInputRef} type="text" placeholder={TRANSLATIONS.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
                                     <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
@@ -813,12 +824,11 @@ function App() {
                         const prevNote = filteredNotes[index - 1];
                         const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
                         
-                        // Define Note Glow Colors
+                        // Define Note Glow Colors (MINIMALIST WHITE)
                         const noteColors = isHackerMode 
                              ? { bg: 'bg-black', border: 'border border-green-500/30 hover:border-green-500 transition-colors', text: 'text-green-500' }
                              : { 
                                  bg: 'bg-zinc-900/50 backdrop-blur-md', 
-                                 // NO OUTLINE, NO GLOW
                                  border: 'border-transparent', 
                                  text: 'text-zinc-100' 
                                };
@@ -852,26 +862,27 @@ function App() {
                         const isLastInSequence = !nextMsg || nextMsg.senderId !== msg.senderId;
                         const showAvatar = !isMe && isLastInSequence;
 
-                        // --- STYLE SELECTOR LOGIC ---
+                        // --- STYLE SELECTOR LOGIC (MINIMALIST DEFAULT) ---
                         let customColors;
                         if (isMe) {
                             switch(bubbleStyle) {
-                                case 'clear': // Clear White Border
+                                case 'clear': 
                                     customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20', text: 'text-white' };
                                     break;
-                                case 'clear_orange': // Clear Orange Glow
-                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-orange-500/30 shadow-[0_0_10px_rgba(234,88,12,0.1)]', text: 'text-white' };
+                                case 'clear_zinc': 
+                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-zinc-400/30 shadow-[0_0_10px_rgba(161,161,170,0.1)]', text: 'text-white' };
                                     break;
-                                case 'orange_glass':
-                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]/30 backdrop-blur-md`, border: `border-[${CLAUDE_ORANGE}]/50`, text: 'text-white' };
+                                case 'minimal_glass':
+                                    customColors = { bg: `bg-white/20 backdrop-blur-md`, border: `border-white/50`, text: 'text-white' };
                                     break;
-                                case 'orange_solid':
+                                case 'minimal_solid':
                                 default:
-                                    customColors = { bg: `bg-[${CLAUDE_ORANGE}]`, border: 'border-transparent', text: 'text-white' };
+                                    // Default White/Black text (Minimalist)
+                                    customColors = { bg: `bg-white`, border: 'border-transparent', text: 'text-black' };
                                     break;
                             }
                         } else {
-                            // "Them" is now DARK GRAY with NO BORDER and NO HOVER GLOW
+                            // "Them" -> Dark Gray
                             customColors = { 
                                 bg: 'bg-zinc-800', 
                                 border: 'border-transparent', 
@@ -926,12 +937,13 @@ function App() {
            <div className="flex-none w-full p-2 pb-6 md:pb-3 bg-black/60 backdrop-blur-xl z-50 border-t border-zinc-800/50">
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  {activeChatId === 'saved_messages' && (<button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">{activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}</button>)}
-                 {/* MAIN CHAT INPUT - ORANGE GLOW */}
-                 <div className="flex-1 bg-zinc-900/50 border border-zinc-700/50 rounded-2xl flex items-center px-3 py-1.5 focus-within:border-orange-500/50 transition-colors gap-2 relative">
+                 {/* MAIN CHAT INPUT - MINIMALIST WHITE FOCUS */}
+                 <div className="flex-1 bg-zinc-900/50 border border-zinc-700/50 rounded-2xl flex items-center px-3 py-1.5 focus-within:border-white/50 transition-colors gap-2 relative">
                     {imageUrl && (<div className="relative flex-shrink-0"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"><X size={10} /></button></div>)}
                     <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} onFocus={() => { scrollToBottom('auto'); }} placeholder={editingNote ? "Edit..." : (activeChatId !== 'saved_messages' ? TRANSLATIONS.typePlaceholder : (activeFilter === 'all' ? "Select category..." : (isHackerMode ? ">_" : `${currentConfig?.label}...`)))} rows={1} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-1 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
                     {(!transcript && !editingNote) && (<label className="cursor-pointer text-zinc-400 hover:text-white"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>)}
                 </div>
+                {/* KEEPS CLAUDE ORANGE SEND BUTTON */}
                 <button onClick={handleMainAction} disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages')} className={`flex-shrink-0 w-8 h-8 mb-1 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg`} style={(transcript.trim() || imageUrl) && (activeFilter !== 'all' || activeChatId !== 'saved_messages') ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: 'transparent', color: '#71717a', boxShadow: 'none' }}>
                     {editingNote ? <Check size={18} strokeWidth={3} /> : <ArrowUp size={20} strokeWidth={3} />}
                 </button>

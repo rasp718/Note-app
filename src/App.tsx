@@ -168,6 +168,7 @@ function App() {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const mimeTypeRef = useRef<string>(''); // NEW: Track correct file type
 
   const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
   const otherChatUser = useUser(currentChatObject?.otherUserId);
@@ -298,10 +299,30 @@ function App() {
     const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = items[i].getAsFile(); if (file) await handleImageUpload(file); break; } }
   };
 
+  // --- UPDATED SMART RECORDING LOGIC (iOS FIX) ---
   const startRecording = async () => {
       try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          const mediaRecorder = new MediaRecorder(stream);
+          
+          // 1. Check which MIME type is supported on this specific device
+          let mimeType = '';
+          if (MediaRecorder.isTypeSupported('audio/webm')) {
+              mimeType = 'audio/webm'; // Chrome/Desktop
+          } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+              mimeType = 'audio/mp4'; // iOS Safari
+          } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+              mimeType = 'audio/ogg'; // Firefox
+          } else {
+              mimeType = ''; // Let browser decide default
+          }
+
+          // 2. Initialize with that type
+          const options = mimeType ? { mimeType } : undefined;
+          const mediaRecorder = new MediaRecorder(stream, options);
+          
+          // Store the actual type the browser chose
+          mimeTypeRef.current = mediaRecorder.mimeType || mimeType;
+
           mediaRecorderRef.current = mediaRecorder;
           audioChunksRef.current = [];
           
@@ -310,7 +331,10 @@ function App() {
           };
 
           mediaRecorder.onstop = () => {
-              const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+              // 3. Create the Blob with the CORRECT type
+              // This is critical. If we say 'audio/webm' but iOS recorded 'audio/mp4', playback fails.
+              const audioBlob = new Blob(audioChunksRef.current, { type: mimeTypeRef.current });
+              
               const reader = new FileReader();
               reader.readAsDataURL(audioBlob);
               reader.onloadend = async () => {
@@ -329,7 +353,10 @@ function App() {
 
           mediaRecorder.start();
           setIsRecording(true);
-      } catch (e) { console.error("Mic error", e); alert("Microphone access denied"); }
+      } catch (e) { 
+          console.error("Mic error", e); 
+          alert("Microphone access denied or not supported."); 
+      }
   };
 
   const stopRecording = () => {
@@ -460,6 +487,7 @@ function App() {
   return (
     <div className={`fixed top-0 left-0 w-full h-[100dvh] bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
+      {/* IMAGE ZOOM */}
       {zoomedImage && (
           <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-in fade-in duration-200" onClick={() => setZoomedImage(null)}>
               <img src={zoomedImage} className="max-w-full max-h-full object-contain p-4 transition-transform duration-300 scale-100" />
@@ -467,6 +495,7 @@ function App() {
           </div>
       )}
 
+      {/* QR CODE */}
       {showQRCode && (
           <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-200" onClick={() => setShowQRCode(false)}>
               <div className="bg-white rounded-3xl p-8 flex flex-col items-center gap-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
@@ -492,7 +521,6 @@ function App() {
 
       {currentView === 'list' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in fade-in slide-in-from-left-5 duration-300">
-           {/* HEADER */}
            {activeTab === 'chats' && (
              <div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <div className="max-w-2xl mx-auto w-full flex items-end justify-between">
@@ -557,10 +585,6 @@ function App() {
                      </>
                    )}
 
-                   {/* REST OF TABS ... (Contacts / Settings) logic is identical to previous successful versions */}
-                   {/* I am re-using the restored settings block here implicitly for brevity in this response, assume it's the FULL block from before */}
-                   {/* To fix the "cut off" issue I will explicitly paste the FULL return now */}
-                   
                    {activeTab === 'contacts' && (
                      <div className="p-4 space-y-6">
                         <form onSubmit={handleSearchContacts} className="relative">
@@ -570,6 +594,7 @@ function App() {
                                 <button type="submit" disabled={isSearchingContacts} className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all disabled:opacity-50"><Search size={16} /></button>
                             </div>
                         </form>
+                        {/* MY QR CODE */}
                         <div onClick={() => setShowQRCode(true)} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors">
                             <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-black">
                                 <QrCode size={24} />
@@ -580,6 +605,7 @@ function App() {
                             </div>
                             <ChevronLeft size={16} className="rotate-180 text-zinc-500" />
                         </div>
+
                         <div className="space-y-3 pt-4">
                             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">Results</h3>
                             {isSearchingContacts ? (
@@ -632,7 +658,6 @@ function App() {
                            </div>
                         </div>
 
-                        {/* RESTORED SETTINGS */}
                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6">
                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
                             <div className="space-y-3"><label className="text-white text-sm font-medium">Message Alignment</label><div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800"><button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button><button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button><button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button></div></div>
@@ -728,40 +753,33 @@ function App() {
               <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-1 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
                 {activeChatId === 'saved_messages' ? (
-                    filteredNotes.length > 0 ? (
-                        filteredNotes.map((note, index) => {
-                            const prevNote = filteredNotes[index - 1];
-                            const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
-                            const noteColors = isHackerMode 
-                                 ? { bg: 'bg-black', border: 'border border-green-500/30 hover:border-green-500 transition-colors', text: 'text-green-500' }
-                                 : { bg: 'bg-zinc-900/50 backdrop-blur-md', border: 'border-transparent', text: 'text-zinc-100' };
+                    filteredNotes.map((note, index) => {
+                        const prevNote = filteredNotes[index - 1];
+                        const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
+                        const noteColors = isHackerMode 
+                             ? { bg: 'bg-black', border: 'border border-green-500/30 hover:border-green-500 transition-colors', text: 'text-green-500' }
+                             : { bg: 'bg-zinc-900/50 backdrop-blur-md', border: 'border-transparent', text: 'text-zinc-100' };
 
-                            return (
-                                <React.Fragment key={note.id}>
-                                    {showHeader && (<div className="flex justify-center my-2 opacity-70 w-full select-none"><span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">{getDateLabel(note.date)}</span></div>)}
-                                    <div onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
-                                        <NoteCard 
-                                            note={note} 
-                                            categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
-                                            selectedVoice={selectedVoice} 
-                                            onDelete={handleDeleteNote} 
-                                            onPin={togglePin} 
-                                            onCategoryClick={(cat) => setActiveFilter(cat)} 
-                                            onEdit={() => handleEditClick(note)} 
-                                            onToggleExpand={handleToggleExpand}
-                                            onImageClick={setZoomedImage}
-                                            customColors={noteColors}
-                                        />
-                                    </div>
-                                </React.Fragment>
-                            );
-                        })
-                    ) : (
-                        <div className="flex h-[50vh] items-center justify-center flex-col opacity-30">
-                            <Book size={48} className="mb-4 text-white"/>
-                            <p className="text-zinc-400">No notes found.</p>
-                        </div>
-                    )
+                        return (
+                            <React.Fragment key={note.id}>
+                                {showHeader && (<div className="flex justify-center my-2 opacity-70 w-full select-none"><span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">{getDateLabel(note.date)}</span></div>)}
+                                <div onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
+                                    <NoteCard 
+                                        note={note} 
+                                        categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
+                                        selectedVoice={selectedVoice} 
+                                        onDelete={handleDeleteNote} 
+                                        onPin={togglePin} 
+                                        onCategoryClick={(cat) => setActiveFilter(cat)} 
+                                        onEdit={() => handleEditClick(note)} 
+                                        onToggleExpand={handleToggleExpand}
+                                        onImageClick={setZoomedImage}
+                                        customColors={noteColors}
+                                    />
+                                </div>
+                            </React.Fragment>
+                        );
+                    })
                 ) : (
                     activeMessages.map((msg, index) => {
                         const prevMsg = activeMessages[index - 1];

@@ -9,7 +9,8 @@ import {
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
-import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers, useUser } from './useFirebaseSync';
+// --- ADDED usePresence and markChatAsRead logic via useMessages ---
+import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers, useUser, usePresence } from './useFirebaseSync';
 import Auth from './components/Auth';
 
 const TRANSLATIONS = { 
@@ -19,8 +20,6 @@ const TRANSLATIONS = {
   cat_hacker: "Hacker Mode"
 };
 
-// --- THEME CONSTANTS ---
-// Main Accent (Send Button, Header Icons)
 const CLAUDE_ORANGE = '#da7756'; 
 const HACKER_GREEN = '#4ade80';
 
@@ -31,7 +30,7 @@ const HACKER_CONFIG: CategoryConfig = {
     colorClass: 'bg-green-500' 
 };
 
-// --- ROBUST DATE UTILS ---
+// --- DATE UTILS ---
 const normalizeDate = (d: any): number => {
     try {
         if (!d) return 0;
@@ -91,7 +90,6 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
-// --- CHAT LIST ITEM ---
 const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any) => {
     const otherUser = useUser(chat.otherUserId);
     const displayName = otherUser?.displayName || 'Unknown';
@@ -102,7 +100,6 @@ const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any
     return (
         <div 
             onClick={isEditing ? onSelect : onClick} 
-            // Staggered Animation
             style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'backwards' }}
             className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent animate-in slide-in-from-right-8 fade-in duration-500 ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
         >
@@ -132,6 +129,10 @@ const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any
 
 function App() {
   const { user, loading: authLoading } = useFirebaseSync();
+  
+  // --- 1. ENABLE PRESENCE SYSTEM ---
+  usePresence(user?.uid);
+  
   const { notes = [], addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
   const { chats: realChats, createChat } = useChats(user?.uid || null);
   
@@ -166,6 +167,7 @@ function App() {
   const [isAutoRedMode, setIsAutoRedMode] = useState<boolean>(false);
 
   const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
+  // --- 2. GET OTHER USER DETAILS (Includes isOnline) ---
   const otherChatUser = useUser(currentChatObject?.otherUserId);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -176,24 +178,28 @@ function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all' | 'secret'>('all');
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [isStartup, setIsStartup] = useState(true);
   const [secretTaps, setSecretTaps] = useState(0);
   const tapTimeoutRef = useRef<any>(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
 
-  const { messages: activeMessages, sendMessage } = useMessages(
+  // --- 3. GET MARK CHAT READ FUNCTION ---
+  const { messages: activeMessages, sendMessage, markChatAsRead } = useMessages(
     (activeChatId && activeChatId !== 'saved_messages') ? activeChatId : null
   );
+
+  // --- 4. AUTO MARK AS READ WHEN CHAT IS OPEN ---
+  useEffect(() => {
+    if (activeChatId && activeChatId !== 'saved_messages' && user && activeMessages.length > 0) {
+        markChatAsRead(user.uid);
+    }
+  }, [activeChatId, activeMessages.length, user]);
 
   const activeSecretConfig = HACKER_CONFIG;
   const isHackerMode = activeFilter === 'secret' || editingNote?.category === 'secret';
   
-  // PRIMARY ACCENT for Buttons/Headers (ORANGE)
   const accentColor = isHackerMode ? HACKER_GREEN : CLAUDE_ORANGE;
-  // NAVIGATION ACCENT for Bottom Tab Bar (White for minimal)
   const navAccentColor = isHackerMode ? HACKER_GREEN : '#ffffff';
   
   const currentTheme = {
@@ -225,220 +231,99 @@ function App() {
       if (savedAutoRed) setIsAutoRedMode(savedAutoRed === 'true');
   }, []);
 
-  // --- AUTO RED MODE LOGIC ---
   useEffect(() => {
     if (!isAutoRedMode) return;
-    
     const checkTime = () => {
         const hour = new Date().getHours();
-        // 6 PM to 6 AM = Night Mode
         if (hour >= 18 || hour < 6) {
-            if (redModeIntensity !== 50) {
-                setRedModeIntensity(50);
-                localStorage.setItem('vibenotes_red_intensity', '50');
-            }
+            if (redModeIntensity !== 50) { setRedModeIntensity(50); localStorage.setItem('vibenotes_red_intensity', '50'); }
         } else {
-            if (redModeIntensity !== 0) {
-                setRedModeIntensity(0);
-                localStorage.setItem('vibenotes_red_intensity', '0');
-            }
+            if (redModeIntensity !== 0) { setRedModeIntensity(0); localStorage.setItem('vibenotes_red_intensity', '0'); }
         }
     };
-    
     checkTime(); 
     const interval = setInterval(checkTime, 60000); 
     return () => clearInterval(interval);
   }, [isAutoRedMode, redModeIntensity]);
 
-  // --- MOBILE KEYBOARD VIEWPORT FIX ---
   useEffect(() => {
     if (currentView !== 'room') return;
-
-    const handleVisualResize = () => {
-        setTimeout(() => {
-            scrollToBottom('auto');
-        }, 100);
-    };
-
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', handleVisualResize);
-        window.visualViewport.addEventListener('scroll', handleVisualResize);
-    }
-
-    return () => {
-        if (window.visualViewport) {
-            window.visualViewport.removeEventListener('resize', handleVisualResize);
-            window.visualViewport.removeEventListener('scroll', handleVisualResize);
-        }
-    };
+    const handleVisualResize = () => { setTimeout(() => { scrollToBottom('auto'); }, 100); };
+    if (window.visualViewport) { window.visualViewport.addEventListener('resize', handleVisualResize); window.visualViewport.addEventListener('scroll', handleVisualResize); }
+    return () => { if (window.visualViewport) { window.visualViewport.removeEventListener('resize', handleVisualResize); window.visualViewport.removeEventListener('scroll', handleVisualResize); } };
   }, [currentView, activeChatId]);
 
   const toggleAutoRedMode = () => {
       const newState = !isAutoRedMode;
       setIsAutoRedMode(newState);
       localStorage.setItem('vibenotes_red_auto', newState.toString());
-      
-      if (!newState) {
-          // If turning OFF, immediately reset to normal mode (0 intensity)
-          setRedModeIntensity(0);
-          localStorage.setItem('vibenotes_red_intensity', '0');
-      } else {
-          // If turning ON, check time immediately to set state
-          const hour = new Date().getHours();
-          if (hour >= 18 || hour < 6) {
-              setRedModeIntensity(50);
-          } else {
-              setRedModeIntensity(0);
-          }
-      }
+      if (!newState) { setRedModeIntensity(0); localStorage.setItem('vibenotes_red_intensity', '0'); } 
+      else { const hour = new Date().getHours(); if (hour >= 18 || hour < 6) { setRedModeIntensity(50); } else { setRedModeIntensity(0); } }
   };
 
-  const changeBubbleStyle = (style: string) => {
-      setBubbleStyle(style);
-      localStorage.setItem('vibenotes_bubble_style', style);
-  };
+  const changeBubbleStyle = (style: string) => { setBubbleStyle(style); localStorage.setItem('vibenotes_bubble_style', style); };
 
   const handleSecretTrigger = () => {
     setSecretTaps(prev => prev + 1);
     if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
     tapTimeoutRef.current = setTimeout(() => setSecretTaps(0), 1000);
-    if (secretTaps + 1 >= 5) {
-        setActiveFilter('secret'); setSecretTaps(0); setShowSecretAnim(true);
-        setTimeout(() => setShowSecretAnim(false), 8000);
-        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-    }
+    if (secretTaps + 1 >= 5) { setActiveFilter('secret'); setSecretTaps(0); setShowSecretAnim(true); setTimeout(() => setShowSecretAnim(false), 8000); if (navigator.vibrate) navigator.vibrate([100, 50, 100]); }
   };
 
   const toggleEditMode = () => { if (isEditing) setSelectedChatIds(new Set()); setIsEditing(!isEditing); };
-  const toggleChatSelection = (id: string) => {
-    const newSet = new Set(selectedChatIds);
-    if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
-    setSelectedChatIds(newSet);
-  };
+  const toggleChatSelection = (id: string) => { const newSet = new Set(selectedChatIds); if (newSet.has(id)) newSet.delete(id); else newSet.add(id); setSelectedChatIds(newSet); };
   const handleDeleteSelected = () => { setSelectedChatIds(new Set()); setIsEditing(false); };
 
   const handleProfileSave = () => {
-      setIsEditingProfile(false);
-      setShowAvatarSelector(false);
-      localStorage.setItem('vibenotes_profile_name', profileName);
-      localStorage.setItem('vibenotes_profile_handle', profileHandle);
-      localStorage.setItem('vibenotes_profile_bio', profileBio);
-      if (profilePic) localStorage.setItem('vibenotes_profile_pic', profilePic);
-      if (user) syncUserProfile(user); 
+      setIsEditingProfile(false); setShowAvatarSelector(false);
+      localStorage.setItem('vibenotes_profile_name', profileName); localStorage.setItem('vibenotes_profile_handle', profileHandle); localStorage.setItem('vibenotes_profile_bio', profileBio);
+      if (profilePic) localStorage.setItem('vibenotes_profile_pic', profilePic); if (user) syncUserProfile(user); 
   };
 
-  const handleAvatarUpload = async (file: File) => {
-      try {
-          const url = await compressImage(file);
-          setProfilePic(url);
-          setShowAvatarSelector(false);
-      } catch(e) { console.error(e); }
-  };
+  const handleAvatarUpload = async (file: File) => { try { const url = await compressImage(file); setProfilePic(url); setShowAvatarSelector(false); } catch(e) { console.error(e); } };
   const handleSelectPreset = (num: number) => { setProfilePic(`/robot${num}.jpeg?v=1`); setShowAvatarSelector(false); };
 
   const handleImageUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) return alert('Please select an image file');
-    setIsUploadingImage(true);
-    try {
-      const url = await compressImage(file);
-      setImageUrl(url);
-    } catch (e) { console.error(e); } finally { setIsUploadingImage(false); }
+    setIsUploadingImage(true); try { const url = await compressImage(file); setImageUrl(url); } catch (e) { console.error(e); } finally { setIsUploadingImage(false); }
   };
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const items = e.clipboardData.items;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = items[i].getAsFile(); if (file) await handleImageUpload(file); break; }
-    }
+    const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = items[i].getAsFile(); if (file) await handleImageUpload(file); break; } }
   };
 
   const handleSearchContacts = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!contactSearchQuery.trim()) return;
-      setIsSearchingContacts(true);
-      try {
-          const results = await searchUsers(contactSearchQuery);
-          setContactSearchResults(results.filter((u: any) => u.uid !== user?.uid));
-      } catch (err) { console.error(err); } finally { setIsSearchingContacts(false); }
+      e.preventDefault(); if (!contactSearchQuery.trim()) return; setIsSearchingContacts(true);
+      try { const results = await searchUsers(contactSearchQuery); setContactSearchResults(results.filter((u: any) => u.uid !== user?.uid)); } catch (err) { console.error(err); } finally { setIsSearchingContacts(false); }
   };
   const startNewChat = async (otherUid: string) => {
       if (!otherUid) return;
-      try {
-          const newChatId = await createChat(otherUid);
-          if (newChatId) {
-              setActiveChatId(newChatId);
-              setCurrentView('room');
-              setContactSearchQuery('');
-              setContactSearchResults([]);
-          }
-      } catch (e) { console.error("Failed to create chat", e); }
+      try { const newChatId = await createChat(otherUid); if (newChatId) { setActiveChatId(newChatId); setCurrentView('room'); setContactSearchQuery(''); setContactSearchResults([]); } } catch (e) { console.error("Failed to create chat", e); }
   };
 
   useEffect(() => {
     if (!showSecretAnim || currentView !== 'room') return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const FONT_SIZE = 24;
-    const FADE_SPEED = 0.1;
-    const MASTER_SPEED = 50;
-    const STUTTER_AMOUNT = 0.85;  
-    const RAIN_BUILDUP = 50; 
-    const COLOR_HEAD = '#FFF'; 
-    const COLOR_TRAIL = '#0D0'; 
-    const GLOW_COLOR = '#0F0'; 
-    const GLOW_INTENSITY = 10;     
-    const binary = '010101010101'; 
-    const nums = '0123456789';
-    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const alphabet = binary + nums + latin;
-    const columns = canvas.width / FONT_SIZE;
-    const drops: number[] = [];
+    const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const FONT_SIZE = 24; const FADE_SPEED = 0.1; const MASTER_SPEED = 50; const STUTTER_AMOUNT = 0.85; const RAIN_BUILDUP = 50; const COLOR_HEAD = '#FFF'; const COLOR_TRAIL = '#0D0'; const GLOW_COLOR = '#0F0'; const GLOW_INTENSITY = 10;     
+    const binary = '010101010101'; const nums = '0123456789'; const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; const alphabet = binary + nums + latin;
+    const columns = canvas.width / FONT_SIZE; const drops: number[] = [];
     for(let x = 0; x < columns; x++) { drops[x] = Math.floor(Math.random() * -RAIN_BUILDUP); }
     const draw = () => {
-        ctx.fillStyle = `rgba(0, 0, 0, ${FADE_SPEED})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.font = `bold ${FONT_SIZE}px monospace`;
+        ctx.fillStyle = `rgba(0, 0, 0, ${FADE_SPEED})`; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.font = `bold ${FONT_SIZE}px monospace`;
         for(let i = 0; i < drops.length; i++) {
             if (Math.random() > STUTTER_AMOUNT) continue;
-            const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-            const x = i * FONT_SIZE;
-            const y = drops[i] * FONT_SIZE;
-            if (y > 0) {
-                ctx.shadowBlur = 0;
-                ctx.fillStyle = COLOR_TRAIL; 
-                ctx.fillText(text, x, y - FONT_SIZE);
-                ctx.shadowColor = GLOW_COLOR;
-                ctx.shadowBlur = GLOW_INTENSITY;
-                ctx.fillStyle = COLOR_HEAD;
-                ctx.fillText(text, x, y);
-            }
-            if(y > canvas.height && Math.random() > 0.975) drops[i] = 0;
-            drops[i]++;
+            const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length)); const x = i * FONT_SIZE; const y = drops[i] * FONT_SIZE;
+            if (y > 0) { ctx.shadowBlur = 0; ctx.fillStyle = COLOR_TRAIL; ctx.fillText(text, x, y - FONT_SIZE); ctx.shadowColor = GLOW_COLOR; ctx.shadowBlur = GLOW_INTENSITY; ctx.fillStyle = COLOR_HEAD; ctx.fillText(text, x, y); }
+            if(y > canvas.height && Math.random() > 0.975) drops[i] = 0; drops[i]++;
         }
     };
-    const interval = setInterval(draw, MASTER_SPEED);
-    const handleResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    window.addEventListener('resize', handleResize);
+    const interval = setInterval(draw, MASTER_SPEED); const handleResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }; window.addEventListener('resize', handleResize);
     return () => { clearInterval(interval); window.removeEventListener('resize', handleResize); };
   }, [showSecretAnim, currentView]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
   
-  useEffect(() => { 
-      try { 
-          const savedAlignment = localStorage.getItem('vibenotes_alignment'); 
-          if(savedAlignment) setAlignment(savedAlignment as any); 
-          const savedBg = localStorage.getItem('vibenotes_bg');
-          if (savedBg) setBgIndex(parseInt(savedBg));
-          const savedOpacity = localStorage.getItem('vibenotes_bg_opacity');
-          if (savedOpacity) setBgOpacity(parseFloat(savedOpacity));
-          const savedScale = localStorage.getItem('vibenotes_bg_scale');
-          if (savedScale) setBgScale(parseInt(savedScale));
-      } catch (e) {} 
-  }, []);
+  useEffect(() => { try { const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any); const savedBg = localStorage.getItem('vibenotes_bg'); if (savedBg) setBgIndex(parseInt(savedBg)); const savedOpacity = localStorage.getItem('vibenotes_bg_opacity'); if (savedOpacity) setBgOpacity(parseFloat(savedOpacity)); const savedScale = localStorage.getItem('vibenotes_bg_scale'); if (savedScale) setBgScale(parseInt(savedScale)); } catch (e) {} }, []);
 
   useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
   useEffect(() => { localStorage.setItem('vibenotes_bg', bgIndex.toString()); }, [bgIndex]);
@@ -487,14 +372,8 @@ function App() {
     setTimeout(() => { textareaRef.current?.focus(); textareaRef.current?.select(); }, 50);
   };
   const handleDeleteNote = async (id: string) => { await deleteNoteFromFirebase(id); };
-  const handleToggleExpand = async (id: string) => {
-      const n = notes.find(n => n.id === id);
-      if(n) await updateNote(id, { isExpanded: !n.isExpanded });
-  };
-  const togglePin = async (id: string) => {
-      const n = notes.find(n => n.id === id);
-      if(n) await updateNote(id, { isPinned: !n.isPinned });
-  };
+  const handleToggleExpand = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
+  const togglePin = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
 
   const safeNotes = (notes || []).map(n => {
       const date = normalizeDate(n.date);
@@ -502,16 +381,7 @@ function App() {
       const fallbackCat = (DEFAULT_CATEGORIES && DEFAULT_CATEGORIES.length > 0) ? DEFAULT_CATEGORIES[0].id : 'default';
       const validCategory = categories.some(c => c.id === n.category) || n.category === 'secret' ? n.category : fallbackCat;
       const effectiveDate = editedAt && editedAt > date ? editedAt : date;
-
-      return { 
-          ...n, 
-          id: n.id || Math.random().toString(), 
-          text: n.text || '', 
-          date: effectiveDate, 
-          originalDate: date, 
-          editedAt,
-          category: validCategory 
-      };
+      return { ...n, id: n.id || Math.random().toString(), text: n.text || '', date: effectiveDate, originalDate: date, editedAt, category: validCategory };
   });
 
   const filteredNotes = safeNotes.filter(n => {
@@ -532,7 +402,6 @@ function App() {
 
   const BottomTabBar = () => (
       <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-2xl border border-white/5 rounded-full shadow-2xl shadow-black/50 p-1.5 flex gap-1 z-50">
-         {/* NAVIGATION BUTTONS - WHITE ACCENT (MINIMALIST) */}
          <button onClick={() => setActiveTab('contacts')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Globe size={22} className={`transition-all duration-300 ${activeTab === 'contacts' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'contacts' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
          <button onClick={() => setActiveTab('calls')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Zap size={22} className={`transition-all duration-300 ${activeTab === 'calls' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'calls' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
          <button onClick={() => setActiveTab('chats')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><MessageSquareDashed size={22} className={`transition-all duration-300 ${activeTab === 'chats' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'chats' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
@@ -547,14 +416,7 @@ function App() {
         <div className="absolute inset-0 transition-opacity duration-300" style={{ backgroundImage: `url(/bg${bgIndex}.jpg)`, backgroundSize: bgScale >= 100 ? 'cover' : `${bgScale}%`, backgroundPosition: 'center', backgroundRepeat: 'repeat', opacity: bgOpacity }} />
       </div>
 
-      {/* --- RED LIGHT MODE OVERLAY --- */}
-      <div 
-        className="fixed inset-0 z-0 pointer-events-none mix-blend-overlay transition-opacity duration-1000"
-        style={{ 
-            backgroundColor: '#ff4500', 
-            opacity: redModeIntensity / 100 
-        }} 
-      />
+      <div className="fixed inset-0 z-0 pointer-events-none mix-blend-overlay transition-opacity duration-1000" style={{ backgroundColor: '#ff4500', opacity: redModeIntensity / 100 }} />
 
       {currentView === 'list' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in fade-in slide-in-from-left-5 duration-300">
@@ -562,7 +424,6 @@ function App() {
              <div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <div className="max-w-2xl mx-auto w-full flex items-end justify-between">
                     <div><h1 className="text-3xl font-black text-white tracking-tighter">FEED</h1><p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mt-1">Encrypted</p></div>
-                    {/* Pen Icon turns Orange on Hover (Keep this accent) */}
                     <div className="flex gap-4 items-center mb-1"><button className="text-zinc-500 transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = '#71717a'}><PenLine size={20} /></button></div>
                 </div>
              </div>
@@ -580,13 +441,11 @@ function App() {
              </div>
            )}
 
-           {/* MAIN CONTENT AREA */}
            <div key={activeTab + 'content'} className="flex-1 overflow-y-auto no-scrollbar pb-24">
                <div className="max-w-2xl mx-auto w-full">
                    {activeTab === 'chats' && (
                      <>
                         <div className="px-4 mb-4">
-                           {/* FEED SEARCH INPUT - REMAINS MINIMALIST (WHITE GLOW) */}
                            <div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-white/50">
                               <Search size={16} className="text-zinc-500" />
                               <input type="text" placeholder="Search frequency..." className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-medium"/>
@@ -595,7 +454,6 @@ function App() {
 
                         <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-left-8 fade-in duration-500`}>
                             <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
-                                {/* MAIN HEADER ICON - KEEPS ORANGE ACCENT */}
                                 <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50">
                                     {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
                                 </div>
@@ -629,7 +487,6 @@ function App() {
                    {activeTab === 'contacts' && (
                      <div className="p-4 space-y-6">
                         <form onSubmit={handleSearchContacts} className="relative">
-                            {/* CONTACTS SEARCH INPUT - WHITE GLOW */}
                             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-3 gap-3 focus-within:border-white/50 transition-colors">
                                 <AtSign size={18} className="text-zinc-500" />
                                 <input type="text" value={contactSearchQuery} onChange={(e) => setContactSearchQuery(e.target.value)} placeholder="Search by handle (e.g. @neo)" className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-mono"/>
@@ -646,7 +503,6 @@ function App() {
                                             {u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}
                                         </div>
                                         <div className="flex-1"><h3 className="font-bold text-white">{u.displayName}</h3><p className="text-xs text-zinc-500 font-mono">{u.handle}</p></div>
-                                        {/* Button Uses White/Minimalist still */}
                                         <button onClick={() => startNewChat(u.uid)} className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all"><MessageCircle size={20} /></button>
                                     </div>
                                 ))
@@ -691,7 +547,6 @@ function App() {
                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
                             <div className="space-y-3"><label className="text-white text-sm font-medium">Message Alignment</label><div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800"><button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button><button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button><button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button></div></div>
                             
-                            {/* CHAT BUBBLE STYLE SELECTOR */}
                             <div className="space-y-3">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
                                 <div className="grid grid-cols-2 gap-3">
@@ -699,18 +554,14 @@ function App() {
                                         <div className="absolute inset-0 bg-white" />
                                         <span className="relative z-10 text-xs font-bold text-black uppercase tracking-wider">Minimal</span>
                                     </button>
-                                    
                                     <button onClick={() => changeBubbleStyle('minimal_glass')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'minimal_glass' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Minimal Glass">
                                         <div className="absolute inset-0 bg-white/20 backdrop-blur-md" />
                                         <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Glass</span>
                                     </button>
-
                                     <button onClick={() => changeBubbleStyle('clear')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'clear' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Clear White">
                                         <div className="absolute inset-0 bg-white/5 border border-white/20" />
                                         <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Clear</span>
                                     </button>
-                                    
-                                    {/* CHANGED: REPLACED GLOW WITH SOLID GRAY */}
                                     <button onClick={() => changeBubbleStyle('solid_gray')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'solid_gray' ? 'border-zinc-400 ring-1 ring-zinc-400/50' : 'border-white/5 hover:border-zinc-400/50'}`} title="Solid Gray">
                                         <div className="absolute inset-0 bg-zinc-700" />
                                         <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Solid Gray</span>
@@ -718,20 +569,14 @@ function App() {
                                 </div>
                             </div>
 
-                            {/* --- AUTO NIGHT SHIFT TOGGLE --- */}
                             <div className="space-y-4 pt-2 border-t border-white/5">
-                                <button 
-                                    onClick={toggleAutoRedMode} 
-                                    className={`w-full py-3 rounded-xl border flex items-center justify-between px-4 transition-all ${isAutoRedMode ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}
-                                >
+                                <button onClick={toggleAutoRedMode} className={`w-full py-3 rounded-xl border flex items-center justify-between px-4 transition-all ${isAutoRedMode ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}>
                                     <span className="font-medium flex items-center gap-2 text-sm"><Moon size={16} /> Auto Night Shift</span>
                                     <div className={`w-10 h-6 rounded-full relative transition-colors ${isAutoRedMode ? 'bg-white' : 'bg-zinc-700'}`}>
                                         <div className={`absolute top-1 left-1 bg-black w-4 h-4 rounded-full transition-transform ${isAutoRedMode ? 'translate-x-4' : 'translate-x-0'}`} />
                                     </div>
                                 </button>
-                                <p className="text-xs text-zinc-500 px-1">
-                                    {isAutoRedMode ? "Automatically enables red filter after sunset (6 PM - 6 AM)." : "Night shift is disabled."}
-                                </p>
+                                <p className="text-xs text-zinc-500 px-1">{isAutoRedMode ? "Automatically enables red filter after sunset (6 PM - 6 AM)." : "Night shift is disabled."}</p>
                             </div>
 
                             <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Wallpaper Scale</label><span className="text-zinc-500 text-xs font-mono">{bgScale >= 100 ? 'COVER' : `${bgScale}%`}</span></div><input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
@@ -773,12 +618,15 @@ function App() {
                                </div>
                                <div className="flex-1 min-w-0">
                                    <h3 className="font-bold text-white text-base leading-tight truncate">{otherChatUser?.displayName || 'Unknown'}</h3>
-                                   <p className="text-zinc-400 text-xs truncate">{otherChatUser?.handle || 'Online'}</p>
+                                   {/* --- 5. REAL ONLINE STATUS UI --- */}
+                                   <div className="flex items-center gap-1.5 mt-0.5">
+                                       {otherChatUser?.isOnline && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}
+                                       <p className={`text-xs truncate ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>{otherChatUser?.isOnline ? 'Online' : 'Last seen recently'}</p>
+                                   </div>
                                </div>
                            </div>
                         ) : (
                            <div onClick={handleSecretTrigger} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer select-none">
-                                {/* KEEPS ORANGE ICON IN HEADER */}
                                 <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden">
                                      {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}
                                 </div>
@@ -799,7 +647,6 @@ function App() {
                         <div className="flex items-center gap-1">
                              <div className="relative flex items-center h-10">
                                 <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-400 transition-all active:scale-95 rounded-full hover:bg-white/5 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={22} /></button>
-                                {/* ROOM SEARCH - WHITE GLOW */}
                                 <div className={`absolute right-0 bg-zinc-900 border border-zinc-800 focus-within:border-white/50 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
                                     <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
                                     <input ref={searchInputRef} type="text" placeholder={TRANSLATIONS.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
@@ -817,26 +664,20 @@ function App() {
            {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}
 
            <div ref={listRef} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
-              <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-3 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
+              <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-1 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
                 {activeChatId === 'saved_messages' ? (
-                    // --- NOTES RENDER ---
                     filteredNotes.map((note, index) => {
                         const prevNote = filteredNotes[index - 1];
                         const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
                         
-                        // Define Note Glow Colors (MINIMALIST WHITE)
                         const noteColors = isHackerMode 
                              ? { bg: 'bg-black', border: 'border border-green-500/30 hover:border-green-500 transition-colors', text: 'text-green-500' }
-                             : { 
-                                 bg: 'bg-zinc-900/50 backdrop-blur-md', 
-                                 border: 'border-transparent', 
-                                 text: 'text-zinc-100' 
-                               };
+                             : { bg: 'bg-zinc-900/50 backdrop-blur-md', border: 'border-transparent', text: 'text-zinc-100' };
 
                         return (
                             <React.Fragment key={note.id}>
-                                {showHeader && (<div className="flex justify-center my-4 opacity-70 w-full select-none"><span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">{getDateLabel(note.date)}</span></div>)}
+                                {showHeader && (<div className="flex justify-center my-2 opacity-70 w-full select-none"><span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">{getDateLabel(note.date)}</span></div>)}
                                 <div onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
                                     <NoteCard 
                                         note={note} 
@@ -854,7 +695,6 @@ function App() {
                         );
                     })
                 ) : (
-                    // --- MESSAGES RENDER ---
                     activeMessages.map((msg, index) => {
                         const prevMsg = activeMessages[index - 1];
                         const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
@@ -863,32 +703,16 @@ function App() {
                         const isLastInSequence = !nextMsg || nextMsg.senderId !== msg.senderId;
                         const showAvatar = !isMe && isLastInSequence;
 
-                        // --- STYLE SELECTOR LOGIC ---
                         let customColors;
                         if (isMe) {
                             switch(bubbleStyle) {
-                                case 'clear': 
-                                    customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20', text: 'text-white' };
-                                    break;
-                                case 'solid_gray': // REPLACED GLOW WITH SOLID GRAY
-                                    customColors = { bg: 'bg-zinc-700', border: 'border-transparent', text: 'text-white' };
-                                    break;
-                                case 'minimal_glass':
-                                    customColors = { bg: `bg-white/20 backdrop-blur-md`, border: `border-white/50`, text: 'text-white' };
-                                    break;
-                                case 'minimal_solid':
-                                default:
-                                    // Default White/Black text (Minimalist)
-                                    customColors = { bg: `bg-white`, border: 'border-transparent', text: 'text-black' };
-                                    break;
+                                case 'clear': customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20', text: 'text-white' }; break;
+                                case 'solid_gray': customColors = { bg: 'bg-zinc-700', border: 'border-transparent', text: 'text-white' }; break;
+                                case 'minimal_glass': customColors = { bg: `bg-white/20 backdrop-blur-md`, border: `border-white/50`, text: 'text-white' }; break;
+                                case 'minimal_solid': default: customColors = { bg: `bg-white`, border: 'border-transparent', text: 'text-black' }; break;
                             }
                         } else {
-                            // "Them" -> Dark Gray
-                            customColors = { 
-                                bg: 'bg-zinc-800', 
-                                border: 'border-transparent', 
-                                text: 'text-zinc-100' 
-                            };
+                            customColors = { bg: 'bg-zinc-800', border: 'border-transparent', text: 'text-zinc-100' };
                         }
 
                         const msgNote = {
@@ -903,9 +727,9 @@ function App() {
 
                         return (
                             <React.Fragment key={msg.id}>
-                                {showHeader && (<div className="flex justify-center my-6 opacity-60 w-full select-none"><span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full border border-white/5">{getDateLabel(msg.timestamp)}</span></div>)}
+                                {showHeader && (<div className="flex justify-center my-4 opacity-60 w-full select-none"><span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full border border-white/5">{getDateLabel(msg.timestamp)}</span></div>)}
                                 
-                                <div className={`flex w-full mb-1 items-end ${isMe ? 'justify-end' : 'justify-start gap-2'}`}>
+                                <div className={`flex w-full mb-0.5 items-end ${isMe ? 'justify-end' : 'justify-start gap-2'}`}>
                                     {!isMe && (
                                         <div className="flex-shrink-0 w-8 h-8 relative z-10">
                                             {showAvatar ? (
@@ -924,6 +748,8 @@ function App() {
                                         categories={[]} 
                                         selectedVoice={selectedVoice} 
                                         variant={isMe ? 'sent' : 'received'}
+                                        // --- 6. PASS REAL STATUS ---
+                                        status={msg.status}
                                         customColors={customColors}
                                     />
                                 </div>
@@ -938,13 +764,11 @@ function App() {
            <div className="flex-none w-full p-2 pb-6 md:pb-3 bg-black/60 backdrop-blur-xl z-50 border-t border-zinc-800/50">
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  {activeChatId === 'saved_messages' && (<button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">{activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}</button>)}
-                 {/* MAIN CHAT INPUT - MINIMALIST WHITE FOCUS */}
                  <div className="flex-1 bg-zinc-900/50 border border-zinc-700/50 rounded-2xl flex items-center px-3 py-1.5 focus-within:border-white/50 transition-colors gap-2 relative">
                     {imageUrl && (<div className="relative flex-shrink-0"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"><X size={10} /></button></div>)}
                     <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} onFocus={() => { scrollToBottom('auto'); }} placeholder={editingNote ? "Edit..." : (activeChatId !== 'saved_messages' ? TRANSLATIONS.typePlaceholder : (activeFilter === 'all' ? "Select category..." : (isHackerMode ? ">_" : `${currentConfig?.label}...`)))} rows={1} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-1 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
                     {(!transcript && !editingNote) && (<label className="cursor-pointer text-zinc-400 hover:text-white"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>)}
                 </div>
-                {/* KEEPS CLAUDE ORANGE SEND BUTTON */}
                 <button onClick={handleMainAction} disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages')} className={`flex-shrink-0 w-8 h-8 mb-1 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg`} style={(transcript.trim() || imageUrl) && (activeFilter !== 'all' || activeChatId !== 'saved_messages') ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: 'transparent', color: '#71717a', boxShadow: 'none' }}>
                     {editingNote ? <Check size={18} strokeWidth={3} /> : <ArrowUp size={20} strokeWidth={3} />}
                 </button>

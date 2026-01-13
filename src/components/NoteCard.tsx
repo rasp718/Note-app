@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck } from 'lucide-react';
+import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck, Play, Pause } from 'lucide-react';
 import { Note, CategoryConfig, CategoryId } from '../types';
 
 const triggerHaptic = () => { if (typeof navigator !== 'undefined' && navigator.vibrate) { try { navigator.vibrate(15); } catch (e) {} } };
@@ -22,6 +22,38 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor }: any) => {
   );
 };
 
+// --- AUDIO PLAYER ---
+const AudioPlayer = ({ src, accentColor, textColor }: any) => {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement>(null);
+
+    const togglePlay = (e: any) => {
+        e.stopPropagation();
+        if(!audioRef.current) return;
+        if(isPlaying) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.play();
+        }
+        setIsPlaying(!isPlaying);
+    };
+
+    return (
+        <div className="flex items-center gap-2 min-w-[120px] bg-black/10 rounded-lg p-2 pr-4 mb-1">
+            <button onClick={togglePlay} className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-black shrink-0 hover:scale-105 transition-transform">
+                {isPlaying ? <Pause size={14} fill="black" /> : <Play size={14} fill="black" className="ml-0.5" />}
+            </button>
+            <div className="flex flex-col gap-0.5 w-full">
+                <div className={`h-1 w-full rounded-full opacity-40 overflow-hidden ${textColor?.includes('black') ? 'bg-black' : 'bg-white'}`}>
+                    <div className={`h-full ${isPlaying ? 'animate-[pulse_1s_ease-in-out_infinite]' : 'w-0'} ${textColor?.includes('black') ? 'bg-black' : 'bg-white'}`} style={{ width: isPlaying ? '100%' : '0%', transition: 'width 0.2s' }} />
+                </div>
+                <span className={`text-[9px] font-mono opacity-70 ${textColor}`}>Voice Message</span>
+            </div>
+            <audio ref={audioRef} src={src} onEnded={() => setIsPlaying(false)} className="hidden" />
+        </div>
+    );
+};
+
 interface NoteCardProps {
   note: Note;
   categories: CategoryConfig[];
@@ -31,12 +63,13 @@ interface NoteCardProps {
   onCategoryClick?: (category: CategoryId) => void;
   onEdit?: () => void;
   onToggleExpand?: (id: string) => void;
+  onImageClick?: (url: string) => void; 
   variant?: 'default' | 'sent' | 'received';
-  status?: 'sending' | 'sent' | 'read'; // Matches Firebase status
+  status?: 'sending' | 'sent' | 'read';
   customColors?: { bg: string; border: string; text: string; shadow?: string; font?: string };
 }
 
-export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onToggleExpand, variant = 'default', status, customColors }) => {
+export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onToggleExpand, onImageClick, variant = 'default', status, customColors }) => {
   if (!note) return null;
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -67,7 +100,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const isExpanded = !!note.isExpanded;
   const safeText = String(note.text || '');
   const lines = safeText.split('\n');
-  const isCompact = lines.length === 1 && !note.imageUrl;
+  const audioUrl = (note as any).audioUrl;
+  const isCompact = lines.length === 1 && !note.imageUrl && !audioUrl;
   
   useEffect(() => {
     const closeMenu = (e: any) => { if (e.type === 'scroll') return; setContextMenu(null); };
@@ -99,19 +133,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
   const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
 
-  // --- READ RECEIPT LOGIC ---
   const StatusIcon = () => {
-    // Only show for messages sent by "Me"
     if (variant !== 'sent') return null;
-    
-    // Status Logic
     if (status === 'sending') return <div className="w-3 h-3 border-2 border-white/50 border-t-transparent rounded-full animate-spin" />;
-    
-    // Read = Blue Double Check
     if (status === 'read') return <CheckCheck size={14} className="text-blue-400" strokeWidth={2.5} />;
-    
-    // Sent/Delivered = Gray Check (or Double Gray Check if you prefer)
-    // Using single Check for 'sent' to distinguish easily
     return <Check size={14} className="text-white/50" strokeWidth={2} />;
   };
 
@@ -122,9 +147,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
         <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} ${fontClass} relative transition-all duration-200`} style={{ ...borderStyle, transform: `translateX(${swipeOffset}px)` }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           {isExpanded ? (
             <div className="flex flex-col gap-1 min-w-[80px]">
-              {note.imageUrl && ( <div className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full"><img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" /></div>)}
+              {note.imageUrl && ( <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform"><img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" /></div>)}
+              {audioUrl && <AudioPlayer src={audioUrl} accentColor={accentColor} textColor={textColor} />}
               <div className="block w-full">
-                  <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>
+                  {safeText && <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>}
                   <div className="float-right ml-2 mt-2 flex items-center gap-1 align-bottom h-4">
                       {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={accentColor} />}
                       {note.editedAt && <span className="text-[9px] italic opacity-50 text-white mr-1">edited</span>}
@@ -137,7 +163,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
              <div className="flex gap-2">
                  <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <div onClick={() => onToggleExpand && onToggleExpand(note.id)} className="cursor-pointer">
-                       <p className={`text-base leading-tight truncate mb-1 text-left ${textColor}`}>{lines[0]}</p>
+                       {audioUrl && <span className="text-sm italic opacity-70 mb-1 block">🎤 Voice Message</span>}
+                       {lines[0] && <p className={`text-base leading-tight truncate mb-1 text-left ${textColor}`}>{lines[0]}</p>}
                        {lines.length > 1 && <p className={`text-sm leading-snug truncate text-left opacity-70 ${textColor}`}>{lines[1]}</p>}
                     </div>
                  </div>

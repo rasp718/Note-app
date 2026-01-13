@@ -7,13 +7,9 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth } from './firebase';
 import { Note, CategoryConfig } from './types';
 
-// --- ENCRYPTION ENGINE (The "Telegram" Core) ---
-// This acts like Telegram's server-side encryption. 
-// The "Key" is stored in the Chat Document in Firestore.
-
+// --- ENCRYPTION ENGINE ---
 const generateKey = () => Math.random().toString(36).substring(2) + Date.now().toString(36);
 
-// Simple but effective XOR-like cipher for visual encryption
 const simpleEncrypt = (text: string, key: string): string => {
     if (!text || !key) return text;
     try {
@@ -24,16 +20,14 @@ const simpleEncrypt = (text: string, key: string): string => {
             const xor = textChars[i] ^ keyChars[i % keyChars.length];
             encryptedHex += ('00' + xor.toString(16)).slice(-2);
         }
-        return encryptedHex; // Returns looks like: "4a1b9c..."
+        return encryptedHex;
     } catch (e) { return text; }
 };
 
 const simpleDecrypt = (encryptedHex: string, key: string): string => {
     if (!encryptedHex || !key) return encryptedHex;
     try {
-        // If it's not hex (old messages), return as is
         if (!/^[0-9a-fA-F]+$/.test(encryptedHex)) return encryptedHex;
-        
         const keyChars = key.split('').map(c => c.charCodeAt(0));
         let decrypted = '';
         for (let i = 0; i < encryptedHex.length; i += 2) {
@@ -139,7 +133,7 @@ export const useUser = (userId: string | undefined) => {
   return userData;
 };
 
-// --- CHATS HOOK (With Decryption for LastMessage) ---
+// --- CHATS HOOK ---
 export const useChats = (userId: string | null) => {
   const [chats, setChats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,14 +146,13 @@ export const useChats = (userId: string | null) => {
         const data = doc.data();
         const otherUserId = data.participants ? data.participants.find((p: string) => p !== userId) : null;
         
-        // DECRYPT PREVIEW
         const plainLastMessage = data.secretKey 
             ? simpleDecrypt(data.lastMessage, data.secretKey) 
             : data.lastMessage;
 
         return { 
             id: doc.id, ...data, 
-            lastMessage: plainLastMessage, // Show plain text in list
+            lastMessage: plainLastMessage, 
             timestamp: normalizeDate(data.timestamp), otherUserId 
         };
       });
@@ -172,7 +165,6 @@ export const useChats = (userId: string | null) => {
   const createChat = async (otherUid: string) => {
     if (!userId) return;
     try {
-      // GENERATE KEY FOR ROOM
       const secretKey = generateKey();
       const initialMsg = "Chat started (Encrypted)";
       const encryptedMsg = simpleEncrypt(initialMsg, secretKey);
@@ -180,7 +172,7 @@ export const useChats = (userId: string | null) => {
       const chatRef = await addDoc(collection(db, 'chats'), {
         participants: [userId, otherUid],
         lastMessage: encryptedMsg,
-        secretKey: secretKey, // SAVE KEY TO SERVER (Telegram Style)
+        secretKey: secretKey,
         timestamp: serverTimestamp(),
         type: 'private'
       });
@@ -191,12 +183,11 @@ export const useChats = (userId: string | null) => {
   return { chats, loading, createChat };
 };
 
-// --- MESSAGES HOOK (With Encryption/Decryption) ---
+// --- MESSAGES HOOK (Updated for Audio) ---
 export const useMessages = (chatId: string | null) => {
   const [messages, setMessages] = useState<any[]>([]);
   const [chatKey, setChatKey] = useState<string | null>(null);
 
-  // 1. Fetch Key for this room
   useEffect(() => {
       if (!chatId || chatId === 'saved_messages') { setChatKey(null); return; }
       const unsub = onSnapshot(doc(db, 'chats', chatId), (doc) => {
@@ -205,7 +196,6 @@ export const useMessages = (chatId: string | null) => {
       return () => unsub();
   }, [chatId]);
   
-  // 2. Fetch & Decrypt Messages
   useEffect(() => {
     if (!chatId || chatId === 'saved_messages') return;
     const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
@@ -213,14 +203,13 @@ export const useMessages = (chatId: string | null) => {
       const msgs = snapshot.docs.map(doc => {
         const data = doc.data();
         
-        // DECRYPT HERE
         const plainText = (chatKey && data.text) 
             ? simpleDecrypt(data.text, chatKey) 
             : data.text;
 
         return { 
           id: doc.id, ...data, 
-          text: plainText, // App sees plain text
+          text: plainText, 
           status: data.status || 'sent', 
           timestamp: normalizeDate(data.timestamp) 
         };
@@ -228,21 +217,33 @@ export const useMessages = (chatId: string | null) => {
       setMessages(msgs);
     });
     return () => unsubscribe();
-  }, [chatId, chatKey]); // Re-run if key loads
+  }, [chatId, chatKey]);
 
-  const sendMessage = async (text: string, imageUrl: string | null, senderId: string) => {
+  // UPDATED: Now accepts audioUrl
+  const sendMessage = async (text: string, imageUrl: string | null, audioUrl: string | null, senderId: string) => {
     if (!chatId) return;
     
-    // ENCRYPT HERE
+    // We encrypt text, but we leave Audio/Image blobs unencrypted for performance (Database limit)
+    // The "Hacker" would see the blob data but not the context text.
     const encryptedText = chatKey ? simpleEncrypt(text, chatKey) : text;
-    const encryptedPreview = chatKey ? simpleEncrypt(text || 'Sent an image', chatKey) : text;
+    
+    let previewText = text;
+    if (imageUrl) previewText = '📷 Image';
+    if (audioUrl) previewText = '🎤 Voice Message';
+    
+    const encryptedPreview = chatKey ? simpleEncrypt(previewText, chatKey) : previewText;
 
     await addDoc(collection(db, 'chats', chatId, 'messages'), {
-      text: encryptedText, // DB gets hex garbage
-      imageUrl, senderId, timestamp: Date.now(), type: imageUrl ? 'image' : 'text', status: 'sent'
+      text: encryptedText, 
+      imageUrl: imageUrl || null,
+      audioUrl: audioUrl || null, // NEW FIELD
+      senderId, 
+      timestamp: Date.now(), 
+      type: audioUrl ? 'audio' : (imageUrl ? 'image' : 'text'), 
+      status: 'sent'
     });
     await updateDoc(doc(db, 'chats', chatId), {
-      lastMessage: encryptedPreview, // DB gets hex garbage
+      lastMessage: encryptedPreview,
       timestamp: serverTimestamp()
     });
   };

@@ -22,34 +22,71 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor }: any) => {
   );
 };
 
-// --- AUDIO PLAYER ---
-const AudioPlayer = ({ src, accentColor, textColor }: any) => {
+// --- ROBUST AUDIO PLAYER ---
+const AudioPlayer = ({ src, textColor }: any) => {
     const [isPlaying, setIsPlaying] = useState(false);
+    const [progress, setProgress] = useState(0);
     const audioRef = useRef<HTMLAudioElement>(null);
 
-    const togglePlay = (e: any) => {
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const handleTimeUpdate = () => {
+            const pct = (audio.currentTime / audio.duration) * 100;
+            setProgress(pct || 0);
+        };
+        const handleEnded = () => {
+            setIsPlaying(false);
+            setProgress(0);
+        };
+
+        audio.addEventListener('timeupdate', handleTimeUpdate);
+        audio.addEventListener('ended', handleEnded);
+        return () => {
+            audio.removeEventListener('timeupdate', handleTimeUpdate);
+            audio.removeEventListener('ended', handleEnded);
+        };
+    }, []);
+
+    const togglePlay = async (e: any) => {
         e.stopPropagation();
         if(!audioRef.current) return;
-        if(isPlaying) {
+
+        if (isPlaying) {
             audioRef.current.pause();
+            setIsPlaying(false);
         } else {
-            audioRef.current.play();
+            try {
+                await audioRef.current.play();
+                setIsPlaying(true);
+            } catch (err) {
+                console.error("Playback Error:", err);
+                alert("Could not play audio. Format might not be supported on this browser.");
+            }
         }
-        setIsPlaying(!isPlaying);
     };
 
     return (
-        <div className="flex items-center gap-2 min-w-[120px] bg-black/10 rounded-lg p-2 pr-4 mb-1">
-            <button onClick={togglePlay} className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-black shrink-0 hover:scale-105 transition-transform">
+        <div className="flex items-center gap-3 min-w-[140px] bg-black/10 rounded-xl p-2 pr-3 mb-1 border border-white/5">
+            <button 
+                onClick={togglePlay} 
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-black shrink-0 hover:scale-105 active:scale-95 transition-all"
+            >
                 {isPlaying ? <Pause size={14} fill="black" /> : <Play size={14} fill="black" className="ml-0.5" />}
             </button>
-            <div className="flex flex-col gap-0.5 w-full">
-                <div className={`h-1 w-full rounded-full opacity-40 overflow-hidden ${textColor?.includes('black') ? 'bg-black' : 'bg-white'}`}>
-                    <div className={`h-full ${isPlaying ? 'animate-[pulse_1s_ease-in-out_infinite]' : 'w-0'} ${textColor?.includes('black') ? 'bg-black' : 'bg-white'}`} style={{ width: isPlaying ? '100%' : '0%', transition: 'width 0.2s' }} />
+            <div className="flex flex-col gap-1 w-full min-w-0">
+                <div className={`h-1 w-full rounded-full opacity-30 overflow-hidden ${textColor?.includes('black') ? 'bg-black' : 'bg-white'}`}>
+                    <div 
+                        className={`h-full ${textColor?.includes('black') ? 'bg-black' : 'bg-white'}`} 
+                        style={{ width: `${progress}%`, transition: 'width 0.1s linear' }} 
+                    />
                 </div>
-                <span className={`text-[9px] font-mono opacity-70 ${textColor}`}>Voice Message</span>
+                <span className={`text-[9px] font-mono opacity-70 ${textColor}`}>
+                    {isPlaying ? 'Playing...' : 'Voice Note'}
+                </span>
             </div>
-            <audio ref={audioRef} src={src} onEnded={() => setIsPlaying(false)} className="hidden" />
+            <audio ref={audioRef} src={src} preload="auto" />
         </div>
     );
 };
@@ -71,7 +108,6 @@ interface NoteCardProps {
 
 export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onToggleExpand, onImageClick, variant = 'default', status, customColors }) => {
   if (!note) return null;
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
@@ -109,7 +145,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     return () => { window.removeEventListener('click', closeMenu); window.removeEventListener('touchstart', closeMenu); window.removeEventListener('scroll', closeMenu, { capture: true }); window.removeEventListener('resize', closeMenu); };
   }, [contextMenu]);
 
-  const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { if (isSpeaking) { window.speechSynthesis.cancel(); setIsSpeaking(false); return; } const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; utterance.onend = () => setIsSpeaking(false); setIsSpeaking(true); window.speechSynthesis.speak(utterance); } };
+  const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; window.speechSynthesis.speak(utterance); } };
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
   const handleContextMenu = (e: any) => { e.preventDefault(); e.stopPropagation(); if(onDelete) openMenu(e.clientX, e.clientY); };
   
@@ -148,7 +184,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
           {isExpanded ? (
             <div className="flex flex-col gap-1 min-w-[80px]">
               {note.imageUrl && ( <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform"><img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" /></div>)}
-              {audioUrl && <AudioPlayer src={audioUrl} accentColor={accentColor} textColor={textColor} />}
+              {audioUrl && <AudioPlayer src={audioUrl} textColor={textColor} />}
               <div className="block w-full">
                   {safeText && <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>}
                   <div className="float-right ml-2 mt-2 flex items-center gap-1 align-bottom h-4">

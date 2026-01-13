@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
-// --- ADDED usePresence and markChatAsRead logic via useMessages ---
+// Added usePresence to imports
 import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers, useUser, usePresence } from './useFirebaseSync';
 import Auth from './components/Auth';
 
@@ -130,8 +130,11 @@ const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any
 function App() {
   const { user, loading: authLoading } = useFirebaseSync();
   
-  // --- 1. ENABLE PRESENCE SYSTEM ---
+  // --- 1. ACTIVATE PRESENCE SYSTEM ---
   usePresence(user?.uid);
+
+  // --- 2. LOAD MY PROFILE FROM DB (FIXES INCOGNITO RESET) ---
+  const myProfile = useUser(user?.uid);
   
   const { notes = [], addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
   const { chats: realChats, createChat } = useChats(user?.uid || null);
@@ -146,10 +149,13 @@ function App() {
   const [isSearchingContacts, setIsSearchingContacts] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  
+  // --- PROFILE STATE ---
   const [profileName, setProfileName] = useState("Vibe User");
   const [profileHandle, setProfileHandle] = useState("@neo");
   const [profileBio, setProfileBio] = useState("Status: Online");
   const [profilePic, setProfilePic] = useState<string | null>(null);
+
   const [categories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
   const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
   const [bgIndex, setBgIndex] = useState<number>(1);
@@ -167,7 +173,6 @@ function App() {
   const [isAutoRedMode, setIsAutoRedMode] = useState<boolean>(false);
 
   const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
-  // --- 2. GET OTHER USER DETAILS (Includes isOnline) ---
   const otherChatUser = useUser(currentChatObject?.otherUserId);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -184,12 +189,12 @@ function App() {
   const tapTimeoutRef = useRef<any>(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
 
-  // --- 3. GET MARK CHAT READ FUNCTION ---
+  // --- 3. FETCH MESSAGES & AUTO-READ FUNCTION ---
   const { messages: activeMessages, sendMessage, markChatAsRead } = useMessages(
     (activeChatId && activeChatId !== 'saved_messages') ? activeChatId : null
   );
 
-  // --- 4. AUTO MARK AS READ WHEN CHAT IS OPEN ---
+  // --- 4. AUTO MARK READ WHEN CHAT IS OPEN ---
   useEffect(() => {
     if (activeChatId && activeChatId !== 'saved_messages' && user && activeMessages.length > 0) {
         markChatAsRead(user.uid);
@@ -211,11 +216,24 @@ function App() {
 
   useEffect(() => { const timer = setTimeout(() => { setIsStartup(false); }, 4500); return () => clearTimeout(timer); }, []);
 
+  // --- 5. SMART PROFILE SYNC ---
+  // If DB has data (myProfile), update UI. 
+  useEffect(() => {
+      if (myProfile) {
+          if (myProfile.displayName) setProfileName(myProfile.displayName);
+          if (myProfile.handle) setProfileHandle(myProfile.handle);
+          if (myProfile.photoURL) setProfilePic(myProfile.photoURL);
+      }
+  }, [myProfile]);
+
+  // Initial Sync on Load (Fallbacks)
   useEffect(() => {
     if (user) {
-         setProfileName(localStorage.getItem('vibenotes_profile_name') || user.displayName || 'Vibe User');
-         setProfileHandle(localStorage.getItem('vibenotes_profile_handle') || '@neo');
-         setProfilePic(localStorage.getItem('vibenotes_profile_pic') || null);
+         if (!myProfile) {
+            setProfileName(localStorage.getItem('vibenotes_profile_name') || user.displayName || 'Vibe User');
+            setProfileHandle(localStorage.getItem('vibenotes_profile_handle') || '@neo');
+            setProfilePic(localStorage.getItem('vibenotes_profile_pic') || null);
+         }
          syncUserProfile(user);
     }
   }, [user]);

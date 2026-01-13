@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { 
   collection, query, onSnapshot, addDoc, deleteDoc, updateDoc,
   setDoc, getDocs, getDoc, doc, where, orderBy, serverTimestamp, writeBatch
@@ -6,6 +6,44 @@ import {
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth } from './firebase';
 import { Note, CategoryConfig } from './types';
+
+// --- ENCRYPTION ENGINE (The "Telegram" Core) ---
+// This acts like Telegram's server-side encryption. 
+// The "Key" is stored in the Chat Document in Firestore.
+
+const generateKey = () => Math.random().toString(36).substring(2) + Date.now().toString(36);
+
+// Simple but effective XOR-like cipher for visual encryption
+const simpleEncrypt = (text: string, key: string): string => {
+    if (!text || !key) return text;
+    try {
+        const textChars = text.split('').map(c => c.charCodeAt(0));
+        const keyChars = key.split('').map(c => c.charCodeAt(0));
+        let encryptedHex = '';
+        for (let i = 0; i < textChars.length; i++) {
+            const xor = textChars[i] ^ keyChars[i % keyChars.length];
+            encryptedHex += ('00' + xor.toString(16)).slice(-2);
+        }
+        return encryptedHex; // Returns looks like: "4a1b9c..."
+    } catch (e) { return text; }
+};
+
+const simpleDecrypt = (encryptedHex: string, key: string): string => {
+    if (!encryptedHex || !key) return encryptedHex;
+    try {
+        // If it's not hex (old messages), return as is
+        if (!/^[0-9a-fA-F]+$/.test(encryptedHex)) return encryptedHex;
+        
+        const keyChars = key.split('').map(c => c.charCodeAt(0));
+        let decrypted = '';
+        for (let i = 0; i < encryptedHex.length; i += 2) {
+            const hex = parseInt(encryptedHex.substr(i, 2), 16);
+            const charCode = hex ^ keyChars[(i / 2) % keyChars.length];
+            decrypted += String.fromCharCode(charCode);
+        }
+        return decrypted;
+    } catch (e) { return encryptedHex; }
+};
 
 // --- HELPER: Normalize Firestore Dates ---
 const normalizeDate = (d: any): number => {
@@ -38,9 +76,7 @@ export const usePresence = (uid: string | undefined) => {
     useEffect(() => {
         if (!uid) return;
         const updateStatus = async () => {
-            try {
-                await updateDoc(doc(db, 'users', uid), { lastSeen: serverTimestamp() });
-            } catch (e) {}
+            try { await updateDoc(doc(db, 'users', uid), { lastSeen: serverTimestamp() }); } catch (e) {}
         };
         updateStatus();
         const interval = setInterval(updateStatus, 2 * 60 * 1000);
@@ -48,44 +84,30 @@ export const usePresence = (uid: string | undefined) => {
     }, [uid]);
 };
 
-// --- SAFE PROFILE SYNC (Fixes the "Anon" Bug) ---
+// --- SAFE PROFILE SYNC ---
 export const syncUserProfile = async (user: User) => {
   if (!user) return;
   try {
     const userRef = doc(db, 'users', user.uid);
     const userSnap = await getDoc(userRef);
-
-    // Get local values (if any)
     const localName = localStorage.getItem('vibenotes_profile_name');
     const localHandle = localStorage.getItem('vibenotes_profile_handle');
     const localPic = localStorage.getItem('vibenotes_profile_pic');
 
     if (userSnap.exists()) {
-       // User exists in DB. 
-       // ONLY overwrite if we have local data to sync UP.
-       // If local is empty (Incognito/New Device), we trust the DB and DO NOT overwrite.
        const updates: any = {};
        if (localName) updates.displayName = localName;
        if (localHandle) updates.handle = localHandle;
        if (localPic) updates.photoURL = localPic;
-
-       // Only fire update if we actually have changes
-       if (Object.keys(updates).length > 0) {
-           await updateDoc(userRef, updates);
-       }
+       if (Object.keys(updates).length > 0) await updateDoc(userRef, updates);
     } else {
-       // New User: Create with defaults
        await setDoc(userRef, {
-         uid: user.uid,
-         email: user.email,
+         uid: user.uid, email: user.email,
          displayName: localName || user.displayName || 'Anon',
-         handle: localHandle || '@anon',
-         photoURL: localPic || null,
+         handle: localHandle || '@anon', photoURL: localPic || null,
        });
     }
-  } catch (e) {
-    console.error("Profile sync error", e);
-  }
+  } catch (e) { console.error("Profile sync error", e); }
 };
 
 // --- SEARCH USERS ---
@@ -99,28 +121,25 @@ export const searchUsers = async (searchTerm: string) => {
   } catch (e) { return []; }
 };
 
-// --- GET SINGLE USER (With Online Status) ---
+// --- GET SINGLE USER ---
 export const useUser = (userId: string | undefined) => {
   const [userData, setUserData] = useState<any>(null);
-
   useEffect(() => {
     if (!userId) return;
     const unsub = onSnapshot(doc(db, 'users', userId), (doc) => {
       if (doc.exists()) {
           const data = doc.data();
           const lastSeen = normalizeDate(data.lastSeen);
-          // Online if seen within last 3 mins
           const isOnline = (Date.now() - lastSeen) < 3 * 60 * 1000;
           setUserData({ ...data, isOnline });
       }
     });
     return () => unsub();
   }, [userId]);
-
   return userData;
 };
 
-// --- CHATS HOOK ---
+// --- CHATS HOOK (With Decryption for LastMessage) ---
 export const useChats = (userId: string | null) => {
   const [chats, setChats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,7 +151,17 @@ export const useChats = (userId: string | null) => {
       const chatsData = snapshot.docs.map(doc => {
         const data = doc.data();
         const otherUserId = data.participants ? data.participants.find((p: string) => p !== userId) : null;
-        return { id: doc.id, ...data, timestamp: normalizeDate(data.timestamp), otherUserId };
+        
+        // DECRYPT PREVIEW
+        const plainLastMessage = data.secretKey 
+            ? simpleDecrypt(data.lastMessage, data.secretKey) 
+            : data.lastMessage;
+
+        return { 
+            id: doc.id, ...data, 
+            lastMessage: plainLastMessage, // Show plain text in list
+            timestamp: normalizeDate(data.timestamp), otherUserId 
+        };
       });
       setChats(chatsData);
       setLoading(false);
@@ -143,9 +172,15 @@ export const useChats = (userId: string | null) => {
   const createChat = async (otherUid: string) => {
     if (!userId) return;
     try {
+      // GENERATE KEY FOR ROOM
+      const secretKey = generateKey();
+      const initialMsg = "Chat started (Encrypted)";
+      const encryptedMsg = simpleEncrypt(initialMsg, secretKey);
+
       const chatRef = await addDoc(collection(db, 'chats'), {
         participants: [userId, otherUid],
-        lastMessage: 'Chat started',
+        lastMessage: encryptedMsg,
+        secretKey: secretKey, // SAVE KEY TO SERVER (Telegram Style)
         timestamp: serverTimestamp(),
         type: 'private'
       });
@@ -156,18 +191,36 @@ export const useChats = (userId: string | null) => {
   return { chats, loading, createChat };
 };
 
-// --- MESSAGES HOOK (With Read Receipts) ---
+// --- MESSAGES HOOK (With Encryption/Decryption) ---
 export const useMessages = (chatId: string | null) => {
   const [messages, setMessages] = useState<any[]>([]);
+  const [chatKey, setChatKey] = useState<string | null>(null);
+
+  // 1. Fetch Key for this room
+  useEffect(() => {
+      if (!chatId || chatId === 'saved_messages') { setChatKey(null); return; }
+      const unsub = onSnapshot(doc(db, 'chats', chatId), (doc) => {
+          if (doc.exists()) setChatKey(doc.data().secretKey || null);
+      });
+      return () => unsub();
+  }, [chatId]);
   
+  // 2. Fetch & Decrypt Messages
   useEffect(() => {
     if (!chatId || chatId === 'saved_messages') return;
     const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map(doc => {
         const data = doc.data();
+        
+        // DECRYPT HERE
+        const plainText = (chatKey && data.text) 
+            ? simpleDecrypt(data.text, chatKey) 
+            : data.text;
+
         return { 
           id: doc.id, ...data, 
+          text: plainText, // App sees plain text
           status: data.status || 'sent', 
           timestamp: normalizeDate(data.timestamp) 
         };
@@ -175,15 +228,21 @@ export const useMessages = (chatId: string | null) => {
       setMessages(msgs);
     });
     return () => unsubscribe();
-  }, [chatId]);
+  }, [chatId, chatKey]); // Re-run if key loads
 
   const sendMessage = async (text: string, imageUrl: string | null, senderId: string) => {
     if (!chatId) return;
+    
+    // ENCRYPT HERE
+    const encryptedText = chatKey ? simpleEncrypt(text, chatKey) : text;
+    const encryptedPreview = chatKey ? simpleEncrypt(text || 'Sent an image', chatKey) : text;
+
     await addDoc(collection(db, 'chats', chatId, 'messages'), {
-      text, imageUrl, senderId, timestamp: Date.now(), type: imageUrl ? 'image' : 'text', status: 'sent'
+      text: encryptedText, // DB gets hex garbage
+      imageUrl, senderId, timestamp: Date.now(), type: imageUrl ? 'image' : 'text', status: 'sent'
     });
     await updateDoc(doc(db, 'chats', chatId), {
-      lastMessage: text || (imageUrl ? 'Sent an image' : ''),
+      lastMessage: encryptedPreview, // DB gets hex garbage
       timestamp: serverTimestamp()
     });
   };
@@ -211,7 +270,6 @@ export const useMessages = (chatId: string | null) => {
 // --- NOTES HOOK ---
 export const useNotes = (userId: string | null) => {
   const [notes, setNotes] = useState<Note[]>([]);
-  
   useEffect(() => {
     if (!userId) { setNotes([]); return; }
     const q = query(collection(db, 'users', userId, 'notes'), orderBy('date', 'desc'));

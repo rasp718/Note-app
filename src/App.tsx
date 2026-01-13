@@ -166,9 +166,11 @@ function App() {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [showQRCode, setShowQRCode] = useState(false);
 
+  // --- MIC REFS & STREAMS ---
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const mimeTypeRef = useRef<string>(''); // NEW: Track correct file type
+  const mimeTypeRef = useRef<string>('');
+  const streamRef = useRef<MediaStream | null>(null);
 
   const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
   const otherChatUser = useUser(currentChatObject?.otherUserId);
@@ -187,7 +189,8 @@ function App() {
   const tapTimeoutRef = useRef<any>(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
 
-  const { messages: activeMessages, sendMessage, markChatAsRead } = useMessages(
+  // --- MESSAGES HOOK WITH DELETE/UPDATE ---
+  const { messages: activeMessages, sendMessage, deleteMessage, updateMessage, markChatAsRead } = useMessages(
     (activeChatId && activeChatId !== 'saved_messages') ? activeChatId : null
   );
 
@@ -301,54 +304,42 @@ function App() {
 
   // --- UNIVERSAL RECORDING LOGIC ---
   const startRecording = async () => {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        // 1. Let browser choose its native default (Safest option)
-        const mediaRecorder = new MediaRecorder(stream);
-        
-        // 2. Capture the actual type the browser decided to use
-        mimeTypeRef.current = mediaRecorder.mimeType;
+      try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          streamRef.current = stream; 
+          
+          let mimeType = '';
+          if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+          else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+          
+          const options = mimeType ? { mimeType } : undefined;
+          const mediaRecorder = new MediaRecorder(stream, options);
+          mimeTypeRef.current = mediaRecorder.mimeType || mimeType;
 
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-        
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) audioChunksRef.current.push(event.data);
-        };
+          mediaRecorderRef.current = mediaRecorder;
+          audioChunksRef.current = [];
+          
+          mediaRecorder.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
 
-        mediaRecorder.onstop = () => {
-            // 3. Create Blob using the BROWSER'S native type
-            // Fallback to 'audio/webm' if the browser didn't report one (rare)
-            const finalType = mimeTypeRef.current || 'audio/webm';
-            const audioBlob = new Blob(audioChunksRef.current, { type: finalType });
-            
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-            reader.onloadend = async () => {
-                const base64Audio = reader.result as string;
-                
-                // Size check (Base64 is ~33% larger than binary)
-                if (base64Audio.length > 1000000) { // ~1MB limit
-                    alert("Voice note too long.");
-                    return;
-                }
-                
-                if (user && activeChatId) {
-                    await sendMessage("", null, base64Audio, user.uid);
-                    scrollToBottom('auto');
-                }
-            };
-            stream.getTracks().forEach(track => track.stop());
-        };
+          mediaRecorder.onstop = () => {
+              const audioBlob = new Blob(audioChunksRef.current, { type: mimeTypeRef.current });
+              const reader = new FileReader();
+              reader.readAsDataURL(audioBlob);
+              reader.onloadend = async () => {
+                  const base64Audio = reader.result as string;
+                  if (base64Audio.length > 1000000) { alert("Voice note too long."); return; }
+                  if (user && activeChatId) { await sendMessage("", null, base64Audio, user.uid); scrollToBottom('auto'); }
+              };
+              if (streamRef.current) {
+                  streamRef.current.getTracks().forEach(track => track.stop());
+                  streamRef.current = null;
+              }
+          };
 
-        mediaRecorder.start();
-        setIsRecording(true);
-    } catch (e) { 
-        console.error("Mic error", e); 
-        alert("Microphone access denied. Please check system permissions."); 
-    }
-};
+          mediaRecorder.start();
+          setIsRecording(true);
+      } catch (e) { console.error("Mic error", e); alert("Microphone access denied."); }
+  };
 
   const stopRecording = () => {
       if (mediaRecorderRef.current && isRecording) {
@@ -356,6 +347,9 @@ function App() {
           setIsRecording(false);
       }
   };
+
+  const handleDeleteMessage = async (id: string) => { await deleteMessage(id); };
+  const handleEditMessage = (msg: any) => { setEditingNote({ ...msg, category: 'default' }); setTranscript(msg.text); setTimeout(() => textareaRef.current?.focus(), 100); };
 
   const handleSearchContacts = async (e: React.FormEvent) => {
       e.preventDefault(); if (!contactSearchQuery.trim()) return; setIsSearchingContacts(true);
@@ -424,7 +418,12 @@ function App() {
             }
         } else {
             // MESSAGES
-            if (user) {
+            if (editingNote && editingNote.id) {
+                // UPDATE EXISTING MESSAGE
+                await updateMessage(editingNote.id, transcript.trim());
+                setEditingNote(null);
+            } else if (user) {
+                // SEND NEW MESSAGE
                 await sendMessage(transcript.trim(), imageUrl, null, user.uid);
             }
         }
@@ -478,7 +477,7 @@ function App() {
   return (
     <div className={`fixed top-0 left-0 w-full h-[100dvh] bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
-      {/* IMAGE ZOOM */}
+      {/* IMAGE ZOOM OVERLAY */}
       {zoomedImage && (
           <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-in fade-in duration-200" onClick={() => setZoomedImage(null)}>
               <img src={zoomedImage} className="max-w-full max-h-full object-contain p-4 transition-transform duration-300 scale-100" />
@@ -486,7 +485,7 @@ function App() {
           </div>
       )}
 
-      {/* QR CODE */}
+      {/* QR CODE OVERLAY */}
       {showQRCode && (
           <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-200" onClick={() => setShowQRCode(false)}>
               <div className="bg-white rounded-3xl p-8 flex flex-col items-center gap-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
@@ -585,7 +584,6 @@ function App() {
                                 <button type="submit" disabled={isSearchingContacts} className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all disabled:opacity-50"><Search size={16} /></button>
                             </div>
                         </form>
-                        {/* MY QR CODE */}
                         <div onClick={() => setShowQRCode(true)} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors">
                             <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-black">
                                 <QrCode size={24} />
@@ -672,7 +670,7 @@ function App() {
                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-4">
                              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
                              <div className="grid grid-cols-4 gap-3">
-                                  {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => setBgIndex(num)} className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-white scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}><img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} /></button>))}
+                                  {Array.from({ length: 33 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => setBgIndex(num)} className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-white scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}><img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} /></button>))}
                               </div>
                         </div>
                      </div>
@@ -810,6 +808,8 @@ function App() {
                                         note={msgNote} categories={[]} selectedVoice={selectedVoice} 
                                         variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
                                         onImageClick={setZoomedImage}
+                                        onDelete={isMe ? (id) => handleDeleteMessage(id) : undefined}
+                                        onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => handleEditMessage(msg) : undefined}
                                     />
                                 </div>
                             </React.Fragment>
@@ -824,6 +824,7 @@ function App() {
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  {activeChatId === 'saved_messages' && (<button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">{activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}</button>)}
                  
+                 {/* MIC BUTTON */}
                  {activeChatId !== 'saved_messages' && !transcript && !imageUrl && !editingNote && (
                      <button 
                         onMouseDown={startRecording} 

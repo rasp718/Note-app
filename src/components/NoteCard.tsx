@@ -22,7 +22,6 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor }: any) => {
   );
 };
 
-// --- ROBUST AUDIO PLAYER ---
 const AudioPlayer = ({ src, textColor }: any) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -31,62 +30,35 @@ const AudioPlayer = ({ src, textColor }: any) => {
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
-
-        const handleTimeUpdate = () => {
-            const pct = (audio.currentTime / audio.duration) * 100;
-            setProgress(pct || 0);
-        };
-        const handleEnded = () => {
-            setIsPlaying(false);
-            setProgress(0);
-        };
-
+        const handleTimeUpdate = () => { const pct = (audio.currentTime / audio.duration) * 100; setProgress(pct || 0); };
+        const handleEnded = () => { setIsPlaying(false); setProgress(0); };
         audio.addEventListener('timeupdate', handleTimeUpdate);
         audio.addEventListener('ended', handleEnded);
-        return () => {
-            audio.removeEventListener('timeupdate', handleTimeUpdate);
-            audio.removeEventListener('ended', handleEnded);
-        };
+        return () => { audio.removeEventListener('timeupdate', handleTimeUpdate); audio.removeEventListener('ended', handleEnded); };
     }, []);
 
     const togglePlay = async (e: any) => {
         e.stopPropagation();
         if(!audioRef.current) return;
-
-        if (isPlaying) {
-            audioRef.current.pause();
-            setIsPlaying(false);
-        } else {
-            try {
-                await audioRef.current.play();
-                setIsPlaying(true);
-            } catch (err) {
-                console.error("Playback Error:", err);
-                alert("Could not play audio. Format might not be supported on this browser.");
-            }
+        if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); } 
+        else { 
+            try { await audioRef.current.play(); setIsPlaying(true); } 
+            catch (err) { console.error("Playback Error:", err); alert("Could not play audio."); } 
         }
     };
 
     return (
         <div className="flex items-center gap-3 min-w-[140px] bg-black/10 rounded-xl p-2 pr-3 mb-1 border border-white/5">
-            <button 
-                onClick={togglePlay} 
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-black shrink-0 hover:scale-105 active:scale-95 transition-all"
-            >
+            <button onClick={togglePlay} className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-black shrink-0 hover:scale-105 active:scale-95 transition-all">
                 {isPlaying ? <Pause size={14} fill="black" /> : <Play size={14} fill="black" className="ml-0.5" />}
             </button>
             <div className="flex flex-col gap-1 w-full min-w-0">
                 <div className={`h-1 w-full rounded-full opacity-30 overflow-hidden ${textColor?.includes('black') ? 'bg-black' : 'bg-white'}`}>
-                    <div 
-                        className={`h-full ${textColor?.includes('black') ? 'bg-black' : 'bg-white'}`} 
-                        style={{ width: `${progress}%`, transition: 'width 0.1s linear' }} 
-                    />
+                    <div className={`h-full ${textColor?.includes('black') ? 'bg-black' : 'bg-white'}`} style={{ width: `${progress}%`, transition: 'width 0.1s linear' }} />
                 </div>
-                <span className={`text-[9px] font-mono opacity-70 ${textColor}`}>
-                    {isPlaying ? 'Playing...' : 'Voice Note'}
-                </span>
+                <span className={`text-[9px] font-mono opacity-70 ${textColor}`}>{isPlaying ? 'Playing...' : 'Voice Note'}</span>
             </div>
-            <audio ref={audioRef} src={src} preload="auto" />
+            <audio ref={audioRef} src={src} preload="auto" playsInline />
         </div>
     );
 };
@@ -127,7 +99,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   
   const borderStyle = customColors?.border ? { borderColor: customColors.border } : {};
   const chatBorderClasses = variant !== 'default' ? (customColors?.border ? customColors.border : 'border-none') : 'border-none';
-  
   const bgColor = customColors?.bg || 'bg-zinc-900';
   const textColor = customColors?.text || 'text-zinc-300';
   const shadowClass = customColors?.shadow || 'shadow-sm';
@@ -147,8 +118,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
 
   const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; window.speechSynthesis.speak(utterance); } };
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
-  const handleContextMenu = (e: any) => { e.preventDefault(); e.stopPropagation(); if(onDelete) openMenu(e.clientX, e.clientY); };
   
+  // MENU TRIGGER
   const openMenu = (clientX: number, clientY: number) => {
     triggerHaptic();
     const menuW = 200; const menuH = 260; 
@@ -157,11 +128,42 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     setContextMenu({ x: Math.max(10, x), y: Math.max(10, y) });
   };
 
+  const handleContextMenu = (e: any) => { 
+      e.preventDefault(); e.stopPropagation(); 
+      // Allow menu on DEFAULT notes AND SENT messages
+      if(variant === 'default' || variant === 'sent') openMenu(e.clientX, e.clientY); 
+  };
+
   const formatTime = (timestamp: any) => { try { const t = Number(timestamp); if (isNaN(t) || t === 0) return ''; return new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } };
 
-  const handleTouchStart = (e: any) => { if (variant !== 'default') return; if (e.targetTouches.length !== 1 || !onDelete) return; touchStartX.current = e.targetTouches[0].clientX; touchStartY.current = e.targetTouches[0].clientY; setIsSwiping(false); isLongPress.current = false; longPressTimer.current = setTimeout(() => { if (touchStartX.current && touchStartY.current) { isLongPress.current = true; openMenu(touchStartX.current, touchStartY.current); } }, 600); };
-  const handleTouchMove = (e: any) => { if (variant !== 'default') return; if (!touchStartX.current || !touchStartY.current || !onDelete) return; const currentX = e.targetTouches[0].clientX; const currentY = e.targetTouches[0].clientY; const diffX = currentX - touchStartX.current; const diffY = currentY - touchStartY.current; if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } } if (isLongPress.current) return; if (Math.abs(diffY) > Math.abs(diffX)) return; if (diffX < 0) { setIsSwiping(true); setSwipeOffset(Math.max(diffX, -200)); } };
-  const handleTouchEnd = () => { if (variant !== 'default') return; if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } if (isLongPress.current) { touchStartX.current = null; touchStartY.current = null; return; } if (swipeOffset < -100 && onDelete && note.id) { triggerHaptic(); onDelete(note.id); } setSwipeOffset(0); setIsSwiping(false); touchStartX.current = null; touchStartY.current = null; };
+  const handleTouchStart = (e: any) => { 
+      if (e.targetTouches.length !== 1) return; 
+      touchStartX.current = e.targetTouches[0].clientX; 
+      touchStartY.current = e.targetTouches[0].clientY; 
+      setIsSwiping(false); isLongPress.current = false; 
+      // ENABLE LONG PRESS FOR SENT MESSAGES TOO
+      if (variant === 'default' || variant === 'sent') {
+          longPressTimer.current = setTimeout(() => { 
+              if (touchStartX.current && touchStartY.current) { isLongPress.current = true; openMenu(touchStartX.current, touchStartY.current); } 
+          }, 600); 
+      }
+  };
+  
+  const handleTouchMove = (e: any) => { 
+      if (!touchStartX.current || !touchStartY.current) return; 
+      const diffX = e.targetTouches[0].clientX - touchStartX.current; 
+      const diffY = e.targetTouches[0].clientY - touchStartY.current; 
+      if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } } 
+      if (isLongPress.current) return; 
+      if (variant === 'default' && diffX < 0 && Math.abs(diffX) > Math.abs(diffY)) { setIsSwiping(true); setSwipeOffset(Math.max(diffX, -200)); } 
+  };
+  
+  const handleTouchEnd = () => { 
+      if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } 
+      if (isLongPress.current) { touchStartX.current = null; touchStartY.current = null; return; } 
+      if (variant === 'default' && swipeOffset < -100 && onDelete && note.id) { triggerHaptic(); onDelete(note.id); } 
+      setSwipeOffset(0); setIsSwiping(false); touchStartX.current = null; touchStartY.current = null; 
+  };
 
   const paddingClass = variant === 'default' ? (isCompact ? 'px-3 py-2' : 'p-3') : 'px-4 py-2';
   let radiusClass = 'rounded-2xl'; 
@@ -213,7 +215,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
           )}
         </div>
       </div>
-      {contextMenu && onDelete && typeof document !== 'undefined' && createPortal( <div className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'rgba(24, 24, 27, 0.95)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}> <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={accentColor} /> <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={accentColor} /> {variant === 'default' && ( <> <div className="h-px bg-white/10 mx-3 my-1" /> <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { onDelete(note.id); setContextMenu(null); }} accentColor={accentColor} /> </> )} </div>, document.body )}
+      {contextMenu && typeof document !== 'undefined' && createPortal( <div className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'rgba(24, 24, 27, 0.95)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}> 
+      <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={accentColor} /> 
+      {variant === 'default' && <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={accentColor} />}
+      {/* SHOW DELETE FOR SENT MESSAGES OR NOTES */}
+      {(variant === 'default' || variant === 'sent') && ( <> <div className="h-px bg-white/10 mx-3 my-1" /> <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={accentColor} /> </> )} 
+      </div>, document.body )}
     </>
   );
 };

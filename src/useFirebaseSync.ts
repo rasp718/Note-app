@@ -183,7 +183,7 @@ export const useChats = (userId: string | null) => {
   return { chats, loading, createChat };
 };
 
-// --- MESSAGES HOOK (Updated for Audio) ---
+// --- MESSAGES HOOK (With Delete/Update Logic) ---
 export const useMessages = (chatId: string | null) => {
   const [messages, setMessages] = useState<any[]>([]);
   const [chatKey, setChatKey] = useState<string | null>(null);
@@ -219,12 +219,9 @@ export const useMessages = (chatId: string | null) => {
     return () => unsubscribe();
   }, [chatId, chatKey]);
 
-  // UPDATED: Now accepts audioUrl
   const sendMessage = async (text: string, imageUrl: string | null, audioUrl: string | null, senderId: string) => {
     if (!chatId) return;
     
-    // We encrypt text, but we leave Audio/Image blobs unencrypted for performance (Database limit)
-    // The "Hacker" would see the blob data but not the context text.
     const encryptedText = chatKey ? simpleEncrypt(text, chatKey) : text;
     
     let previewText = text;
@@ -236,7 +233,7 @@ export const useMessages = (chatId: string | null) => {
     await addDoc(collection(db, 'chats', chatId, 'messages'), {
       text: encryptedText, 
       imageUrl: imageUrl || null,
-      audioUrl: audioUrl || null, // NEW FIELD
+      audioUrl: audioUrl || null, 
       senderId, 
       timestamp: Date.now(), 
       type: audioUrl ? 'audio' : (imageUrl ? 'image' : 'text'), 
@@ -246,6 +243,24 @@ export const useMessages = (chatId: string | null) => {
       lastMessage: encryptedPreview,
       timestamp: serverTimestamp()
     });
+  };
+
+  const deleteMessage = async (messageId: string) => {
+      if (!chatId || !messageId) return;
+      try {
+          await deleteDoc(doc(db, 'chats', chatId, 'messages', messageId));
+      } catch (e) { console.error("Failed to delete message", e); }
+  };
+
+  const updateMessage = async (messageId: string, newText: string) => {
+      if (!chatId || !messageId) return;
+      try {
+          const encryptedText = chatKey ? simpleEncrypt(newText, chatKey) : newText;
+          await updateDoc(doc(db, 'chats', chatId, 'messages', messageId), {
+              text: encryptedText,
+              editedAt: Date.now()
+          });
+      } catch (e) { console.error("Failed to edit message", e); }
   };
 
   const markChatAsRead = async (currentUserId: string) => {
@@ -265,7 +280,7 @@ export const useMessages = (chatId: string | null) => {
       } catch (e) { console.error("Error marking read:", e); }
   };
 
-  return { messages, sendMessage, markChatAsRead };
+  return { messages, sendMessage, deleteMessage, updateMessage, markChatAsRead };
 };
 
 // --- NOTES HOOK ---

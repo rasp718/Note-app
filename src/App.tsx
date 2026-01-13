@@ -299,65 +299,56 @@ function App() {
     const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = items[i].getAsFile(); if (file) await handleImageUpload(file); break; } }
   };
 
-  // --- UPDATED SMART RECORDING LOGIC (iOS FIX) ---
+  // --- UNIVERSAL RECORDING LOGIC ---
   const startRecording = async () => {
-      try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          
-          // 1. Check which MIME type is supported on this specific device
-          let mimeType = '';
-          if (MediaRecorder.isTypeSupported('audio/webm')) {
-              mimeType = 'audio/webm'; // Chrome/Desktop
-          } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-              mimeType = 'audio/mp4'; // iOS Safari
-          } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-              mimeType = 'audio/ogg'; // Firefox
-          } else {
-              mimeType = ''; // Let browser decide default
-          }
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // 1. Let browser choose its native default (Safest option)
+        const mediaRecorder = new MediaRecorder(stream);
+        
+        // 2. Capture the actual type the browser decided to use
+        mimeTypeRef.current = mediaRecorder.mimeType;
 
-          // 2. Initialize with that type
-          const options = mimeType ? { mimeType } : undefined;
-          const mediaRecorder = new MediaRecorder(stream, options);
-          
-          // Store the actual type the browser chose
-          mimeTypeRef.current = mediaRecorder.mimeType || mimeType;
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+        
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) audioChunksRef.current.push(event.data);
+        };
 
-          mediaRecorderRef.current = mediaRecorder;
-          audioChunksRef.current = [];
-          
-          mediaRecorder.ondataavailable = (event) => {
-              if (event.data.size > 0) audioChunksRef.current.push(event.data);
-          };
+        mediaRecorder.onstop = () => {
+            // 3. Create Blob using the BROWSER'S native type
+            // Fallback to 'audio/webm' if the browser didn't report one (rare)
+            const finalType = mimeTypeRef.current || 'audio/webm';
+            const audioBlob = new Blob(audioChunksRef.current, { type: finalType });
+            
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async () => {
+                const base64Audio = reader.result as string;
+                
+                // Size check (Base64 is ~33% larger than binary)
+                if (base64Audio.length > 1000000) { // ~1MB limit
+                    alert("Voice note too long.");
+                    return;
+                }
+                
+                if (user && activeChatId) {
+                    await sendMessage("", null, base64Audio, user.uid);
+                    scrollToBottom('auto');
+                }
+            };
+            stream.getTracks().forEach(track => track.stop());
+        };
 
-          mediaRecorder.onstop = () => {
-              // 3. Create the Blob with the CORRECT type
-              // This is critical. If we say 'audio/webm' but iOS recorded 'audio/mp4', playback fails.
-              const audioBlob = new Blob(audioChunksRef.current, { type: mimeTypeRef.current });
-              
-              const reader = new FileReader();
-              reader.readAsDataURL(audioBlob);
-              reader.onloadend = async () => {
-                  const base64Audio = reader.result as string;
-                  if (base64Audio.length > 800000) {
-                      alert("Voice note too long for this demo.");
-                      return;
-                  }
-                  if (user && activeChatId) {
-                      await sendMessage("", null, base64Audio, user.uid);
-                      scrollToBottom('auto');
-                  }
-              };
-              stream.getTracks().forEach(track => track.stop());
-          };
-
-          mediaRecorder.start();
-          setIsRecording(true);
-      } catch (e) { 
-          console.error("Mic error", e); 
-          alert("Microphone access denied or not supported."); 
-      }
-  };
+        mediaRecorder.start();
+        setIsRecording(true);
+    } catch (e) { 
+        console.error("Mic error", e); 
+        alert("Microphone access denied. Please check system permissions."); 
+    }
+};
 
   const stopRecording = () => {
       if (mediaRecorderRef.current && isRecording) {

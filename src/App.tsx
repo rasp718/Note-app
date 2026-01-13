@@ -76,11 +76,11 @@ function App() {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [showQRCode, setShowQRCode] = useState(false);
 
-  // --- NEW: MIC REFS & STREAMS ---
+  // --- MIC REFS & STREAMS ---
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const mimeTypeRef = useRef<string>('');
-  const streamRef = useRef<MediaStream | null>(null); // To stop tracks
+  const streamRef = useRef<MediaStream | null>(null);
 
   const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
   const otherChatUser = useUser(currentChatObject?.otherUserId);
@@ -97,7 +97,6 @@ function App() {
   const tapTimeoutRef = useRef<any>(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
 
-  // --- NEW: MESSAGES HOOK NOW HAS DELETE/UPDATE ---
   const { messages: activeMessages, sendMessage, deleteMessage, updateMessage, markChatAsRead } = useMessages(
     (activeChatId && activeChatId !== 'saved_messages') ? activeChatId : null
   );
@@ -131,20 +130,19 @@ function App() {
   const handleImageUpload = async (file: File) => { if (!file.type.startsWith('image/')) return alert('Please select an image file'); setIsUploadingImage(true); try { const url = await compressImage(file); setImageUrl(url); } catch (e) { console.error(e); } finally { setIsUploadingImage(false); } };
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => { const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = items[i].getAsFile(); if (file) await handleImageUpload(file); break; } } };
 
-  // --- FIXED RECORDING LOGIC ---
+  // --- UNIVERSAL RECORDING LOGIC ---
   const startRecording = async () => {
       try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          streamRef.current = stream; // STORE STREAM TO KILL IT LATER
-
-          // Prefer mp4 for iOS, webm for others
+          streamRef.current = stream; 
+          
           let mimeType = '';
-          if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
-          else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+          if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+          else if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
           
           const options = mimeType ? { mimeType } : undefined;
           const mediaRecorder = new MediaRecorder(stream, options);
-          mimeTypeRef.current = mediaRecorder.mimeType || mimeType; // Store actual type used
+          mimeTypeRef.current = mediaRecorder.mimeType || mimeType;
 
           mediaRecorderRef.current = mediaRecorder;
           audioChunksRef.current = [];
@@ -160,7 +158,6 @@ function App() {
                   if (base64Audio.length > 1000000) { alert("Voice note too long."); return; }
                   if (user && activeChatId) { await sendMessage("", null, base64Audio, user.uid); scrollToBottom('auto'); }
               };
-              // STOP THE STREAM TRACKS (Orange Light Fix)
               if (streamRef.current) {
                   streamRef.current.getTracks().forEach(track => track.stop());
                   streamRef.current = null;
@@ -179,7 +176,6 @@ function App() {
       }
   };
 
-  // --- HANDLERS FOR MESSAGE DELETION/EDITING ---
   const handleDeleteMessage = async (id: string) => { await deleteMessage(id); };
   const handleEditMessage = (msg: any) => { setEditingNote({ ...msg, category: 'default' }); setTranscript(msg.text); setTimeout(() => textareaRef.current?.focus(), 100); };
 
@@ -215,11 +211,9 @@ function App() {
             }
         } else {
             if (editingNote && editingNote.id) {
-                // UPDATE EXISTING MESSAGE
                 await updateMessage(editingNote.id, transcript.trim());
                 setEditingNote(null);
             } else if (user) {
-                // SEND NEW MESSAGE
                 await sendMessage(transcript.trim(), imageUrl, null, user.uid);
             }
         }
@@ -239,7 +233,6 @@ function App() {
   if (authLoading) return <div className="min-h-screen bg-black" />;
   if (!user) return <Auth />;
 
-  // ... (BottomTabBar is identical to before)
   const BottomTabBar = () => ( <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-2xl border border-white/5 rounded-full shadow-2xl shadow-black/50 p-1.5 flex gap-1 z-50"> <button onClick={() => setActiveTab('contacts')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Globe size={22} className={`transition-all duration-300 ${activeTab === 'contacts' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'contacts' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button> <button onClick={() => setActiveTab('calls')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Zap size={22} className={`transition-all duration-300 ${activeTab === 'calls' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'calls' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button> <button onClick={() => setActiveTab('chats')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><MessageSquareDashed size={22} className={`transition-all duration-300 ${activeTab === 'chats' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'chats' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button> <button onClick={() => setActiveTab('settings')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Cpu size={22} className={`transition-all duration-300 ${activeTab === 'settings' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'settings' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button> </div> );
 
   return (
@@ -251,7 +244,6 @@ function App() {
       <div className="fixed inset-0 z-0 pointer-events-none mix-blend-overlay transition-opacity duration-1000" style={{ backgroundColor: '#ff4500', opacity: redModeIntensity / 100 }} />
 
       {currentView === 'list' && (
-        // ... (List view code remains largely the same, collapsed for brevity but fully functional in logic)
         <div className="flex-1 flex flex-col h-full z-10 animate-in fade-in slide-in-from-left-5 duration-300">
            {activeTab === 'chats' && (<div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20"><div className="max-w-2xl mx-auto w-full flex items-end justify-between"><div><h1 className="text-3xl font-black text-white tracking-tighter">FEED</h1><p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mt-1">Encrypted</p></div><div className="flex gap-4 items-center mb-1"><button className="text-zinc-500 transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = '#71717a'}><PenLine size={20} /></button></div></div></div>)}
            {activeTab === 'settings' && (<div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20"><div className="max-w-2xl mx-auto w-full"><h1 className="text-3xl font-black text-white tracking-tighter">SYSTEM</h1></div></div>)}
@@ -260,11 +252,9 @@ function App() {
            <div key={activeTab + 'content'} className="flex-1 overflow-y-auto no-scrollbar pb-24">
                <div className="max-w-2xl mx-auto w-full">
                    {activeTab === 'chats' && ( <> <div className="px-4 mb-4"><div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-white/50"><Search size={16} className="text-zinc-500" /><input type="text" placeholder="Search frequency..." className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-medium"/></div></div> <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-left-8 fade-in duration-500`}><div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo"><div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50">{activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}</div></div><div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5"><div className="flex justify-between items-baseline"><span className="font-bold text-white text-base tracking-tight">Notes</span><span className="text-[10px] text-zinc-500 font-mono">{notes.length > 0 ? getDateLabel(notes[0].date) : ''}</span></div><div className="text-zinc-400 text-sm truncate pr-4 flex items-center gap-1"><span className="text-[10px] font-bold uppercase tracking-wider px-1 rounded bg-white/10" style={{ color: accentColor }}>You</span><span className="opacity-70 truncate">{notes.length > 0 ? notes[0].text : 'No notes yet'}</span></div></div></div> {realChats.map((chat, index) => ( <ChatListItem key={chat.id} chat={chat} active={isEditing ? selectedChatIds.has(chat.id) : false} isEditing={isEditing} onSelect={() => toggleChatSelection(chat.id)} onClick={() => { setActiveChatId(chat.id); setCurrentView('room'); scrollToBottom('auto'); }} index={index} /> ))} </> )}
-                   {/* Rest of Tabs from previous successful code ... assuming they exist in your previous paste, but included briefly */}
                    {activeTab === 'contacts' && ( <div className="p-4 space-y-6"> <form onSubmit={handleSearchContacts} className="relative"> <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-3 gap-3 focus-within:border-white/50 transition-colors"> <AtSign size={18} className="text-zinc-500" /> <input type="text" value={contactSearchQuery} onChange={(e) => setContactSearchQuery(e.target.value)} placeholder="Search by handle (e.g. @neo)" className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-mono"/> <button type="submit" disabled={isSearchingContacts} className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all disabled:opacity-50"><Search size={16} /></button> </div> </form> <div onClick={() => setShowQRCode(true)} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors"> <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-black"><QrCode size={24} /></div> <div className="flex-1"><h3 className="font-bold text-white">My QR Code</h3><p className="text-xs text-zinc-500">Tap to share your profile</p></div> <ChevronLeft size={16} className="rotate-180 text-zinc-500" /> </div> <div className="space-y-3 pt-4"><h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">Results</h3>{isSearchingContacts ? (<div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div></div>) : contactSearchResults.length > 0 ? (contactSearchResults.map((u) => (<div key={u.uid} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-2 fade-in duration-300"><div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden">{u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}</div><div className="flex-1"><h3 className="font-bold text-white">{u.displayName}</h3><p className="text-xs text-zinc-500 font-mono">{u.handle}</p></div><button onClick={() => startNewChat(u.uid)} className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all"><MessageCircle size={20} /></button></div>))) : (<div className="text-center py-10 opacity-30"><UserPlus size={48} className="mx-auto mb-4 text-zinc-600" /><p className="text-zinc-500 text-sm">Search for a handle to start connecting.</p></div>)}</div></div> )}
                    {activeTab === 'settings' && ( 
                        <div className="p-4 space-y-6">
-                           {/* PROFILE CARD */}
                            <div className="relative overflow-hidden bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col gap-6 backdrop-blur-xl group">
                                <div className="absolute top-4 right-4">
                                     {isEditingProfile ? (<button onClick={handleProfileSave} className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center"><Check size={16} strokeWidth={3} /></button>) : (<button onClick={() => setIsEditingProfile(true)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 hover:text-white"><Edit size={14} /></button>)}
@@ -289,7 +279,6 @@ function App() {
                                </div>
                            </div>
                            
-                           {/* INTERFACE SETTINGS */}
                            <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6">
                                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
                                 <div className="space-y-3"><label className="text-white text-sm font-medium">Message Alignment</label><div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800"><button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button><button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button><button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button></div></div>
@@ -313,7 +302,7 @@ function App() {
                             <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-4">
                                  <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
                                  <div className="grid grid-cols-4 gap-3">
-                                      {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => setBgIndex(num)} className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-white scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}><img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} /></button>))}
+                                      {Array.from({ length: 33 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => setBgIndex(num)} className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-white scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}><img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} /></button>))}
                                   </div>
                             </div>
                        </div> 
@@ -322,99 +311,6 @@ function App() {
            </div>
 
            <BottomTabBar />
-        </div>
-      )}
-
-      {currentView === 'room' && (
-        // ... (Room view same as before, ensures NoteCard gets handlers)
-        <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
-            {/* Header omitted for brevity but remains same */}
-            <div className="fixed top-0 left-0 right-0 z-40">
-                <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative z-50">
-                    <div className="flex items-center gap-1 w-full">
-                        <button onClick={() => { setCurrentView('list'); setActiveChatId(null); }} className="w-10 h-10 flex items-center justify-center text-zinc-400 transition-colors active:scale-95 hover:bg-white/5 rounded-full mr-1"><ChevronLeft size={28} /></button>
-                        {activeChatId !== 'saved_messages' ? (<div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors"><div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 relative">{otherChatUser?.photoURL ? (<img src={otherChatUser.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-lg">{otherChatUser?.displayName?.[0] || '?'}</div>)}</div><div className="flex-1 min-w-0"><h3 className="font-bold text-white text-base leading-tight truncate">{otherChatUser?.displayName || 'Unknown'}</h3><div className="flex items-center gap-1.5 mt-0.5">{otherChatUser?.isOnline && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}<p className={`text-xs truncate ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>{otherChatUser?.isOnline ? 'Online' : 'Last seen recently'}</p></div></div></div>) : (<div onClick={handleSecretTrigger} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer select-none"><div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden">{activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}</div><div className="animate-in fade-in duration-300"><h3 className="font-bold text-white text-lg leading-tight">Notes</h3><p className="text-zinc-500 text-xs font-mono uppercase tracking-widest">Personal</p></div></div>)}
-                        <div className="flex items-center gap-1"><div className="relative flex items-center h-10"><button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-400 transition-all active:scale-95 rounded-full hover:bg-white/5 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={22} /></button><div className={`absolute right-0 bg-zinc-900 border border-zinc-800 focus-within:border-white/50 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}><Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} /><input ref={searchInputRef} type="text" placeholder={TRANSLATIONS.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/><button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button></div></div>{activeChatId !== 'saved_messages' && (<button className="w-10 h-10 flex items-center justify-center text-zinc-400 rounded-full hover:bg-white/5"><Phone size={22} /></button>)}</div>
-                    </div>
-                </header>
-            </div>
-
-           {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}
-
-           <div ref={listRef} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
-              <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-1 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
-                
-                {/* MESSAGES RENDER */}
-                {activeChatId === 'saved_messages' ? (
-                    filteredNotes.map((note, index) => {
-                        const prevNote = filteredNotes[index - 1]; const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
-                        const noteColors = isHackerMode ? { bg: 'bg-black', border: 'border border-green-500/30 hover:border-green-500 transition-colors', text: 'text-green-500' } : { bg: 'bg-zinc-900/50 backdrop-blur-md', border: 'border-transparent', text: 'text-zinc-100' };
-                        return (
-                            <React.Fragment key={note.id}>
-                                {showHeader && (<div className="flex justify-center my-2 opacity-70 w-full select-none"><span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">{getDateLabel(note.date)}</span></div>)}
-                                <div onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
-                                    <NoteCard note={note} categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} selectedVoice={selectedVoice} onDelete={handleDeleteNote} onPin={togglePin} onCategoryClick={(cat) => setActiveFilter(cat)} onEdit={() => handleEditClick(note)} onToggleExpand={handleToggleExpand} onImageClick={setZoomedImage} customColors={noteColors} />
-                                </div>
-                            </React.Fragment>
-                        );
-                    })
-                ) : (
-                    activeMessages.map((msg, index) => {
-                        const prevMsg = activeMessages[index - 1]; const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp); const isMe = msg.senderId === user?.uid;
-                        let customColors; if (isMe) { switch(bubbleStyle) { case 'clear': customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20', text: 'text-white' }; break; case 'solid_gray': customColors = { bg: 'bg-zinc-700', border: 'border-transparent', text: 'text-white' }; break; case 'minimal_glass': customColors = { bg: `bg-white/20 backdrop-blur-md`, border: `border-white/50`, text: 'text-white' }; break; case 'minimal_solid': default: customColors = { bg: `bg-white`, border: 'border-transparent', text: 'text-black' }; break; } } else { customColors = { bg: 'bg-zinc-800', border: 'border-transparent', text: 'text-zinc-100' }; }
-                        const msgNote = { id: msg.id, text: msg.text, date: normalizeDate(msg.timestamp), category: 'default', isPinned: false, isExpanded: true, imageUrl: msg.imageUrl, audioUrl: msg.audioUrl };
-                        return (
-                            <React.Fragment key={msg.id}>
-                                {showHeader && (<div className="flex justify-center my-4 opacity-60 w-full select-none"><span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full border border-white/5">{getDateLabel(msg.timestamp)}</span></div>)}
-                                <div className={`flex w-full mb-0.5 items-end ${isMe ? 'justify-end' : 'justify-start gap-2'}`}>
-                                    {!isMe && (<div className="flex-shrink-0 w-8 h-8 relative z-10"><div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 shadow-md">{otherChatUser?.photoURL ? <img src={otherChatUser.photoURL} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">{otherChatUser?.displayName?.[0] || '?'}</div>}</div></div>)}
-                                    
-                                    {/* HERE IS THE CRITICAL FIX: PASS onDelete AND onEdit */}
-                                    <NoteCard 
-                                        note={msgNote} categories={[]} selectedVoice={selectedVoice} 
-                                        variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
-                                        onImageClick={setZoomedImage}
-                                        onDelete={isMe ? (id) => handleDeleteMessage(id) : undefined}
-                                        onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => handleEditMessage(msg) : undefined}
-                                    />
-                                </div>
-                            </React.Fragment>
-                        );
-                    })
-                )}
-                <div ref={bottomRef} className="h-0 w-full shrink-0" />
-              </div>
-           </div>
-
-           <div className="flex-none w-full p-2 pb-6 md:pb-3 bg-black/60 backdrop-blur-xl z-50 border-t border-zinc-800/50">
-             <div className="max-w-2xl mx-auto flex items-end gap-2">
-                 {activeChatId === 'saved_messages' && (<button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">{activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}</button>)}
-                 
-                 {activeChatId !== 'saved_messages' && !transcript && !imageUrl && !editingNote && (
-                     <button 
-                        onMouseDown={startRecording} 
-                        onMouseUp={stopRecording} 
-                        onTouchStart={(e) => { e.preventDefault(); startRecording(); }}
-                        onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
-                        className={`flex-shrink-0 w-10 h-10 mb-1 rounded-full flex items-center justify-center transition-all duration-200 ${isRecording ? 'bg-red-500 scale-125' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400'}`}
-                     >
-                         <Mic size={20} className={isRecording ? 'text-white animate-pulse' : ''} />
-                     </button>
-                 )}
-
-                 <div className="flex-1 bg-zinc-900/50 border border-zinc-700/50 rounded-2xl flex items-center px-3 py-1.5 focus-within:border-white/50 transition-colors gap-2 relative">
-                    {imageUrl && (<div className="relative flex-shrink-0"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"><X size={10} /></button></div>)}
-                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} onFocus={() => { scrollToBottom('auto'); }} placeholder={isRecording ? "Listening..." : (editingNote ? "Edit..." : (activeChatId !== 'saved_messages' ? TRANSLATIONS.typePlaceholder : (activeFilter === 'all' ? "Select category..." : (isHackerMode ? ">_" : `${currentConfig?.label}...`))))} rows={1} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-1 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
-                    {(!transcript && !editingNote && !isRecording) && (<label className="cursor-pointer text-zinc-400 hover:text-white"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>)}
-                </div>
-                {!isRecording && (
-                    <button onClick={handleMainAction} disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages')} className={`flex-shrink-0 w-8 h-8 mb-1 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg`} style={(transcript.trim() || imageUrl) && (activeFilter !== 'all' || activeChatId !== 'saved_messages') ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: 'transparent', color: '#71717a', boxShadow: 'none' }}>
-                        {editingNote ? <Check size={18} strokeWidth={3} /> : <ArrowUp size={20} strokeWidth={3} />}
-                    </button>
-                )}
-             </div>
-           </div>
-
         </div>
       )}
 

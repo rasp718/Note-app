@@ -16,15 +16,15 @@ const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
   );
 };
 
-const InlineActionButton = ({ onClick, icon: Icon, accentColor }: any) => {
+const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any) => {
   const [isHovered, setIsHovered] = useState(false);
   return (
-    <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? '#ffffff' : '#71717a' }}><Icon size={12} /></button>
+    <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? accentColor : (iconColor || '#71717a') }}><Icon size={12} /></button>
   );
 };
 
-// --- WHATSAPP STYLE AUDIO PLAYER ---
-const AudioPlayer = ({ src }: any) => {
+// --- AUDIO PLAYER ---
+const AudioPlayer = ({ src, barColor }: any) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
@@ -81,6 +81,9 @@ const AudioPlayer = ({ src }: any) => {
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
+    // Use passed barColor or default to orange
+    const activeColor = barColor || '#da7756';
+
     return (
         <div className="flex items-center gap-2 min-w-[200px] sm:min-w-[240px] bg-[#1f2937] rounded-full p-1 pr-4 border border-zinc-700 select-none shadow-sm mt-1 mb-1">
             <button onClick={togglePlay} className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-400 hover:text-white transition-colors shrink-0">
@@ -94,8 +97,11 @@ const AudioPlayer = ({ src }: any) => {
                     return (
                         <div 
                             key={i} 
-                            className={`w-[3px] rounded-full transition-colors duration-150 ${isActive ? 'bg-[#da7756]' : 'bg-zinc-600'}`}
-                            style={{ height: `${height}%` }}
+                            className="w-[3px] rounded-full transition-colors duration-150"
+                            style={{ 
+                                height: `${height}%`,
+                                backgroundColor: isActive ? activeColor : '#52525b' 
+                            }}
                         />
                     );
                 })}
@@ -127,7 +133,8 @@ interface NoteCardProps {
   onImageClick?: (url: string) => void; 
   variant?: 'default' | 'sent' | 'received';
   status?: 'sending' | 'sent' | 'read';
-  customColors?: { bg: string; border: string; text: string; shadow?: string; font?: string };
+  // Added subtext to customColors so we can force timestamps to be dark
+  customColors?: { bg: string; border: string; text: string; subtext?: string; shadow?: string; font?: string };
 }
 
 export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onToggleExpand, onImageClick, variant = 'default', status, customColors }) => {
@@ -148,7 +155,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const lines = safeText.split('\n');
   const audioUrl = (note as any).audioUrl;
   
-  // DETERMINE CONTENT TYPE
   const isImageOnly = !!note.imageUrl && !safeText && !audioUrl;
 
   useEffect(() => {
@@ -205,6 +211,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
 
   const bgColor = customColors?.bg || 'bg-zinc-900';
   const textColor = customColors?.text || 'text-zinc-300';
+  
+  // Use explicit subtext color if provided (fixes white bubble visibility), otherwise default
+  const subtextColor = customColors?.subtext || 'text-zinc-400 opacity-60'; 
+  
   const shadowClass = customColors?.shadow || 'shadow-sm';
   const chatBorderClasses = variant !== 'default' ? (customColors?.border ? customColors.border : 'border-none') : 'border-none';
   let radiusClass = 'rounded-2xl'; 
@@ -212,17 +222,25 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
   const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
 
-  // If image only, use very small padding
   const paddingClass = isImageOnly ? 'p-1' : (audioUrl ? 'p-1' : 'p-3');
 
   const StatusIcon = ({ isOverlay = false }) => {
     if (variant !== 'sent') return null;
-    const colorClass = isOverlay ? "text-white" : (status === 'read' ? "text-blue-400" : "text-white/50");
     
-    if (status === 'sending') return <div className={`w-3 h-3 border-2 border-t-transparent rounded-full animate-spin ${isOverlay ? 'border-white' : 'border-white/50'}`} />;
+    // On white bubbles, status icon needs to be visible
+    const defaultColor = customColors?.bg?.includes('white') ? 'text-blue-500' : 'text-blue-400';
+    const pendingColor = customColors?.bg?.includes('white') ? 'text-zinc-400' : 'text-white/50';
+
+    const colorClass = isOverlay ? "text-white" : (status === 'read' ? defaultColor : pendingColor);
+    const borderClass = isOverlay ? 'border-white' : (customColors?.bg?.includes('white') ? 'border-zinc-400' : 'border-white/50');
+
+    if (status === 'sending') return <div className={`w-3 h-3 border-2 border-t-transparent rounded-full animate-spin ${borderClass}`} />;
     if (status === 'read') return <CheckCheck size={14} className={colorClass} strokeWidth={2.5} />;
     return <Check size={14} className={colorClass} strokeWidth={2} />;
   };
+
+  // Determine bar color for audio based on theme
+  const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 
   return (
     <>
@@ -234,21 +252,18 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
           {/* AUDIO MESSAGE */}
           {audioUrl ? (
              <div className="flex flex-col gap-1">
-                <AudioPlayer src={audioUrl} />
+                <AudioPlayer src={audioUrl} barColor={audioBarColor} />
                 <div className="flex justify-end px-2 pb-1">
                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] opacity-60 font-medium text-zinc-400">{formatTime(note.date)}</span>
+                      <span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>
                       {variant === 'sent' && <StatusIcon />}
                    </div>
                 </div>
              </div>
           ) : isImageOnly ? (
-            // --- IMAGE ONLY (WHATSAPP STYLE) ---
             <div className="relative">
                 <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="rounded-xl overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative">
                     <img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" />
-                    
-                    {/* OVERLAY TIMESTAMP */}
                     <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1.5 shadow-sm">
                         <span className="text-[10px] font-medium text-white/90">{formatTime(note.date)}</span>
                         {variant === 'sent' && <StatusIcon isOverlay={true} />}
@@ -256,15 +271,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                 </div>
             </div>
           ) : (
-             // --- STANDARD TEXT (+ Optional Image) ---
+             // --- STANDARD TEXT ---
              <div className="flex flex-col min-w-[80px]">
                {note.imageUrl && ( <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform"><img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" /></div>)}
                <div className="block w-full">
                    {safeText && <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>}
                    <div className="float-right ml-2 mt-2 flex items-center gap-1 align-bottom h-4">
-                       {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#da7756'} />}
-                       {note.editedAt && <span className="text-[9px] italic opacity-50 text-white mr-1">edited</span>}
-                       <span className="text-[10px] opacity-60 font-medium select-none text-current">{formatTime(note.date)}</span>
+                       {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#da7756'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}
+                       {note.editedAt && <span className={`text-[9px] italic opacity-50 mr-1 ${subtextColor}`}>edited</span>}
+                       <span className={`text-[10px] font-medium select-none ${subtextColor}`}>{formatTime(note.date)}</span>
                        {variant === 'sent' && <div className="ml-0.5"><StatusIcon /></div>}
                    </div>
                </div>
@@ -272,7 +287,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
           )}
         </div>
       </div>
-
       {contextMenu && typeof document !== 'undefined' && createPortal( <div className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'rgba(24, 24, 27, 0.95)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}> 
       <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
       {variant === 'default' && <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />}

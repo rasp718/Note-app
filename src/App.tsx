@@ -29,6 +29,86 @@ const HACKER_CONFIG: CategoryConfig = {
     colorClass: 'bg-green-500' 
 };
 
+// --- HELPER FOR BUBBLE STYLES ---
+const getBubbleColors = (style: string, isMe: boolean, isHacker: boolean) => {
+    if (isHacker) {
+        return { 
+            bg: 'bg-black', 
+            border: 'border border-green-500/30 hover:border-green-500 transition-colors', 
+            text: 'text-green-500', 
+            subtext: 'text-green-500/60' 
+        };
+    }
+
+    if (!isMe) {
+        return { 
+            bg: 'bg-zinc-800', 
+            border: 'border-transparent', 
+            text: 'text-zinc-100', 
+            subtext: 'text-zinc-400 opacity-60' 
+        };
+    }
+
+    switch(style) {
+        case 'minimal_solid': // White bubble, Black text
+            return { 
+                bg: 'bg-white', 
+                border: 'border-transparent', 
+                text: 'text-black', 
+                subtext: 'text-zinc-500' // Dark Gray Timestamp
+            };
+        case 'minimal_glass': // Glassy
+            return { 
+                bg: 'bg-white/20 backdrop-blur-md', 
+                border: 'border-white/50', 
+                text: 'text-white',
+                subtext: 'text-white/70'
+            };
+        case 'clear': // Outline
+            return { 
+                bg: 'bg-white/5 backdrop-blur-sm', 
+                border: 'border border-white/20', 
+                text: 'text-white',
+                subtext: 'text-white/60'
+            };
+        case 'solid_gray': // Dark Gray
+            return { 
+                bg: 'bg-zinc-700', 
+                border: 'border-transparent', 
+                text: 'text-white',
+                subtext: 'text-zinc-300'
+            };
+        case 'whatsapp': // WhatsApp Dark Green
+            return { 
+                bg: 'bg-[#005c4b]', 
+                border: 'border-transparent', 
+                text: 'text-white', 
+                subtext: 'text-[#85a8a1]' 
+            };
+        case 'telegram': // Telegram Blue
+            return { 
+                bg: 'bg-[#2b5278]', 
+                border: 'border-transparent', 
+                text: 'text-white', 
+                subtext: 'text-[#8aa8c7]' 
+            };
+        case 'blue_gradient':
+             return {
+                 bg: 'bg-gradient-to-br from-blue-500 to-blue-600',
+                 border: 'border-transparent',
+                 text: 'text-white',
+                 subtext: 'text-blue-100/80'
+             };
+        default:
+            return { 
+                bg: 'bg-white', 
+                border: 'border-transparent', 
+                text: 'text-black', 
+                subtext: 'text-zinc-500' 
+            };
+    }
+};
+
 // --- DATE UTILS ---
 const normalizeDate = (d: any): number => {
     try {
@@ -129,6 +209,7 @@ const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any
 function App() {
   const { user, loading: authLoading } = useFirebaseSync();
   usePresence(user?.uid);
+  
   // Cleanup mic on page close
   useEffect(() => {
     return () => {
@@ -137,6 +218,7 @@ function App() {
         }
     };
   }, []);
+
   const myProfile = useUser(user?.uid);
   
   const { notes = [], addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
@@ -411,7 +493,7 @@ function App() {
     setRecordingDuration(0);
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     
-    // STOP THE MIC to remove the orange indicator and save battery
+    // Stop mic to close the "orange dot"
     if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
@@ -733,6 +815,24 @@ function App() {
                                     <button onClick={() => changeBubbleStyle('minimal_glass')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'minimal_glass' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Minimal Glass"><div className="absolute inset-0 bg-white/20 backdrop-blur-md" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Glass</span></button>
                                     <button onClick={() => changeBubbleStyle('clear')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'clear' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Clear White"><div className="absolute inset-0 bg-white/5 border border-white/20" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Clear</span></button>
                                     <button onClick={() => changeBubbleStyle('solid_gray')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'solid_gray' ? 'border-zinc-400 ring-1 ring-zinc-400/50' : 'border-white/5 hover:border-zinc-400/50'}`} title="Solid Gray"><div className="absolute inset-0 bg-zinc-700" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Solid Gray</span></button>
+                                    
+                                    {/* NEW: WhatsApp Green */}
+                                    <button onClick={() => changeBubbleStyle('whatsapp')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'whatsapp' ? 'border-[#25D366] ring-1 ring-[#25D366]/50' : 'border-white/5 hover:border-[#25D366]/50'}`} title="WhatsApp Style">
+                                        <div className="absolute inset-0 bg-[#005c4b]" />
+                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">WhatsApp</span>
+                                    </button>
+
+                                    {/* NEW: Telegram Blue */}
+                                    <button onClick={() => changeBubbleStyle('telegram')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'telegram' ? 'border-[#2AABEE] ring-1 ring-[#2AABEE]/50' : 'border-white/5 hover:border-[#2AABEE]/50'}`} title="Telegram Style">
+                                        <div className="absolute inset-0 bg-[#2b5278]" />
+                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Telegram</span>
+                                    </button>
+                                    
+                                    {/* NEW: Blue Gradient */}
+                                    <button onClick={() => changeBubbleStyle('blue_gradient')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'blue_gradient' ? 'border-blue-500 ring-1 ring-blue-500/50' : 'border-white/5 hover:border-blue-500/50'}`} title="Blue Gradient">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600" />
+                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Blue</span>
+                                    </button>
                                 </div>
                             </div>
                             <div className="space-y-4 pt-2 border-t border-white/5">
@@ -821,9 +921,9 @@ function App() {
                     filteredNotes.map((note, index) => {
                         const prevNote = filteredNotes[index - 1];
                         const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
-                        const noteColors = isHackerMode 
-                             ? { bg: 'bg-black', border: 'border border-green-500/30 hover:border-green-500 transition-colors', text: 'text-green-500' }
-                             : { bg: 'bg-zinc-900/50 backdrop-blur-md', border: 'border-transparent', text: 'text-zinc-100' };
+                        
+                        // UPDATED: Use the shared getBubbleColors function so notes match settings
+                        const noteColors = getBubbleColors(bubbleStyle, true, isHackerMode);
 
                         return (
                             <React.Fragment key={note.id}>
@@ -851,17 +951,8 @@ function App() {
                         const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
                         const isMe = msg.senderId === user?.uid;
                         
-                        let customColors;
-                        if (isMe) {
-                            switch(bubbleStyle) {
-                                case 'clear': customColors = { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20', text: 'text-white' }; break;
-                                case 'solid_gray': customColors = { bg: 'bg-zinc-700', border: 'border-transparent', text: 'text-white' }; break;
-                                case 'minimal_glass': customColors = { bg: `bg-white/20 backdrop-blur-md`, border: `border-white/50`, text: 'text-white' }; break;
-                                case 'minimal_solid': default: customColors = { bg: `bg-white`, border: 'border-transparent', text: 'text-black' }; break;
-                            }
-                        } else {
-                            customColors = { bg: 'bg-zinc-800', border: 'border-transparent', text: 'text-zinc-100' };
-                        }
+                        // UPDATED: Use helper function for consistent colors
+                        const customColors = getBubbleColors(bubbleStyle, isMe, false);
 
                         const msgNote = {
                             id: msg.id, text: msg.text, date: normalizeDate(msg.timestamp), 

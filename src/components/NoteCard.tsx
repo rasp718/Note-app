@@ -81,7 +81,6 @@ const AudioPlayer = ({ src, barColor }: any) => {
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
-    // Use passed barColor or default to orange
     const activeColor = barColor || '#da7756';
 
     return (
@@ -120,8 +119,6 @@ const AudioPlayer = ({ src, barColor }: any) => {
     );
 };
 
-// ... (Previous imports remain the same)
-
 // --- MAIN COMPONENT ---
 interface NoteCardProps {
   note: Note;
@@ -143,8 +140,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [isExiting, setIsExiting] = useState(false); // Track if we are flying away
+
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const touchStartTime = useRef<number>(0);
   const longPressTimer = useRef<any>(null);
   const isLongPress = useRef(false); 
 
@@ -156,9 +156,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const lines = safeText.split('\n');
   const audioUrl = (note as any).audioUrl;
   
-  // Check if we have an image at all
   const hasImage = !!note.imageUrl;
-  // Check if it is ONLY an image (no text, no audio)
   const isImageOnly = hasImage && !safeText && !audioUrl;
 
   useEffect(() => {
@@ -185,11 +183,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
 
   const formatTime = (timestamp: any) => { try { const t = Number(timestamp); if (isNaN(t) || t === 0) return ''; return new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } };
 
+  // --- TOUCH HANDLERS (FLING LOGIC) ---
   const handleTouchStart = (e: any) => { 
       if (e.targetTouches.length !== 1) return; 
       touchStartX.current = e.targetTouches[0].clientX; 
       touchStartY.current = e.targetTouches[0].clientY; 
-      setIsSwiping(false); isLongPress.current = false; 
+      touchStartTime.current = Date.now(); // Track start time for velocity
+      setIsSwiping(false); 
+      isLongPress.current = false; 
+      
       if (variant === 'default' || variant === 'sent') {
           longPressTimer.current = setTimeout(() => { 
               if (touchStartX.current && touchStartY.current) { isLongPress.current = true; openMenu(touchStartX.current, touchStartY.current); } 
@@ -198,19 +200,53 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   };
   
   const handleTouchMove = (e: any) => { 
-      if (!touchStartX.current || !touchStartY.current) return; 
+      if (!touchStartX.current || !touchStartY.current || isExiting) return; 
+      
       const diffX = e.targetTouches[0].clientX - touchStartX.current; 
       const diffY = e.targetTouches[0].clientY - touchStartY.current; 
-      if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } } 
+      
+      // Cancel long press if moved
+      if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) { 
+          if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } 
+      } 
+      
       if (isLongPress.current) return; 
-      if (variant === 'default' && diffX < 0 && Math.abs(diffX) > Math.abs(diffY)) { setIsSwiping(true); setSwipeOffset(Math.max(diffX, -200)); } 
+
+      // Only allow Left swipes for fling
+      if (variant === 'default' && diffX < 0 && Math.abs(diffX) > Math.abs(diffY)) { 
+          setIsSwiping(true); 
+          setSwipeOffset(diffX); 
+      } 
   };
   
-  const handleTouchEnd = () => { 
+  const handleTouchEnd = (e: any) => { 
       if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } 
       if (isLongPress.current) { touchStartX.current = null; touchStartY.current = null; return; } 
-      if (variant === 'default' && swipeOffset < -100 && onDelete && note.id) { triggerHaptic(); onDelete(note.id); } 
-      setSwipeOffset(0); setIsSwiping(false); touchStartX.current = null; touchStartY.current = null; 
+      
+      if (variant === 'default' && onDelete && note.id) {
+          const touchDuration = Date.now() - touchStartTime.current;
+          const isFling = touchDuration < 300 && swipeOffset < -50; // Fast swipe > 50px
+          const isDrag = swipeOffset < -150; // Slow drag > 150px
+
+          if (isFling || isDrag) {
+              // FLING DETECTED: Fly away
+              triggerHaptic();
+              setIsExiting(true);
+              setSwipeOffset(-window.innerWidth); // Fly off screen
+              setTimeout(() => {
+                  onDelete(note.id);
+              }, 200); // Wait for transition
+          } else {
+             // Snap back
+             setSwipeOffset(0); 
+          }
+      } else {
+          setSwipeOffset(0);
+      }
+
+      setIsSwiping(false); 
+      touchStartX.current = null; 
+      touchStartY.current = null; 
   };
 
   const bgColor = customColors?.bg || 'bg-zinc-900';
@@ -224,9 +260,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
   const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
 
-  // --- UPDATED PADDING LOGIC ---
-  // If there is an image (even with text) or audio, use tight padding (p-1).
-  // This gives the "thin border" look for the image.
+  // Padding Logic: Thin padding if image/audio exists
   const paddingClass = (hasImage || audioUrl) ? 'p-1' : 'p-3';
 
   const StatusIcon = ({ isOverlay = false }) => {
@@ -248,9 +282,19 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   return (
     <>
       <div className={`relative ${variant === 'default' ? 'w-fit max-w-[85%]' : 'max-w-[85%]'} overflow-visible group`} onContextMenu={handleContextMenu}>
-        {variant === 'default' && ( <div className={`absolute inset-0 flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: '#ef4444' }}><Trash2 className="text-white animate-pulse" size={24} /></div>)}
         
-        <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} relative transition-all duration-200`} style={{ transform: `translateX(${swipeOffset}px)` }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+        {/* NO RED BACKGROUND HERE ANYMORE - JUST VOID */}
+        
+        <div 
+            className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} relative transition-all duration-300 ease-out`} 
+            style={{ 
+                transform: `translateX(${swipeOffset}px)`,
+                opacity: isExiting ? 0 : 1 // Fade out as it flies away
+            }} 
+            onTouchStart={handleTouchStart} 
+            onTouchMove={handleTouchMove} 
+            onTouchEnd={handleTouchEnd}
+        >
           
           {/* AUDIO MESSAGE */}
           {audioUrl ? (
@@ -281,11 +325,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                     <img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" />
                  </div>
                )}
-               {/* 
-                  UPDATED TEXT WRAPPER:
-                  Added explicit padding (px-2 pb-2) only if there is an image.
-                  This is necessary because we removed the parent padding to make the image fit tight.
-               */}
                <div className={`block w-full ${hasImage ? 'px-2 pb-2 pt-1' : ''}`}>
                    {safeText && <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>}
                    <div className="float-right ml-2 mt-2 flex items-center gap-1 align-bottom h-4">
@@ -302,12 +341,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       {contextMenu && typeof document !== 'undefined' && createPortal( <div className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'rgba(24, 24, 27, 0.95)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}> 
       <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
       {variant === 'default' && <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />}
-      
-      {/* EDIT BUTTON */}
-      {onEdit && (
-          <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} />
-      )}
-
+      {onEdit && ( <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} /> )}
       {(variant === 'default' || variant === 'sent') && ( <> <div className="h-px bg-white/10 mx-3 my-1" /> <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> </> )} 
       </div>, document.body )}
     </>

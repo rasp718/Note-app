@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck, Play, Pause } from 'lucide-react';
 import { Note, CategoryConfig, CategoryId } from '../types';
 
+// --- UTILS ---
 const triggerHaptic = () => { if (typeof navigator !== 'undefined' && navigator.vibrate) { try { navigator.vibrate(15); } catch (e) {} } };
 
 const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
@@ -22,47 +23,103 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor }: any) => {
   );
 };
 
-const AudioPlayer = ({ src, textColor }: any) => {
+// --- WHATSAPP STYLE AUDIO PLAYER ---
+const AudioPlayer = ({ src }: any) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [playbackRate, setPlaybackRate] = useState(1);
     const audioRef = useRef<HTMLAudioElement>(null);
+
+    // Generate random bars once on mount to simulate a waveform
+    const [bars] = useState(() => Array.from({ length: 30 }, () => Math.floor(Math.random() * 50) + 20));
 
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
-        const handleTimeUpdate = () => { const pct = (audio.currentTime / audio.duration) * 100; setProgress(pct || 0); };
-        const handleEnded = () => { setIsPlaying(false); setProgress(0); };
+
+        const handleTimeUpdate = () => {
+            if (Number.isFinite(audio.duration)) {
+                setDuration(audio.duration);
+                setCurrentTime(audio.currentTime);
+                setProgress((audio.currentTime / audio.duration) * 100);
+            }
+        };
+
+        const handleEnded = () => { setIsPlaying(false); setProgress(0); setCurrentTime(0); };
+        const handleLoadedMetadata = () => { setDuration(audio.duration); };
+
         audio.addEventListener('timeupdate', handleTimeUpdate);
         audio.addEventListener('ended', handleEnded);
-        return () => { audio.removeEventListener('timeupdate', handleTimeUpdate); audio.removeEventListener('ended', handleEnded); };
+        audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+        return () => {
+            audio.removeEventListener('timeupdate', handleTimeUpdate);
+            audio.removeEventListener('ended', handleEnded);
+            audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        };
     }, []);
 
     const togglePlay = async (e: any) => {
         e.stopPropagation();
         if(!audioRef.current) return;
-        if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); } 
-        else { 
-            try { await audioRef.current.play(); setIsPlaying(true); } 
-            catch (err) { console.error("Playback Error:", err); alert("Could not play audio."); } 
-        }
+        if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); }
+        else { try { await audioRef.current.play(); setIsPlaying(true); } catch (err) { console.error(err); } }
+    };
+
+    const toggleSpeed = (e: any) => {
+        e.stopPropagation();
+        if (!audioRef.current) return;
+        const newRate = playbackRate === 1 ? 1.5 : (playbackRate === 1.5 ? 2 : 1);
+        audioRef.current.playbackRate = newRate;
+        setPlaybackRate(newRate);
+    };
+
+    const formatTime = (time: number) => {
+        if (!time || isNaN(time)) return "0:00";
+        const m = Math.floor(time / 60);
+        const s = Math.floor(time % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
     return (
-        <div className="flex items-center gap-3 min-w-[140px] bg-black/10 rounded-xl p-2 pr-3 mb-1 border border-white/5">
-            <button onClick={togglePlay} className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-black shrink-0 hover:scale-105 active:scale-95 transition-all">
-                {isPlaying ? <Pause size={14} fill="black" /> : <Play size={14} fill="black" className="ml-0.5" />}
+        <div className="flex items-center gap-2 min-w-[200px] sm:min-w-[240px] bg-[#1f2937] rounded-full p-1 pr-4 border border-zinc-700 select-none shadow-sm mt-1 mb-1">
+            {/* Play Button */}
+            <button onClick={togglePlay} className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-400 hover:text-white transition-colors shrink-0">
+                {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
             </button>
-            <div className="flex flex-col gap-1 w-full min-w-0">
-                <div className={`h-1 w-full rounded-full opacity-30 overflow-hidden ${textColor?.includes('black') ? 'bg-black' : 'bg-white'}`}>
-                    <div className={`h-full ${textColor?.includes('black') ? 'bg-black' : 'bg-white'}`} style={{ width: `${progress}%`, transition: 'width 0.1s linear' }} />
-                </div>
-                <span className={`text-[9px] font-mono opacity-70 ${textColor}`}>{isPlaying ? 'Playing...' : 'Voice Note'}</span>
+
+            {/* Waveform Visualization */}
+            <div className="flex-1 flex items-center gap-[2px] h-8 mx-1 opacity-90">
+                {bars.map((height, i) => {
+                    const barPercent = (i / bars.length) * 100;
+                    const isActive = progress > barPercent;
+                    return (
+                        <div 
+                            key={i} 
+                            className={`w-[3px] rounded-full transition-colors duration-150 ${isActive ? 'bg-emerald-500' : 'bg-zinc-600'}`}
+                            style={{ height: `${height}%` }}
+                        />
+                    );
+                })}
             </div>
-            <audio ref={audioRef} src={src} preload="auto" playsInline />
+
+            {/* Timer */}
+            <span className="text-xs font-mono text-zinc-400 min-w-[35px] text-right">
+                {isPlaying ? formatTime(currentTime) : formatTime(duration)}
+            </span>
+
+            {/* Speed Toggle */}
+            <button onClick={toggleSpeed} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 text-[10px] font-bold text-white hover:bg-zinc-700 transition-colors ml-1 border border-zinc-600">
+                {playbackRate}x
+            </button>
+
+            <audio ref={audioRef} src={src} preload="metadata" playsInline />
         </div>
     );
 };
 
+// --- MAIN COMPONENT ---
 interface NoteCardProps {
   note: Note;
   categories: CategoryConfig[];
@@ -91,25 +148,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const safeCategories = Array.isArray(categories) ? categories : [];
   const defaultCat = { id: 'default', label: 'Note', emoji: '📝', colorClass: 'bg-zinc-500' };
   const category = safeCategories.find((c: any) => c?.id === note.category) || safeCategories[0] || defaultCat;
-  const isHacker = category?.label === 'Hacker' || category?.label === 'Anon';
-  const isSecret = category?.id === 'secret' && !isHacker;
-  const CLAUDE_ORANGE = '#da7756';
-  const HACKER_GREEN = '#4ade80';
-  const accentColor = isHacker ? HACKER_GREEN : isSecret ? '#ef4444' : CLAUDE_ORANGE;
   
-  const borderStyle = customColors?.border ? { borderColor: customColors.border } : {};
-  const chatBorderClasses = variant !== 'default' ? (customColors?.border ? customColors.border : 'border-none') : 'border-none';
-  const bgColor = customColors?.bg || 'bg-zinc-900';
-  const textColor = customColors?.text || 'text-zinc-300';
-  const shadowClass = customColors?.shadow || 'shadow-sm';
-  const fontClass = customColors?.font || '';
-  
-  const isExpanded = !!note.isExpanded;
   const safeText = String(note.text || '');
   const lines = safeText.split('\n');
   const audioUrl = (note as any).audioUrl;
-  const isCompact = lines.length === 1 && !note.imageUrl && !audioUrl;
   
+  // Close menu on interaction
   useEffect(() => {
     const closeMenu = (e: any) => { if (e.type === 'scroll') return; setContextMenu(null); };
     if (contextMenu) { setTimeout(() => { window.addEventListener('click', closeMenu); window.addEventListener('touchstart', closeMenu); window.addEventListener('scroll', closeMenu, { capture: true }); window.addEventListener('resize', closeMenu); }, 200); }
@@ -119,7 +163,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; window.speechSynthesis.speak(utterance); } };
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
   
-  // MENU TRIGGER
   const openMenu = (clientX: number, clientY: number) => {
     triggerHaptic();
     const menuW = 200; const menuH = 260; 
@@ -130,7 +173,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
 
   const handleContextMenu = (e: any) => { 
       e.preventDefault(); e.stopPropagation(); 
-      // Allow menu on DEFAULT notes AND SENT messages
       if(variant === 'default' || variant === 'sent') openMenu(e.clientX, e.clientY); 
   };
 
@@ -141,7 +183,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       touchStartX.current = e.targetTouches[0].clientX; 
       touchStartY.current = e.targetTouches[0].clientY; 
       setIsSwiping(false); isLongPress.current = false; 
-      // ENABLE LONG PRESS FOR SENT MESSAGES TOO
       if (variant === 'default' || variant === 'sent') {
           longPressTimer.current = setTimeout(() => { 
               if (touchStartX.current && touchStartY.current) { isLongPress.current = true; openMenu(touchStartX.current, touchStartY.current); } 
@@ -165,7 +206,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       setSwipeOffset(0); setIsSwiping(false); touchStartX.current = null; touchStartY.current = null; 
   };
 
-  const paddingClass = variant === 'default' ? (isCompact ? 'px-3 py-2' : 'p-3') : 'px-4 py-2';
+  const bgColor = customColors?.bg || 'bg-zinc-900';
+  const textColor = customColors?.text || 'text-zinc-300';
+  const shadowClass = customColors?.shadow || 'shadow-sm';
+  const chatBorderClasses = variant !== 'default' ? (customColors?.border ? customColors.border : 'border-none') : 'border-none';
   let radiusClass = 'rounded-2xl'; 
   if (variant === 'sent') radiusClass = 'rounded-2xl rounded-br-none';
   if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
@@ -180,46 +224,44 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
 
   return (
     <>
-      <div className={`relative ${variant === 'default' ? 'w-fit max-w-[85%]' : 'max-w-[75%]'} overflow-visible group`} onContextMenu={handleContextMenu}>
-        {variant === 'default' && ( <div className={`absolute inset-0 flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: isHacker ? '#16a34a' : CLAUDE_ORANGE }}><Trash2 className="text-white animate-pulse" size={24} /></div>)}
-        <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} ${fontClass} relative transition-all duration-200`} style={{ ...borderStyle, transform: `translateX(${swipeOffset}px)` }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-          {isExpanded ? (
-            <div className="flex flex-col gap-1 min-w-[80px]">
-              {note.imageUrl && ( <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform"><img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" /></div>)}
-              {audioUrl && <AudioPlayer src={audioUrl} textColor={textColor} />}
-              <div className="block w-full">
-                  {safeText && <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>}
-                  <div className="float-right ml-2 mt-2 flex items-center gap-1 align-bottom h-4">
-                      {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={accentColor} />}
-                      {note.editedAt && <span className="text-[9px] italic opacity-50 text-white mr-1">edited</span>}
-                      <span className="text-[10px] opacity-60 font-medium select-none" style={{ color: customColors?.text || accentColor }}>{formatTime(note.date)}</span>
-                      {variant === 'sent' && <div className="ml-0.5"><StatusIcon /></div>}
-                  </div>
-              </div>
-            </div>
+      <div className={`relative ${variant === 'default' ? 'w-fit max-w-[85%]' : 'max-w-[85%]'} overflow-visible group`} onContextMenu={handleContextMenu}>
+        {variant === 'default' && ( <div className={`absolute inset-0 flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: '#ef4444' }}><Trash2 className="text-white animate-pulse" size={24} /></div>)}
+        
+        <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${audioUrl ? 'p-1' : 'p-3'} ${widthClass} ${shadowClass} relative transition-all duration-200`} style={{ transform: `translateX(${swipeOffset}px)` }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+          
+          {/* AUDIO MESSAGE */}
+          {audioUrl ? (
+             <div className="flex flex-col gap-1">
+                <AudioPlayer src={audioUrl} />
+                <div className="flex justify-end px-2 pb-1">
+                   <div className="flex items-center gap-1">
+                      <span className="text-[10px] opacity-60 font-medium text-zinc-400">{formatTime(note.date)}</span>
+                      {variant === 'sent' && <StatusIcon />}
+                   </div>
+                </div>
+             </div>
           ) : (
-             <div className="flex gap-2">
-                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <div onClick={() => onToggleExpand && onToggleExpand(note.id)} className="cursor-pointer">
-                       {audioUrl && <span className="text-sm italic opacity-70 mb-1 block">🎤 Voice Message</span>}
-                       {lines[0] && <p className={`text-base leading-tight truncate mb-1 text-left ${textColor}`}>{lines[0]}</p>}
-                       {lines.length > 1 && <p className={`text-sm leading-snug truncate text-left opacity-70 ${textColor}`}>{lines[1]}</p>}
-                    </div>
-                 </div>
-                 {note.imageUrl && (<div className="flex-shrink-0 w-12 h-10 rounded bg-zinc-800 border-none overflow-hidden"><img src={note.imageUrl} alt="" className="w-full h-full object-cover" /></div>)}
-                 <div className="flex flex-col justify-end items-end gap-0.5 flex-shrink-0">
-                    <span className="text-[10px] opacity-60 font-medium" style={{ color: customColors?.text || accentColor }}>{formatTime(note.date)}</span>
-                    {variant === 'sent' && <StatusIcon />}
-                 </div>
+             // TEXT / IMAGE MESSAGE
+             <div className="flex flex-col min-w-[80px]">
+               {note.imageUrl && ( <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform"><img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" /></div>)}
+               <div className="block w-full">
+                   {safeText && <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>}
+                   <div className="float-right ml-2 mt-2 flex items-center gap-1 align-bottom h-4">
+                       {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#da7756'} />}
+                       {note.editedAt && <span className="text-[9px] italic opacity-50 text-white mr-1">edited</span>}
+                       <span className="text-[10px] opacity-60 font-medium select-none text-current">{formatTime(note.date)}</span>
+                       {variant === 'sent' && <div className="ml-0.5"><StatusIcon /></div>}
+                   </div>
+               </div>
              </div>
           )}
         </div>
       </div>
+
       {contextMenu && typeof document !== 'undefined' && createPortal( <div className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'rgba(24, 24, 27, 0.95)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}> 
-      <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={accentColor} /> 
-      {variant === 'default' && <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={accentColor} />}
-      {/* SHOW DELETE FOR SENT MESSAGES OR NOTES */}
-      {(variant === 'default' || variant === 'sent') && ( <> <div className="h-px bg-white/10 mx-3 my-1" /> <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={accentColor} /> </> )} 
+      <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
+      {variant === 'default' && <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />}
+      {(variant === 'default' || variant === 'sent') && ( <> <div className="h-px bg-white/10 mx-3 my-1" /> <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> </> )} 
       </div>, document.body )}
     </>
   );

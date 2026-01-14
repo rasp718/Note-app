@@ -411,7 +411,11 @@ function App() {
     setRecordingDuration(0);
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     
-    // We KEEP the stream open so it doesn't ask for permission again
+    // STOP THE MIC to remove the orange indicator and save battery
+    if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+    }
   };
 
   const formatDuration = (sec: number) => {

@@ -129,6 +129,14 @@ const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any
 function App() {
   const { user, loading: authLoading } = useFirebaseSync();
   usePresence(user?.uid);
+  // Cleanup mic on page close
+  useEffect(() => {
+    return () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+        }
+    };
+  }, []);
   const myProfile = useUser(user?.uid);
   
   const { notes = [], addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
@@ -310,10 +318,14 @@ function App() {
     if (isRecording) return; // Prevent double start
 
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        streamRef.current = stream; 
-        
-        let mimeType = '';
+      // reuse existing mic if available
+      let stream = streamRef.current;
+      if (!stream || !stream.active) {
+           stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+           streamRef.current = stream;
+      }
+      
+      let mimeType = '';
         if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
         else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
         else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
@@ -398,10 +410,8 @@ function App() {
     setIsPaused(false);
     setRecordingDuration(0);
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-    if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-    }
+    
+    // We KEEP the stream open so it doesn't ask for permission again
   };
 
   const formatDuration = (sec: number) => {

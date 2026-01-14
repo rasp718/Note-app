@@ -32,7 +32,6 @@ const AudioPlayer = ({ src }: any) => {
     const [playbackRate, setPlaybackRate] = useState(1);
     const audioRef = useRef<HTMLAudioElement>(null);
 
-    // Generate random bars once on mount to simulate a waveform
     const [bars] = useState(() => Array.from({ length: 30 }, () => Math.floor(Math.random() * 50) + 20));
 
     useEffect(() => {
@@ -84,12 +83,10 @@ const AudioPlayer = ({ src }: any) => {
 
     return (
         <div className="flex items-center gap-2 min-w-[200px] sm:min-w-[240px] bg-[#1f2937] rounded-full p-1 pr-4 border border-zinc-700 select-none shadow-sm mt-1 mb-1">
-            {/* Play Button */}
             <button onClick={togglePlay} className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-400 hover:text-white transition-colors shrink-0">
                 {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
             </button>
 
-            {/* Waveform Visualization */}
             <div className="flex-1 flex items-center gap-[2px] h-8 mx-1 opacity-90">
                 {bars.map((height, i) => {
                     const barPercent = (i / bars.length) * 100;
@@ -104,12 +101,10 @@ const AudioPlayer = ({ src }: any) => {
                 })}
             </div>
 
-            {/* Timer */}
             <span className="text-xs font-mono text-zinc-400 min-w-[35px] text-right">
                 {isPlaying ? formatTime(currentTime) : formatTime(duration)}
             </span>
 
-            {/* Speed Toggle */}
             <button onClick={toggleSpeed} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 text-[10px] font-bold text-white hover:bg-zinc-700 transition-colors ml-1 border border-zinc-600">
                 {playbackRate}x
             </button>
@@ -153,7 +148,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const lines = safeText.split('\n');
   const audioUrl = (note as any).audioUrl;
   
-  // Close menu on interaction
+  // DETERMINE CONTENT TYPE
+  const isImageOnly = !!note.imageUrl && !safeText && !audioUrl;
+
   useEffect(() => {
     const closeMenu = (e: any) => { if (e.type === 'scroll') return; setContextMenu(null); };
     if (contextMenu) { setTimeout(() => { window.addEventListener('click', closeMenu); window.addEventListener('touchstart', closeMenu); window.addEventListener('scroll', closeMenu, { capture: true }); window.addEventListener('resize', closeMenu); }, 200); }
@@ -215,11 +212,16 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
   const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
 
-  const StatusIcon = () => {
+  // If image only, use very small padding
+  const paddingClass = isImageOnly ? 'p-1' : (audioUrl ? 'p-1' : 'p-3');
+
+  const StatusIcon = ({ isOverlay = false }) => {
     if (variant !== 'sent') return null;
-    if (status === 'sending') return <div className="w-3 h-3 border-2 border-white/50 border-t-transparent rounded-full animate-spin" />;
-    if (status === 'read') return <CheckCheck size={14} className="text-blue-400" strokeWidth={2.5} />;
-    return <Check size={14} className="text-white/50" strokeWidth={2} />;
+    const colorClass = isOverlay ? "text-white" : (status === 'read' ? "text-blue-400" : "text-white/50");
+    
+    if (status === 'sending') return <div className={`w-3 h-3 border-2 border-t-transparent rounded-full animate-spin ${isOverlay ? 'border-white' : 'border-white/50'}`} />;
+    if (status === 'read') return <CheckCheck size={14} className={colorClass} strokeWidth={2.5} />;
+    return <Check size={14} className={colorClass} strokeWidth={2} />;
   };
 
   return (
@@ -227,7 +229,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       <div className={`relative ${variant === 'default' ? 'w-fit max-w-[85%]' : 'max-w-[85%]'} overflow-visible group`} onContextMenu={handleContextMenu}>
         {variant === 'default' && ( <div className={`absolute inset-0 flex items-center justify-end pr-6 rounded-xl transition-opacity duration-200 ${swipeOffset < 0 ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: '#ef4444' }}><Trash2 className="text-white animate-pulse" size={24} /></div>)}
         
-        <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${audioUrl ? 'p-1' : 'p-3'} ${widthClass} ${shadowClass} relative transition-all duration-200`} style={{ transform: `translateX(${swipeOffset}px)` }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+        <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} relative transition-all duration-200`} style={{ transform: `translateX(${swipeOffset}px)` }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           
           {/* AUDIO MESSAGE */}
           {audioUrl ? (
@@ -240,8 +242,21 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                    </div>
                 </div>
              </div>
+          ) : isImageOnly ? (
+            // --- IMAGE ONLY (WHATSAPP STYLE) ---
+            <div className="relative">
+                <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="rounded-xl overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative">
+                    <img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" />
+                    
+                    {/* OVERLAY TIMESTAMP */}
+                    <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1.5 shadow-sm">
+                        <span className="text-[10px] font-medium text-white/90">{formatTime(note.date)}</span>
+                        {variant === 'sent' && <StatusIcon isOverlay={true} />}
+                    </div>
+                </div>
+            </div>
           ) : (
-             // TEXT / IMAGE MESSAGE
+             // --- STANDARD TEXT (+ Optional Image) ---
              <div className="flex flex-col min-w-[80px]">
                {note.imageUrl && ( <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform"><img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" /></div>)}
                <div className="block w-full">

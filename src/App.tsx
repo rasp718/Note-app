@@ -55,7 +55,7 @@ const getBubbleColors = (style: string, isMe: boolean, isHacker: boolean) => {
                 bg: 'bg-white', 
                 border: 'border-transparent', 
                 text: 'text-black', 
-                subtext: 'text-zinc-500' // Dark Gray Timestamp
+                subtext: 'text-zinc-500' 
             };
         case 'minimal_glass': // Glassy
             return { 
@@ -78,14 +78,14 @@ const getBubbleColors = (style: string, isMe: boolean, isHacker: boolean) => {
                 text: 'text-white',
                 subtext: 'text-zinc-300'
             };
-        case 'whatsapp': // WhatsApp Dark Green
+        case 'whatsapp': // Forest Green
             return { 
                 bg: 'bg-[#005c4b]', 
                 border: 'border-transparent', 
                 text: 'text-white', 
                 subtext: 'text-[#85a8a1]' 
             };
-        case 'telegram': // Telegram Blue
+        case 'telegram': // Ocean Blue
             return { 
                 bg: 'bg-[#2b5278]', 
                 border: 'border-transparent', 
@@ -99,7 +99,7 @@ const getBubbleColors = (style: string, isMe: boolean, isHacker: boolean) => {
                  text: 'text-white',
                  subtext: 'text-blue-100/80'
              };
-        case 'purple': // New Royal Purple
+        case 'purple': // Royal Purple
              return { 
                  bg: 'bg-[#6d28d9]', 
                  border: 'border-transparent', 
@@ -823,18 +823,24 @@ function App() {
                                     <button onClick={() => changeBubbleStyle('clear')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'clear' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Clear White"><div className="absolute inset-0 bg-white/5 border border-white/20" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Clear</span></button>
                                     <button onClick={() => changeBubbleStyle('solid_gray')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'solid_gray' ? 'border-zinc-400 ring-1 ring-zinc-400/50' : 'border-white/5 hover:border-zinc-400/50'}`} title="Solid Gray"><div className="absolute inset-0 bg-zinc-700" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Solid Gray</span></button>
                                     
-                                    {/* NEW: WhatsApp Green */}
-                                    <button onClick={() => changeBubbleStyle('whatsapp')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'whatsapp' ? 'border-[#25D366] ring-1 ring-[#25D366]/50' : 'border-white/5 hover:border-[#25D366]/50'}`} title="WhatsApp Style">
+                                    {/* NEW: Forest (WhatsApp) */}
+                                    <button onClick={() => changeBubbleStyle('whatsapp')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'whatsapp' ? 'border-[#25D366] ring-1 ring-[#25D366]/50' : 'border-white/5 hover:border-[#25D366]/50'}`} title="Forest Style">
                                         <div className="absolute inset-0 bg-[#005c4b]" />
                                         <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Forest</span>
                                     </button>
 
-                                    {/* NEW: Telegram Blue */}
-                                    <button onClick={() => changeBubbleStyle('telegram')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'telegram' ? 'border-[#2AABEE] ring-1 ring-[#2AABEE]/50' : 'border-white/5 hover:border-[#2AABEE]/50'}`} title="Telegram Style">
+                                    {/* NEW: Ocean (Telegram) */}
+                                    <button onClick={() => changeBubbleStyle('telegram')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'telegram' ? 'border-[#2AABEE] ring-1 ring-[#2AABEE]/50' : 'border-white/5 hover:border-[#2AABEE]/50'}`} title="Ocean Style">
                                         <div className="absolute inset-0 bg-[#2b5278]" />
                                         <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Ocean</span>
                                     </button>
                                     
+                                    {/* NEW: Royal (Purple) */}
+                                    <button onClick={() => changeBubbleStyle('purple')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'purple' ? 'border-purple-500 ring-1 ring-purple-500/50' : 'border-white/5 hover:border-purple-500/50'}`} title="Royal Style">
+                                        <div className="absolute inset-0 bg-[#6d28d9]" />
+                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Royal</span>
+                                    </button>
+
                                     {/* NEW: Blue Gradient */}
                                     <button onClick={() => changeBubbleStyle('blue_gradient')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'blue_gradient' ? 'border-blue-500 ring-1 ring-blue-500/50' : 'border-white/5 hover:border-blue-500/50'}`} title="Blue Gradient">
                                         <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600" />

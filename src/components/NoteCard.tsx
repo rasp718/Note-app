@@ -133,7 +133,6 @@ interface NoteCardProps {
   onImageClick?: (url: string) => void; 
   variant?: 'default' | 'sent' | 'received';
   status?: 'sending' | 'sent' | 'read';
-  // Added subtext to customColors so we can force timestamps to be dark
   customColors?: { bg: string; border: string; text: string; subtext?: string; shadow?: string; font?: string };
 }
 
@@ -211,10 +210,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
 
   const bgColor = customColors?.bg || 'bg-zinc-900';
   const textColor = customColors?.text || 'text-zinc-300';
-  
-  // Use explicit subtext color if provided (fixes white bubble visibility), otherwise default
   const subtextColor = customColors?.subtext || 'text-zinc-400 opacity-60'; 
-  
   const shadowClass = customColors?.shadow || 'shadow-sm';
   const chatBorderClasses = variant !== 'default' ? (customColors?.border ? customColors.border : 'border-none') : 'border-none';
   let radiusClass = 'rounded-2xl'; 
@@ -227,7 +223,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const StatusIcon = ({ isOverlay = false }) => {
     if (variant !== 'sent') return null;
     
-    // On white bubbles, status icon needs to be visible
     const defaultColor = customColors?.bg?.includes('white') ? 'text-blue-500' : 'text-blue-400';
     const pendingColor = customColors?.bg?.includes('white') ? 'text-zinc-400' : 'text-white/50';
 
@@ -239,7 +234,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     return <Check size={14} className={colorClass} strokeWidth={2} />;
   };
 
-  // Determine bar color for audio based on theme
   const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 
   return (
@@ -249,7 +243,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
         
         <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} relative transition-all duration-200`} style={{ transform: `translateX(${swipeOffset}px)` }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           
-          {/* AUDIO MESSAGE */}
           {audioUrl ? (
              <div className="flex flex-col gap-1">
                 <AudioPlayer src={audioUrl} barColor={audioBarColor} />
@@ -271,7 +264,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                 </div>
             </div>
           ) : (
-             // --- STANDARD TEXT ---
              <div className="flex flex-col min-w-[80px]">
                {note.imageUrl && ( <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform"><img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" /></div>)}
                <div className="block w-full">
@@ -290,6 +282,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       {contextMenu && typeof document !== 'undefined' && createPortal( <div className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'rgba(24, 24, 27, 0.95)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}> 
       <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
       {variant === 'default' && <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />}
+      
+      {/* EDIT BUTTON ADDED HERE */}
+      {onEdit && (
+          <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} />
+      )}
+
       {(variant === 'default' || variant === 'sent') && ( <> <div className="h-px bg-white/10 mx-3 my-1" /> <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> </> )} 
       </div>, document.body )}
     </>

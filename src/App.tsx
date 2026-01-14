@@ -5,7 +5,7 @@ import {
   ChevronLeft, MessageSquareDashed, Bookmark, Edit, Moon, Book,
   Archive, Trash2, CheckCheck, Circle, Globe, Zap, Cpu, SlidersHorizontal,
   User, AtSign, Activity, Camera, Save, Grid, UserPlus, MessageCircle, MoreVertical, Phone, PaintBucket,
-  Sun, Sunset, QrCode, Mic
+  Sun, Sunset, QrCode, Mic, Pause, Play
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
@@ -167,6 +167,7 @@ function App() {
 
   // --- RECORDING STATE ---
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -304,7 +305,7 @@ function App() {
     const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = items[i].getAsFile(); if (file) await handleImageUpload(file); break; } }
   };
 
-  // --- RECORDING LOGIC (Tap to start) ---
+  // --- RECORDING LOGIC (Tap to start / Pause support) ---
   const startRecording = async () => {
     if (isRecording) return; // Prevent double start
 
@@ -332,6 +333,7 @@ function App() {
         
         mediaRecorder.start();
         setIsRecording(true);
+        setIsPaused(false);
         
         // Timer
         setRecordingDuration(0);
@@ -341,7 +343,25 @@ function App() {
 
     } catch (e) { 
         console.error("Mic error", e); 
-        alert("Microphone access denied."); 
+        alert("Microphone access denied. Please check your browser permissions."); 
+    }
+  };
+
+  const togglePause = () => {
+    if (!mediaRecorderRef.current) return;
+    
+    if (isPaused) {
+        // RESUME
+        mediaRecorderRef.current.resume();
+        setIsPaused(false);
+        recordingTimerRef.current = setInterval(() => {
+           setRecordingDuration(prev => prev + 1);
+        }, 1000);
+    } else {
+        // PAUSE
+        mediaRecorderRef.current.pause();
+        setIsPaused(true);
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     }
   };
 
@@ -375,6 +395,7 @@ function App() {
 
   const cleanupRecording = () => {
     setIsRecording(false);
+    setIsPaused(false);
     setRecordingDuration(0);
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     if (streamRef.current) {
@@ -561,12 +582,12 @@ function App() {
              </div>
            )}
 
-           {/* (Other tabs settings, contacts, etc - kept same) */}
            {activeTab === 'settings' && (
              <div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <div className="max-w-2xl mx-auto w-full"><h1 className="text-3xl font-black text-white tracking-tighter">SYSTEM</h1></div>
              </div>
            )}
+
            {activeTab === 'contacts' && (
              <div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <div className="max-w-2xl mx-auto w-full"><h1 className="text-3xl font-black text-white tracking-tighter">CONTACTS</h1></div>
@@ -615,7 +636,107 @@ function App() {
                         ))}
                      </>
                    )}
-                   {/* (Contact list and settings content kept same as original for brevity, assume included) */}
+
+                   {activeTab === 'contacts' && (
+                     <div className="p-4 space-y-6">
+                        <form onSubmit={handleSearchContacts} className="relative">
+                            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-3 gap-3 focus-within:border-white/50 transition-colors">
+                                <AtSign size={18} className="text-zinc-500" />
+                                <input type="text" value={contactSearchQuery} onChange={(e) => setContactSearchQuery(e.target.value)} placeholder="Search by handle (e.g. @neo)" className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-mono"/>
+                                <button type="submit" disabled={isSearchingContacts} className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all disabled:opacity-50"><Search size={16} /></button>
+                            </div>
+                        </form>
+                        <div onClick={() => setShowQRCode(true)} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors">
+                            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-black">
+                                <QrCode size={24} />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-white">My QR Code</h3>
+                                <p className="text-xs text-zinc-500">Tap to share your profile</p>
+                            </div>
+                            <ChevronLeft size={16} className="rotate-180 text-zinc-500" />
+                        </div>
+
+                        <div className="space-y-3 pt-4">
+                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">Results</h3>
+                            {isSearchingContacts ? (
+                                <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div></div>
+                            ) : contactSearchResults.length > 0 ? (
+                                contactSearchResults.map((u) => (
+                                    <div key={u.uid} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                        <div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden">
+                                            {u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}
+                                        </div>
+                                        <div className="flex-1"><h3 className="font-bold text-white">{u.displayName}</h3><p className="text-xs text-zinc-500 font-mono">{u.handle}</p></div>
+                                        <button onClick={() => startNewChat(u.uid)} className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all"><MessageCircle size={20} /></button>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-10 opacity-30"><UserPlus size={48} className="mx-auto mb-4 text-zinc-600" /><p className="text-zinc-500 text-sm">Search for a handle to start connecting.</p></div>
+                            )}
+                        </div>
+                    </div>
+                   )}
+
+                   {activeTab === 'settings' && (
+                     <div className="p-4 space-y-6">
+                        <div className="relative overflow-hidden bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col gap-6 backdrop-blur-xl group">
+                           <div className="absolute top-4 right-4">
+                                {isEditingProfile ? (<button onClick={handleProfileSave} className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center"><Check size={16} strokeWidth={3} /></button>) : (<button onClick={() => setIsEditingProfile(true)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 hover:text-white"><Edit size={14} /></button>)}
+                           </div>
+                           <div className="flex items-center gap-5">
+                               <div className="relative">
+                                   <div className="w-20 h-20 rounded-2xl bg-zinc-800 flex items-center justify-center text-3xl shadow-xl overflow-hidden">
+                                       {profilePic ? (<img key={profilePic} src={profilePic} className="w-full h-full object-cover" />) : (<span>😎</span>)}
+                                   </div>
+                                   {isEditingProfile && (
+                                       <><label className="absolute -bottom-2 -right-2 w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-white cursor-pointer"><Camera size={14} /><input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleAvatarUpload(e.target.files[0]); }} /></label><button onClick={() => setShowAvatarSelector(!showAvatarSelector)} className="absolute -bottom-2 -left-2 w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-white cursor-pointer"><Grid size={14} /></button></>
+                                   )}
+                               </div>
+                               <div className="flex-1 min-w-0 space-y-1">
+                                   {isEditingProfile ? (<input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-xl font-bold w-full focus:outline-none focus:border-white py-1" placeholder="Display Name"/>) : (<h2 className="text-2xl font-black tracking-tight text-white truncate">{profileName}</h2>)}
+                                   {isEditingProfile ? (<div className="flex items-center gap-1 text-zinc-500"><AtSign size={12} /><input type="text" value={profileHandle} onChange={(e) => setProfileHandle(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-sm font-mono w-full focus:outline-none focus:border-white" placeholder="handle"/></div>) : (<p className="text-zinc-400 text-xs font-mono tracking-wide">{profileHandle}</p>)}
+                               </div>
+                           </div>
+                           {isEditingProfile && showAvatarSelector && (
+                               <div className="grid grid-cols-6 gap-2 pt-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                                   {Array.from({ length: 7 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => handleSelectPreset(num)} className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-white transition-colors bg-black/40 flex items-center justify-center text-xl relative"><img src={`/robot${num}.jpeg?v=1`} className="w-full h-full object-cover" /></button>))}
+                               </div>
+                           )}
+                           <div className="pt-2 border-t border-white/5 flex justify-between items-center">
+                                {isEditingProfile ? (<div className="flex items-center gap-2"><Activity size={14} className="text-zinc-500" /><input type="text" value={profileBio} onChange={(e) => setProfileBio(e.target.value)} className="bg-transparent border-b border-white/20 text-zinc-300 text-xs font-mono w-full focus:outline-none focus:border-white py-1" placeholder="Status..."/></div>) : (<div className="flex items-center gap-2 text-zinc-500 text-xs font-mono uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>{profileBio}</div>)}
+                                <button onClick={() => setShowQRCode(true)} className="text-zinc-500 hover:text-white"><QrCode size={20} /></button>
+                           </div>
+                        </div>
+
+                        <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6">
+                           <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
+                            <div className="space-y-3"><label className="text-white text-sm font-medium">Message Alignment</label><div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800"><button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button><button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button><button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button></div></div>
+                            <div className="space-y-3">
+                                <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={() => changeBubbleStyle('minimal_solid')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'minimal_solid' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Minimal Solid"><div className="absolute inset-0 bg-white" /><span className="relative z-10 text-xs font-bold text-black uppercase tracking-wider">Minimal</span></button>
+                                    <button onClick={() => changeBubbleStyle('minimal_glass')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'minimal_glass' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Minimal Glass"><div className="absolute inset-0 bg-white/20 backdrop-blur-md" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Glass</span></button>
+                                    <button onClick={() => changeBubbleStyle('clear')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'clear' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Clear White"><div className="absolute inset-0 bg-white/5 border border-white/20" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Clear</span></button>
+                                    <button onClick={() => changeBubbleStyle('solid_gray')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'solid_gray' ? 'border-zinc-400 ring-1 ring-zinc-400/50' : 'border-white/5 hover:border-zinc-400/50'}`} title="Solid Gray"><div className="absolute inset-0 bg-zinc-700" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Solid Gray</span></button>
+                                </div>
+                            </div>
+                            <div className="space-y-4 pt-2 border-t border-white/5">
+                                <button onClick={toggleAutoRedMode} className={`w-full py-3 rounded-xl border flex items-center justify-between px-4 transition-all ${isAutoRedMode ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}><span className="font-medium flex items-center gap-2 text-sm"><Moon size={16} /> Auto Night Shift</span><div className={`w-10 h-6 rounded-full relative transition-colors ${isAutoRedMode ? 'bg-white' : 'bg-zinc-700'}`}><div className={`absolute top-1 left-1 bg-black w-4 h-4 rounded-full transition-transform ${isAutoRedMode ? 'translate-x-4' : 'translate-x-0'}`} /></div></button>
+                                <p className="text-xs text-zinc-500 px-1">{isAutoRedMode ? "Automatically enables red filter after sunset (6 PM - 6 AM)." : "Night shift is disabled."}</p>
+                            </div>
+                            <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Wallpaper Scale</label><span className="text-zinc-500 text-xs font-mono">{bgScale >= 100 ? 'COVER' : `${bgScale}%`}</span></div><input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
+                             <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Opacity</label><span className="text-zinc-500 text-xs font-mono">{Math.round(bgOpacity * 100)}%</span></div><input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
+                        </div>
+
+                        <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-4">
+                             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
+                             <div className="grid grid-cols-4 gap-3">
+                                  {Array.from({ length: 33 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => setBgIndex(num)} className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-white scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}><img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} /></button>))}
+                              </div>
+                        </div>
+                     </div>
+                   )}
                </div>
            </div>
 
@@ -765,37 +886,43 @@ function App() {
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  
                  {isRecording ? (
-                    // --- WHATSAPP STYLE RECORDING UI ---
-                    <div className="flex-1 flex items-center gap-3 animate-in slide-in-from-bottom-2 fade-in duration-200">
+                    // --- WHATSAPP STYLE RECORDING UI (PAUSE SUPPORT + CLAUDE ORANGE) ---
+                    <div className="flex-1 flex items-center gap-2 animate-in slide-in-from-bottom-2 fade-in duration-200">
                         {/* TRASH (CANCEL) */}
                         <button 
                             onClick={cancelRecording} 
                             className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-red-500 hover:bg-white/10 transition-all"
                         >
-                            <Trash2 size={24} />
+                            <Trash2 size={22} />
                         </button>
 
                         {/* RECORDING STATUS PILL */}
-                        <div className="flex-1 bg-zinc-900 rounded-full h-12 flex items-center px-4 justify-between border border-zinc-700/50 relative overflow-hidden">
-                            <div className="flex items-center gap-3 z-10">
-                                <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                        <div className="flex-1 bg-zinc-900 rounded-full h-12 flex items-center px-4 justify-between border border-zinc-700/50 relative overflow-hidden gap-2">
+                            
+                            {/* PAUSE TOGGLE */}
+                            <button onClick={togglePause} className="z-20 w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 text-white hover:bg-zinc-700 transition-colors">
+                                {isPaused ? <Play size={14} fill="white" /> : <Pause size={14} fill="white" />}
+                            </button>
+
+                            {/* Timer & Dot */}
+                            <div className="flex items-center gap-2 z-10 min-w-[60px]">
+                                <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isPaused ? 'bg-amber-500' : 'bg-red-500 animate-pulse'}`} />
                                 <span className="text-white font-mono font-medium">{formatDuration(recordingDuration)}</span>
                             </div>
                             
-                            {/* Fake Waveform Animation */}
-                            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-0.5 h-6 opacity-30">
-                                {[...Array(12)].map((_, i) => (
-                                    <div key={i} className="w-1 bg-white rounded-full animate-pulse" style={{ height: `${Math.random() * 100}%`, animationDuration: '0.8s', animationDelay: `${i * 0.1}s` }} />
+                            {/* Fake Waveform Animation (Claude Orange) */}
+                            <div className="flex-1 flex items-center justify-center gap-0.5 h-6 opacity-80 overflow-hidden relative">
+                                {!isPaused && [...Array(16)].map((_, i) => (
+                                    <div key={i} className="w-1 rounded-full animate-pulse bg-[#da7756]" style={{ height: `${Math.random() * 100}%`, animationDuration: '0.6s', animationDelay: `${i * 0.05}s` }} />
                                 ))}
+                                {isPaused && <span className="text-xs text-zinc-500 uppercase font-bold tracking-widest">Paused</span>}
                             </div>
-
-                            <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider z-10">Recording</span>
                         </div>
 
-                        {/* SEND BUTTON */}
+                        {/* SEND BUTTON (Claude Orange) */}
                         <button 
                             onClick={finishRecording} 
-                            className="w-12 h-12 flex items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 active:scale-95 transition-transform"
+                            className="w-12 h-12 flex items-center justify-center rounded-full bg-[#da7756] text-white shadow-lg shadow-orange-900/20 active:scale-95 transition-transform"
                         >
                             <ArrowUp size={24} strokeWidth={3} />
                         </button>

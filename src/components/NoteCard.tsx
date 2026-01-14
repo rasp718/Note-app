@@ -97,7 +97,7 @@ const AudioPlayer = ({ src }: any) => {
                     return (
                         <div 
                             key={i} 
-                            className={`w-[3px] rounded-full transition-colors duration-150 ${isActive ? 'bg-emerald-500' : 'bg-zinc-600'}`}
+                            className={`w-[3px] rounded-full transition-colors duration-150 ${isActive ? 'bg-[#da7756]' : 'bg-zinc-600'}`}
                             style={{ height: `${height}%` }}
                         />
                     );

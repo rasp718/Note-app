@@ -120,6 +120,8 @@ const AudioPlayer = ({ src, barColor }: any) => {
     );
 };
 
+// ... (Previous imports remain the same)
+
 // --- MAIN COMPONENT ---
 interface NoteCardProps {
   note: Note;
@@ -154,7 +156,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const lines = safeText.split('\n');
   const audioUrl = (note as any).audioUrl;
   
-  const isImageOnly = !!note.imageUrl && !safeText && !audioUrl;
+  // Check if we have an image at all
+  const hasImage = !!note.imageUrl;
+  // Check if it is ONLY an image (no text, no audio)
+  const isImageOnly = hasImage && !safeText && !audioUrl;
 
   useEffect(() => {
     const closeMenu = (e: any) => { if (e.type === 'scroll') return; setContextMenu(null); };
@@ -212,9 +217,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const textColor = customColors?.text || 'text-zinc-300';
   const subtextColor = customColors?.subtext || 'text-zinc-400 opacity-60'; 
   const shadowClass = customColors?.shadow || 'shadow-sm';
-  
-  // FIX: Don't strip the border from notes (variant='default')
-  // We use the border passed in customColors, or fallback to border-none
   const chatBorderClasses = customColors?.border || 'border-none';
 
   let radiusClass = 'rounded-2xl'; 
@@ -222,12 +224,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
   const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
 
-  const paddingClass = isImageOnly ? 'p-1' : (audioUrl ? 'p-1' : 'p-3');
+  // --- UPDATED PADDING LOGIC ---
+  // If there is an image (even with text) or audio, use tight padding (p-1).
+  // This gives the "thin border" look for the image.
+  const paddingClass = (hasImage || audioUrl) ? 'p-1' : 'p-3';
 
   const StatusIcon = ({ isOverlay = false }) => {
     if (variant !== 'sent') return null;
     
-    // On white bubbles, status icon needs to be visible
     const defaultColor = customColors?.bg?.includes('white') ? 'text-blue-500' : 'text-blue-400';
     const pendingColor = customColors?.bg?.includes('white') ? 'text-zinc-400' : 'text-white/50';
 
@@ -239,7 +243,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     return <Check size={14} className={colorClass} strokeWidth={2} />;
   };
 
-  // Determine bar color for audio based on theme
   const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 
   return (
@@ -271,10 +274,19 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                 </div>
             </div>
           ) : (
-             // --- STANDARD TEXT ---
+             // --- MIXED CONTENT (Text + Maybe Image) ---
              <div className="flex flex-col min-w-[80px]">
-               {note.imageUrl && ( <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform"><img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" /></div>)}
-               <div className="block w-full">
+               {note.imageUrl && ( 
+                 <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="mb-1 rounded-xl overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform">
+                    <img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" />
+                 </div>
+               )}
+               {/* 
+                  UPDATED TEXT WRAPPER:
+                  Added explicit padding (px-2 pb-2) only if there is an image.
+                  This is necessary because we removed the parent padding to make the image fit tight.
+               */}
+               <div className={`block w-full ${hasImage ? 'px-2 pb-2 pt-1' : ''}`}>
                    {safeText && <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>}
                    <div className="float-right ml-2 mt-2 flex items-center gap-1 align-bottom h-4">
                        {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#da7756'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}

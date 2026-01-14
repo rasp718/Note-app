@@ -99,6 +99,13 @@ const getBubbleColors = (style: string, isMe: boolean, isHacker: boolean) => {
                  text: 'text-white',
                  subtext: 'text-blue-100/80'
              };
+        case 'purple': // New Royal Purple
+             return { 
+                 bg: 'bg-[#6d28d9]', 
+                 border: 'border-transparent', 
+                 text: 'text-white', 
+                 subtext: 'text-[#ddd6fe]' 
+             };
         default:
             return { 
                 bg: 'bg-white', 
@@ -819,13 +826,13 @@ function App() {
                                     {/* NEW: WhatsApp Green */}
                                     <button onClick={() => changeBubbleStyle('whatsapp')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'whatsapp' ? 'border-[#25D366] ring-1 ring-[#25D366]/50' : 'border-white/5 hover:border-[#25D366]/50'}`} title="WhatsApp Style">
                                         <div className="absolute inset-0 bg-[#005c4b]" />
-                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">WhatsApp</span>
+                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Forest</span>
                                     </button>
 
                                     {/* NEW: Telegram Blue */}
                                     <button onClick={() => changeBubbleStyle('telegram')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'telegram' ? 'border-[#2AABEE] ring-1 ring-[#2AABEE]/50' : 'border-white/5 hover:border-[#2AABEE]/50'}`} title="Telegram Style">
                                         <div className="absolute inset-0 bg-[#2b5278]" />
-                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Telegram</span>
+                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Ocean</span>
                                     </button>
                                     
                                     {/* NEW: Blue Gradient */}

@@ -50,42 +50,42 @@ const getBubbleColors = (style: string, isMe: boolean, isHacker: boolean) => {
     }
 
     switch(style) {
-        case 'minimal_solid': 
+        case 'minimal_solid': // White bubble, Black text
             return { 
                 bg: 'bg-white', 
                 border: 'border-transparent', 
                 text: 'text-black', 
                 subtext: 'text-zinc-500' 
             };
-        case 'minimal_glass': 
+        case 'minimal_glass': // Glassy
             return { 
                 bg: 'bg-white/20 backdrop-blur-md', 
                 border: 'border-white/50', 
                 text: 'text-white',
                 subtext: 'text-white/70'
             };
-        case 'clear': 
+        case 'clear': // Outline
             return { 
                 bg: 'bg-white/5 backdrop-blur-sm', 
                 border: 'border border-white/20', 
                 text: 'text-white',
                 subtext: 'text-white/60'
             };
-        case 'solid_gray': 
+        case 'solid_gray': // Dark Gray
             return { 
                 bg: 'bg-zinc-700', 
                 border: 'border-transparent', 
                 text: 'text-white',
                 subtext: 'text-zinc-300'
             };
-        case 'whatsapp': 
+        case 'whatsapp': // Forest Green
             return { 
                 bg: 'bg-[#005c4b]', 
                 border: 'border-transparent', 
                 text: 'text-white', 
                 subtext: 'text-[#85a8a1]' 
             };
-        case 'telegram': 
+        case 'telegram': // Ocean Blue
             return { 
                 bg: 'bg-[#2b5278]', 
                 border: 'border-transparent', 
@@ -99,7 +99,7 @@ const getBubbleColors = (style: string, isMe: boolean, isHacker: boolean) => {
                  text: 'text-white',
                  subtext: 'text-blue-100/80'
              };
-        case 'purple': 
+        case 'purple': // Royal Purple
              return { 
                  bg: 'bg-[#6d28d9]', 
                  border: 'border-transparent', 
@@ -867,7 +867,7 @@ function App() {
                </div>
            </div>
 
-           {/* ADDED: CLICK OUTSIDE TO CANCEL EDIT */}
+           {/* CLICK OUTSIDE TO CANCEL EDIT (WRAPPER) */}
            <div 
                 ref={listRef} 
                 className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}
@@ -891,7 +891,11 @@ function App() {
                         return (
                             <React.Fragment key={note.id}>
                                 {showHeader && (<div className="flex justify-center my-2 opacity-70 w-full select-none"><span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">{getDateLabel(note.date)}</span></div>)}
-                                <div onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
+                                <div 
+                                    onDoubleClick={() => handleToggleExpand(note.id)} 
+                                    className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}
+                                    onClick={(e) => e.stopPropagation()} // PREVENT CANCEL EDIT WHEN CLICKING NOTE
+                                >
                                     <NoteCard 
                                         note={note} 
                                         categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
@@ -925,7 +929,10 @@ function App() {
                         return (
                             <React.Fragment key={msg.id}>
                                 {showHeader && (<div className="flex justify-center my-4 opacity-60 w-full select-none"><span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full border border-white/5">{getDateLabel(msg.timestamp)}</span></div>)}
-                                <div className={`flex w-full mb-0.5 items-end ${isMe ? 'justify-end' : 'justify-start gap-2'}`}>
+                                <div 
+                                    className={`flex w-full mb-0.5 items-end ${isMe ? 'justify-end' : 'justify-start gap-2'}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
                                     {!isMe && (
                                         <div className="flex-shrink-0 w-8 h-8 relative z-10">
                                             <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 shadow-md">
@@ -1014,7 +1021,6 @@ function App() {
              </div>
            </div>
 
-           <BottomTabBar />
         </div>
       )}
 

@@ -212,7 +212,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const textColor = customColors?.text || 'text-zinc-300';
   const subtextColor = customColors?.subtext || 'text-zinc-400 opacity-60'; 
   const shadowClass = customColors?.shadow || 'shadow-sm';
-  const chatBorderClasses = variant !== 'default' ? (customColors?.border ? customColors.border : 'border-none') : 'border-none';
+  
+  // FIX: Don't strip the border from notes (variant='default')
+  // We use the border passed in customColors, or fallback to border-none
+  const chatBorderClasses = customColors?.border || 'border-none';
+
   let radiusClass = 'rounded-2xl'; 
   if (variant === 'sent') radiusClass = 'rounded-2xl rounded-br-none';
   if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
@@ -223,6 +227,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const StatusIcon = ({ isOverlay = false }) => {
     if (variant !== 'sent') return null;
     
+    // On white bubbles, status icon needs to be visible
     const defaultColor = customColors?.bg?.includes('white') ? 'text-blue-500' : 'text-blue-400';
     const pendingColor = customColors?.bg?.includes('white') ? 'text-zinc-400' : 'text-white/50';
 
@@ -234,6 +239,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     return <Check size={14} className={colorClass} strokeWidth={2} />;
   };
 
+  // Determine bar color for audio based on theme
   const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 
   return (
@@ -243,6 +249,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
         
         <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} relative transition-all duration-200`} style={{ transform: `translateX(${swipeOffset}px)` }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           
+          {/* AUDIO MESSAGE */}
           {audioUrl ? (
              <div className="flex flex-col gap-1">
                 <AudioPlayer src={audioUrl} barColor={audioBarColor} />
@@ -264,6 +271,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                 </div>
             </div>
           ) : (
+             // --- STANDARD TEXT ---
              <div className="flex flex-col min-w-[80px]">
                {note.imageUrl && ( <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="mb-1 rounded-lg overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform"><img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" /></div>)}
                <div className="block w-full">
@@ -283,7 +291,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
       {variant === 'default' && <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />}
       
-      {/* EDIT BUTTON ADDED HERE */}
+      {/* EDIT BUTTON */}
       {onEdit && (
           <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} />
       )}

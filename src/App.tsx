@@ -935,12 +935,18 @@ function App() {
                         const prevNote = filteredNotes[index - 1];
                         const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
                         
-                        // UPDATED: Use the shared getBubbleColors function so notes match settings
                         const noteColors = getBubbleColors(bubbleStyle, true, isHackerMode);
 
                         return (
                             <React.Fragment key={note.id}>
-                                {showHeader && (<div className="flex justify-center my-2 opacity-70 w-full select-none"><span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">{getDateLabel(note.date)}</span></div>)}
+                                {/* UPDATED DATE HEADER: White text, no background pill */}
+                                {showHeader && (
+                                  <div className="flex justify-center my-2 w-full select-none">
+                                    <span className="text-white/90 text-[11px] font-bold uppercase tracking-widest drop-shadow-md shadow-black">
+                                      {getDateLabel(note.date)}
+                                    </span>
+                                  </div>
+                                )}
                                 <div onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
                                     <NoteCard 
                                         note={note} 
@@ -964,7 +970,6 @@ function App() {
                         const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
                         const isMe = msg.senderId === user?.uid;
                         
-                        // UPDATED: Use helper function for consistent colors
                         const customColors = getBubbleColors(bubbleStyle, isMe, false);
 
                         const msgNote = {
@@ -975,7 +980,14 @@ function App() {
 
                         return (
                             <React.Fragment key={msg.id}>
-                                {showHeader && (<div className="flex justify-center my-4 opacity-60 w-full select-none"><span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full border border-white/5">{getDateLabel(msg.timestamp)}</span></div>)}
+                                {/* UPDATED DATE HEADER: White text, no background pill */}
+                                {showHeader && (
+                                  <div className="flex justify-center my-4 w-full select-none">
+                                    <span className="text-white/90 text-[11px] font-bold uppercase tracking-widest drop-shadow-md shadow-black">
+                                      {getDateLabel(msg.timestamp)}
+                                    </span>
+                                  </div>
+                                )}
                                 <div className={`flex w-full mb-0.5 items-end ${isMe ? 'justify-end' : 'justify-start gap-2'}`}>
                                     {!isMe && (
                                         <div className="flex-shrink-0 w-8 h-8 relative z-10">

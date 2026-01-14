@@ -867,18 +867,67 @@ function App() {
                </div>
            </div>
 
-           {/* CLICK OUTSIDE TO CANCEL EDIT (WRAPPER) */}
-           <div 
-                ref={listRef} 
-                className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}
-                onClick={() => { 
-                    if(editingNote) { 
-                        setEditingNote(null); 
-                        setTranscript(''); 
-                        setImageUrl(''); 
-                    } 
-                }}
-           >
+           <BottomTabBar />
+        </div>
+      )}
+
+      {currentView === 'room' && (
+        <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
+            <div className="fixed top-0 left-0 right-0 z-40">
+                <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative z-50">
+                    <div className="flex items-center gap-1 w-full">
+                        <button onClick={() => { setCurrentView('list'); setActiveChatId(null); }} className="w-10 h-10 flex items-center justify-center text-zinc-400 transition-colors active:scale-95 hover:bg-white/5 rounded-full mr-1">
+                            <ChevronLeft size={28} />
+                        </button>
+                        
+                        {activeChatId !== 'saved_messages' ? (
+                           <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors">
+                               <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 relative">
+                                  {otherChatUser?.photoURL ? (
+                                      <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
+                                  ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-lg">{otherChatUser?.displayName?.[0] || '?'}</div>
+                                  )}
+                               </div>
+                               <div className="flex-1 min-w-0">
+                                   <h3 className="font-bold text-white text-base leading-tight truncate">{otherChatUser?.displayName || 'Unknown'}</h3>
+                                   <div className="flex items-center gap-1.5 mt-0.5">
+                                       {otherChatUser?.isOnline && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}
+                                       <p className={`text-xs truncate ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>{otherChatUser?.isOnline ? 'Online' : 'Last seen recently'}</p>
+                                   </div>
+                               </div>
+                           </div>
+                        ) : (
+                           <div onClick={handleSecretTrigger} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer select-none">
+                                <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden">
+                                     {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}
+                                </div>
+                                <div className="animate-in fade-in duration-300">
+                                    <h3 className="font-bold text-white text-lg leading-tight">Notes</h3>
+                                    <p className="text-zinc-500 text-xs font-mono uppercase tracking-widest">Personal</p>
+                                </div>
+                           </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                             <div className="relative flex items-center h-10">
+                                <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-400 transition-all active:scale-95 rounded-full hover:bg-white/5 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={22} /></button>
+                                <div className={`absolute right-0 bg-zinc-900 border border-zinc-800 focus-within:border-white/50 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
+                                    <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
+                                    <input ref={searchInputRef} type="text" placeholder={TRANSLATIONS.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
+                                    <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
+                                </div>
+                            </div>
+                            {activeChatId !== 'saved_messages' && (
+                                <button className="w-10 h-10 flex items-center justify-center text-zinc-400 rounded-full hover:bg-white/5"><Phone size={22} /></button>
+                            )}
+                        </div>
+                    </div>
+                </header>
+            </div>
+
+           {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}
+
+           <div ref={listRef} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
               <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-1 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
                 {activeChatId === 'saved_messages' ? (
@@ -886,16 +935,13 @@ function App() {
                         const prevNote = filteredNotes[index - 1];
                         const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
                         
+                        // UPDATED: Use the shared getBubbleColors function so notes match settings
                         const noteColors = getBubbleColors(bubbleStyle, true, isHackerMode);
 
                         return (
                             <React.Fragment key={note.id}>
                                 {showHeader && (<div className="flex justify-center my-2 opacity-70 w-full select-none"><span className="text-zinc-500 text-[11px] font-medium uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">{getDateLabel(note.date)}</span></div>)}
-                                <div 
-                                    onDoubleClick={() => handleToggleExpand(note.id)} 
-                                    className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}
-                                    onClick={(e) => e.stopPropagation()} // PREVENT CANCEL EDIT WHEN CLICKING NOTE
-                                >
+                                <div onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
                                     <NoteCard 
                                         note={note} 
                                         categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
@@ -918,6 +964,7 @@ function App() {
                         const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
                         const isMe = msg.senderId === user?.uid;
                         
+                        // UPDATED: Use helper function for consistent colors
                         const customColors = getBubbleColors(bubbleStyle, isMe, false);
 
                         const msgNote = {
@@ -929,10 +976,7 @@ function App() {
                         return (
                             <React.Fragment key={msg.id}>
                                 {showHeader && (<div className="flex justify-center my-4 opacity-60 w-full select-none"><span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full border border-white/5">{getDateLabel(msg.timestamp)}</span></div>)}
-                                <div 
-                                    className={`flex w-full mb-0.5 items-end ${isMe ? 'justify-end' : 'justify-start gap-2'}`}
-                                    onClick={(e) => e.stopPropagation()}
-                                >
+                                <div className={`flex w-full mb-0.5 items-end ${isMe ? 'justify-end' : 'justify-start gap-2'}`}>
                                     {!isMe && (
                                         <div className="flex-shrink-0 w-8 h-8 relative z-10">
                                             <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 shadow-md">
@@ -960,7 +1004,9 @@ function App() {
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  
                  {isRecording ? (
+                    // --- WHATSAPP STYLE RECORDING UI (PAUSE SUPPORT + CLAUDE ORANGE) ---
                     <div className="flex-1 flex items-center gap-2 animate-in slide-in-from-bottom-2 fade-in duration-200">
+                        {/* TRASH (CANCEL) */}
                         <button 
                             onClick={cancelRecording} 
                             className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-red-500 hover:bg-white/10 transition-all"
@@ -968,17 +1014,21 @@ function App() {
                             <Trash2 size={22} />
                         </button>
 
+                        {/* RECORDING STATUS PILL */}
                         <div className="flex-1 bg-zinc-900 rounded-full h-12 flex items-center px-4 justify-between border border-zinc-700/50 relative overflow-hidden gap-2">
                             
+                            {/* PAUSE TOGGLE */}
                             <button onClick={togglePause} className="z-20 w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 text-white hover:bg-zinc-700 transition-colors">
                                 {isPaused ? <Play size={14} fill="white" /> : <Pause size={14} fill="white" />}
                             </button>
 
+                            {/* Timer & Dot */}
                             <div className="flex items-center gap-2 z-10 min-w-[60px]">
                                 <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isPaused ? 'bg-amber-500' : 'bg-red-500 animate-pulse'}`} />
                                 <span className="text-white font-mono font-medium">{formatDuration(recordingDuration)}</span>
                             </div>
                             
+                            {/* Fake Waveform Animation (Claude Orange) */}
                             <div className="flex-1 flex items-center justify-center gap-0.5 h-6 opacity-80 overflow-hidden relative">
                                 {!isPaused && [...Array(16)].map((_, i) => (
                                     <div key={i} className="w-1 rounded-full animate-pulse bg-[#da7756]" style={{ height: `${Math.random() * 100}%`, animationDuration: '0.6s', animationDelay: `${i * 0.05}s` }} />
@@ -987,6 +1037,7 @@ function App() {
                             </div>
                         </div>
 
+                        {/* SEND BUTTON (Claude Orange) */}
                         <button 
                             onClick={finishRecording} 
                             className="w-12 h-12 flex items-center justify-center rounded-full bg-[#da7756] text-white shadow-lg shadow-orange-900/20 active:scale-95 transition-transform"
@@ -995,9 +1046,11 @@ function App() {
                         </button>
                     </div>
                  ) : (
+                    // --- STANDARD INPUT UI ---
                     <>
                         {activeChatId === 'saved_messages' && (<button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">{activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}</button>)}
                         
+                        {/* MIC BUTTON (TAP TO START) */}
                         {activeChatId !== 'saved_messages' && !transcript && !imageUrl && !editingNote && (
                             <button 
                                 onClick={startRecording}

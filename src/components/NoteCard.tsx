@@ -63,7 +63,7 @@ const AudioPlayer = ({ src, barColor }: any) => {
 type RollResult = 
   | { type: 'auto_win'; label: '4-5-6 HEAD CRACK'; value: 100 }
   | { type: 'auto_loss'; label: '1-2-3 TRASH'; value: -1 }
-  | { type: 'triple'; label: 'TRIPLES'; value: number }
+  | { type: 'triple'; label: 'TRIPLE'; value: number }
   | { type: 'point'; label: 'POINT'; value: number }
   | { type: 'junk'; label: 'NOTHING'; value: 0 };
 
@@ -72,19 +72,18 @@ const analyzeRoll = (dice: number[]): RollResult => {
     const s = sorted.join('');
     
     // Instant Win/Loss
-    if (s === '456') return { type: 'auto_win', label: '4-5-6 HEAD CRACK', value: 100 };
-    if (s === '123') return { type: 'auto_loss', label: '1-2-3 AUTO LOSS', value: -1 };
+    if (s === '456') return { type: 'auto_win', label: '4-5-6', value: 100 };
+    if (s === '123') return { type: 'auto_loss', label: '1-2-3', value: -1 };
     
     // Triples (Beats everything except 456)
-    if (sorted[0] === sorted[1] && sorted[1] === sorted[2]) return { type: 'triple', label: `TRIPLE ${sorted[0]}s`, value: 20 + sorted[0] };
+    if (sorted[0] === sorted[1] && sorted[1] === sorted[2]) return { type: 'triple', label: `TRIP ${sorted[0]}s`, value: 20 + sorted[0] };
     
     // Points (Pair + Singleton)
-    // 2-2-4 -> Point is 4
-    if (sorted[0] === sorted[1]) return { type: 'point', label: `POINT IS ${sorted[2]}`, value: sorted[2] };
-    if (sorted[1] === sorted[2]) return { type: 'point', label: `POINT IS ${sorted[0]}`, value: sorted[0] };
-    if (sorted[0] === sorted[2]) return { type: 'point', label: `POINT IS ${sorted[1]}`, value: sorted[1] };
+    if (sorted[0] === sorted[1]) return { type: 'point', label: `POINT ${sorted[2]}`, value: sorted[2] };
+    if (sorted[1] === sorted[2]) return { type: 'point', label: `POINT ${sorted[0]}`, value: sorted[0] };
+    if (sorted[0] === sorted[2]) return { type: 'point', label: `POINT ${sorted[1]}`, value: sorted[1] };
     
-    // Junk (1-2-4, 1-3-5, etc)
+    // Junk
     return { type: 'junk', label: 'TRASH', value: 0 };
 };
 
@@ -146,26 +145,22 @@ const StreetDiceGame = ({ dataStr, onSave, myId }: { dataStr: string, onSave: (d
         state = { ...state, ...parsed };
     } catch(e) {}
 
-    // 2. Assign Player 1 (Creator) on first load
+    // 2. Assign Player 1
     useEffect(() => {
         if (!state.p1Id && myId) {
             onSave(JSON.stringify({ ...state, p1Id: myId }));
         }
     }, []);
 
-    // 3. Determine "Who Am I?"
-    // P1 is the Creator. P2 is anyone else.
     const iAmP1 = myId === state.p1Id;
     const isMyTurn = (state.turn === 'p1' && iAmP1) || (state.turn === 'p2' && !iAmP1);
 
-    // 4. Local Animation State
     const [isRolling, setIsRolling] = useState(false);
     const [isShaking, setIsShaking] = useState(false);
     const [shakeOffset, setShakeOffset] = useState({x:0, y:0});
     const shakeInterval = useRef<any>(null);
     const longPressTimeout = useRef<any>(null);
 
-    // 5. Input Handlers
     const startShake = () => {
         if(isRolling || !isMyTurn) return;
         setIsShaking(true);
@@ -187,7 +182,6 @@ const StreetDiceGame = ({ dataStr, onSave, myId }: { dataStr: string, onSave: (d
 
     const executeRoll = () => {
         setIsRolling(true);
-        // Visual spin loop
         let rolls = 0;
         const rollInt = setInterval(() => {
             rolls++;
@@ -198,146 +192,123 @@ const StreetDiceGame = ({ dataStr, onSave, myId }: { dataStr: string, onSave: (d
         }, 80);
     };
 
-    // 6. CORE GAME LOGIC (The Brain)
+    // --- GAME BRAIN ---
     const finalizeRoll = () => {
         setIsRolling(false);
         triggerHaptic(50);
         
-        // A. Generate Numbers
         const finalDice = [Math.ceil(Math.random()*6), Math.ceil(Math.random()*6), Math.ceil(Math.random()*6)];
         const result = analyzeRoll(finalDice);
-        
         const next = { ...state, dice: finalDice };
 
-        // B. Handle TRASH (Retain Turn)
+        // Handle Junk
         if (result.type === 'junk') {
             next.message = "TRASH. ROLL AGAIN.";
             next.msgColor = "text-zinc-500";
-            next.lastAction = 'trash';
-            // Turn does not flip!
             onSave(JSON.stringify(next));
             return;
         }
 
-        // C. Handle OUTCOMES
+        // Logic
         if (next.turn === 'p1') {
-            // --- PLAYER 1 TURN ---
             if (result.type === 'auto_win') {
-                next.message = "BANKER ROLLED 4-5-6!";
+                next.message = "BANKER WON! (4-5-6)";
                 next.msgColor = "text-green-400";
                 next.p1Score += 1;
-                next.p1Roll = null; // Round Reset
-                next.turn = 'p1';   // Winner keeps dice? Or alternate? Let's keep it simple: Reset.
+                next.p1Roll = null;
+                next.turn = 'p1';
             } else if (result.type === 'auto_loss') {
-                next.message = "BANKER ROLLED 1-2-3 (LOSS)";
+                next.message = "BANKER LOST! (1-2-3)";
                 next.msgColor = "text-red-400";
                 next.p2Score += 1;
                 next.p1Roll = null;
                 next.turn = 'p1';
             } else {
-                // POINT ESTABLISHED
                 next.p1Roll = { value: result.value, label: result.label };
-                next.turn = 'p2'; // Pass to Challenger
-                next.message = `${result.label}. CHALLENGER TO BEAT.`;
+                next.turn = 'p2';
+                next.message = `${result.label}. OPP TO BEAT.`;
                 next.msgColor = "text-white";
             }
         } else {
-            // --- PLAYER 2 TURN (Chasing) ---
+            // P2 Chasing P1
             if (!next.p1Roll) return;
 
             if (result.type === 'auto_win') {
-                next.message = "CHALLENGER ROLLED 4-5-6!";
-                next.msgColor = "text-red-400"; // Red for P1 view, but we handle colors dynamically below
+                next.message = "CHALLENGER WON! (4-5-6)";
+                next.msgColor = "text-red-400"; 
                 next.p2Score += 1;
                 next.p1Roll = null;
                 next.turn = 'p1';
             } else if (result.type === 'auto_loss') {
-                next.message = "CHALLENGER ROLLED 1-2-3 (LOSS)";
+                next.message = "CHALLENGER LOST! (1-2-3)";
                 next.msgColor = "text-green-400";
                 next.p1Score += 1;
                 next.p1Roll = null;
                 next.turn = 'p1';
             } else {
-                // COMPARE POINTS
-                const p1Val = next.p1Roll.value;
-                const p2Val = result.value;
-
-                if (p2Val > p1Val) {
-                    next.message = `CHALLENGER WINS! (${result.label})`;
+                // Point Comparison
+                if (result.value > next.p1Roll.value) {
+                    next.message = `CHALLENGER WON! (${result.label} vs ${next.p1Roll.label})`;
                     next.p2Score += 1;
-                } else if (p2Val < p1Val) {
-                    next.message = `BANKER WINS! (${next.p1Roll.label} HELD)`;
+                } else if (result.value < next.p1Roll.value) {
+                    next.message = `BANKER WON! (${next.p1Roll.label} vs ${result.label})`;
                     next.p1Score += 1;
                 } else {
                     next.message = "WASH! RE-ROLL ROUND.";
-                    // No score change
                 }
-                
-                // End Round
                 next.p1Roll = null;
                 next.turn = 'p1';
             }
         }
-
         onSave(JSON.stringify(next));
     };
 
-    // 7. RENDER HELPERS
-    // We render "YOU" and "OPP" dynamically based on iAmP1
     const myScore = iAmP1 ? state.p1Score : state.p2Score;
     const oppScore = iAmP1 ? state.p2Score : state.p1Score;
     const isGameOver = myScore >= 5 || oppScore >= 5;
 
-    // Helper to translate status messages to "YOU" terminology
+    // Helper for "YOU" vs "OPP" text replacement
     const getDisplayMessage = () => {
-        if (state.message.includes("BANKER")) {
-            return state.message.replace("BANKER", iAmP1 ? "YOU" : "OPP");
-        }
-        if (state.message.includes("CHALLENGER")) {
-            return state.message.replace("CHALLENGER", !iAmP1 ? "YOU" : "OPP");
-        }
-        return state.message;
+        let msg = state.message;
+        if (msg.includes("BANKER")) msg = msg.replace("BANKER", iAmP1 ? "YOU" : "OPP");
+        if (msg.includes("CHALLENGER")) msg = msg.replace("CHALLENGER", !iAmP1 ? "YOU" : "OPP");
+        return msg;
     };
 
     return (
         <div className="w-full bg-zinc-900 rounded-xl overflow-hidden border border-zinc-700 relative shadow-2xl select-none min-w-[260px]">
-            {/* Header: Dynamic YOU vs OPP */}
+            {/* Header */}
             <div className="flex justify-between items-center p-3 bg-black/30 border-b border-zinc-800">
-                {/* LEFT SIDE (ME) */}
                 <div className="flex flex-col gap-1">
                     <span className="text-[10px] font-bold text-zinc-500 tracking-widest">YOU</span>
-                    <div className="flex gap-1">
-                        {[...Array(5)].map((_, i) => (
-                            <div key={i} className={`w-1.5 h-4 rounded-sm transition-all ${i < myScore ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-zinc-800'}`}/>
-                        ))}
-                    </div>
+                    <div className="flex gap-1">{[...Array(5)].map((_, i) => (<div key={i} className={`w-1.5 h-4 rounded-sm transition-all ${i < myScore ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-zinc-800'}`}/>))}</div>
                 </div>
-                
-                {/* CENTER (STREAK) */}
                 <div className="text-center">
                     <span className="text-[9px] text-zinc-600 font-mono tracking-widest">WINS</span>
-                    <div className="flex items-center justify-center gap-1 text-orange-500 font-bold text-xs">
-                        <Trophy size={10} /> <span>{Math.max(myScore, oppScore)}</span>
-                    </div>
+                    <div className="flex items-center justify-center gap-1 text-orange-500 font-bold text-xs"><Trophy size={10} /> <span>{Math.max(myScore, oppScore)}</span></div>
                 </div>
-
-                {/* RIGHT SIDE (THEM) */}
                 <div className="flex flex-col gap-1 items-end">
                     <span className="text-[10px] font-bold text-zinc-500 tracking-widest">OPP</span>
-                    <div className="flex gap-1">
-                        {[...Array(5)].map((_, i) => (
-                            <div key={i} className={`w-1.5 h-4 rounded-sm transition-all ${i < oppScore ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-zinc-800'}`}/>
-                        ))}
-                    </div>
+                    <div className="flex gap-1">{[...Array(5)].map((_, i) => (<div key={i} className={`w-1.5 h-4 rounded-sm transition-all ${i < oppScore ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-zinc-800'}`}/>))}</div>
                 </div>
             </div>
 
             {/* The Pit */}
-            <div className="h-40 relative flex flex-col items-center justify-center gap-4" style={{ backgroundImage: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' }}>
-                <div className={`absolute top-3 font-black text-xs tracking-widest transition-colors duration-300 drop-shadow-md text-center px-4 ${state.message.includes('LOSS') || (state.message.includes('OPP') && state.message.includes('WIN')) ? 'text-red-500' : 'text-zinc-300'}`}>
+            <div className="h-44 relative flex flex-col items-center justify-center gap-4" style={{ backgroundImage: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' }}>
+                
+                {/* STATUS MESSAGE */}
+                <div className={`font-black text-xs tracking-widest transition-colors duration-300 drop-shadow-md text-center px-4 ${state.message.includes('LOST') || (state.message.includes('OPP') && state.message.includes('WON')) ? 'text-red-500' : 'text-zinc-300'}`}>
                     {getDisplayMessage()}
                 </div>
-                <div className="flex gap-3 z-10">
+
+                {/* TARGET INDICATOR (Persistent while rolling) */}
+                {state.p1Roll && (
+                    <div className="text-[10px] font-mono text-zinc-500 bg-black/40 px-3 py-1 rounded-full border border-zinc-700 animate-pulse">
+                        TARGET: <span className="text-white font-bold">{state.p1Roll.label}</span>
+                    </div>
+                )}
+
+                <div className="flex gap-3 z-10 mt-1">
                     {state.dice.map((d, i) => <RedDie key={i} val={d} rolling={isRolling} shakeOffset={shakeOffset} />)}
                 </div>
             </div>
@@ -347,13 +318,9 @@ const StreetDiceGame = ({ dataStr, onSave, myId }: { dataStr: string, onSave: (d
                 {!isGameOver ? (
                     <button 
                         onPointerDown={(e) => { 
-                            if(isMyTurn) {
-                                e.preventDefault(); // FIX SCROLL BLOCKING
-                                e.currentTarget.releasePointerCapture(e.pointerId); 
-                                startShake(); 
-                            }
+                            if(isMyTurn) { e.preventDefault(); e.currentTarget.releasePointerCapture(e.pointerId); startShake(); }
                         }}
-                        onContextMenu={(e) => e.preventDefault()} // FIX RIGHT CLICK
+                        onContextMenu={(e) => e.preventDefault()}
                         onPointerUp={() => isMyTurn && releaseShake()}
                         onPointerLeave={() => isMyTurn && releaseShake()}
                         disabled={isRolling || !isMyTurn}
@@ -406,10 +373,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const audioUrl = (note as any).audioUrl;
   const hasImage = !!note.imageUrl;
   
-  // --- DETECT GAME ---
   const isDiceGame = safeText.includes('STREET_DICE_GAME');
-  
-  // Parse Game Data if available
   let gameData = "";
   if (isDiceGame) {
       const parts = safeText.split('|||');
@@ -435,7 +399,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const handleContextMenu = (e: any) => { e.preventDefault(); e.stopPropagation(); if(variant === 'default' || variant === 'sent') openMenu(e.clientX, e.clientY); };
   const formatTime = (timestamp: any) => { try { const t = Number(timestamp); if (isNaN(t) || t === 0) return ''; return new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } };
 
-  // --- TOUCH HANDLERS ---
   const handleTouchStart = (e: any) => { 
       if (e.targetTouches.length !== 1) return; 
       touchStartX.current = e.targetTouches[0].clientX; touchStartY.current = e.targetTouches[0].clientY; touchStartTime.current = Date.now(); setIsSwiping(false); isLongPress.current = false; 
@@ -470,7 +433,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
   const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
   
-  // Minimal padding for games/images
   const paddingClass = (hasImage || audioUrl || isDiceGame) ? 'p-1' : 'p-3';
 
   const StatusIcon = ({ isOverlay = false }) => {

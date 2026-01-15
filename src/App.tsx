@@ -50,69 +50,15 @@ const getBubbleColors = (style: string, isMe: boolean, isHacker: boolean) => {
     }
 
     switch(style) {
-        case 'minimal_solid': // White bubble, Black text
-            return { 
-                bg: 'bg-white', 
-                border: 'border-transparent', 
-                text: 'text-black', 
-                subtext: 'text-zinc-500' 
-            };
-        case 'minimal_glass': // Glassy
-            return { 
-                bg: 'bg-white/20 backdrop-blur-md', 
-                border: 'border-white/50', 
-                text: 'text-white',
-                subtext: 'text-white/70'
-            };
-        case 'clear': // Outline
-            return { 
-                bg: 'bg-white/5 backdrop-blur-sm', 
-                border: 'border border-white/20', 
-                text: 'text-white',
-                subtext: 'text-white/60'
-            };
-        case 'solid_gray': // Dark Gray
-            return { 
-                bg: 'bg-zinc-700', 
-                border: 'border-transparent', 
-                text: 'text-white',
-                subtext: 'text-zinc-300'
-            };
-        case 'whatsapp': // Forest Green
-            return { 
-                bg: 'bg-[#005c4b]', 
-                border: 'border-transparent', 
-                text: 'text-white', 
-                subtext: 'text-[#85a8a1]' 
-            };
-        case 'telegram': // Ocean Blue
-            return { 
-                bg: 'bg-[#2b5278]', 
-                border: 'border-transparent', 
-                text: 'text-white', 
-                subtext: 'text-[#8aa8c7]' 
-            };
-        case 'blue_gradient':
-             return {
-                 bg: 'bg-gradient-to-br from-blue-500 to-blue-600',
-                 border: 'border-transparent',
-                 text: 'text-white',
-                 subtext: 'text-blue-100/80'
-             };
-        case 'purple': // Royal Purple
-             return { 
-                 bg: 'bg-[#6d28d9]', 
-                 border: 'border-transparent', 
-                 text: 'text-white', 
-                 subtext: 'text-[#ddd6fe]' 
-             };
-        default:
-            return { 
-                bg: 'bg-white', 
-                border: 'border-transparent', 
-                text: 'text-black', 
-                subtext: 'text-zinc-500' 
-            };
+        case 'minimal_solid': return { bg: 'bg-white', border: 'border-transparent', text: 'text-black', subtext: 'text-zinc-500' };
+        case 'minimal_glass': return { bg: 'bg-white/20 backdrop-blur-md', border: 'border-white/50', text: 'text-white', subtext: 'text-white/70' };
+        case 'clear': return { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20', text: 'text-white', subtext: 'text-white/60' };
+        case 'solid_gray': return { bg: 'bg-zinc-700', border: 'border-transparent', text: 'text-white', subtext: 'text-zinc-300' };
+        case 'whatsapp': return { bg: 'bg-[#005c4b]', border: 'border-transparent', text: 'text-white', subtext: 'text-[#85a8a1]' };
+        case 'telegram': return { bg: 'bg-[#2b5278]', border: 'border-transparent', text: 'text-white', subtext: 'text-[#8aa8c7]' };
+        case 'blue_gradient': return { bg: 'bg-gradient-to-br from-blue-500 to-blue-600', border: 'border-transparent', text: 'text-white', subtext: 'text-blue-100/80' };
+        case 'purple': return { bg: 'bg-[#6d28d9]', border: 'border-transparent', text: 'text-white', subtext: 'text-[#ddd6fe]' };
+        default: return { bg: 'bg-white', border: 'border-transparent', text: 'text-black', subtext: 'text-zinc-500' };
     }
 };
 
@@ -123,8 +69,7 @@ const normalizeDate = (d: any): number => {
         if (typeof d === 'number') return d;
         if (typeof d.toMillis === 'function') return d.toMillis();
         if (d.seconds) return d.seconds * 1000;
-        const parsed = new Date(d).getTime();
-        return isNaN(parsed) ? 0 : parsed;
+        return new Date(d).getTime() || 0;
     } catch { return 0; }
 };
 
@@ -134,9 +79,7 @@ const isSameDay = (d1: any, d2: any) => {
     if (!t1 || !t2) return false;
     const date1 = new Date(t1);
     const date2 = new Date(t2);
-    return date1.getDate() === date2.getDate() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getFullYear() === date2.getFullYear();
+    return date1.getDate() === date2.getDate() && date1.getMonth() === date2.getMonth() && date1.getFullYear() === date2.getFullYear();
 };
 
 const getDateLabel = (d: any) => {
@@ -146,7 +89,6 @@ const getDateLabel = (d: any) => {
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-
     if (isSameDay(timestamp, today.getTime())) return 'Today';
     if (isSameDay(timestamp, yesterday.getTime())) return 'Yesterday';
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -184,30 +126,15 @@ const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any
     const safeDate = getDateLabel(normalizeDate(chat.timestamp));
 
     return (
-        <div 
-            onClick={isEditing ? onSelect : onClick} 
-            style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'backwards' }}
-            className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent animate-in slide-in-from-right-8 fade-in duration-500 ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}
-        >
-            {isEditing && (
-                <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200">
-                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${active ? 'bg-[#da7756] border-[#da7756] scale-110' : 'border-zinc-700 bg-black/40'}`}>
-                        {active && <Check size={14} className="text-white" strokeWidth={4} />}
-                    </div>
-                </div>
-            )}
+        <div onClick={isEditing ? onSelect : onClick} style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'backwards' }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent animate-in slide-in-from-right-8 fade-in duration-500 ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}>
+            {isEditing && ( <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200"> <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${active ? 'bg-[#da7756] border-[#da7756] scale-110' : 'border-zinc-700 bg-black/40'}`}> {active && <Check size={14} className="text-white" strokeWidth={4} />} </div> </div> )}
             <div className="w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-lg shadow-black/30 overflow-hidden relative">
                 {photoURL ? (<img src={photoURL} className="w-full h-full object-cover" alt="avatar" onError={(e) => { e.currentTarget.style.display = 'none'; }} />) : null}
                 <span className={`absolute ${photoURL ? '-z-10' : ''}`}>{initial}</span>
             </div>
             <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                <div className="flex justify-between items-baseline">
-                    <span className="font-bold text-white text-base tracking-tight truncate">{displayName}</span>
-                    <span className="text-[10px] text-zinc-500 font-mono">{safeDate}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span className="text-zinc-400 text-sm truncate opacity-70">{chat.lastMessage}</span>
-                </div>
+                <div className="flex justify-between items-baseline"> <span className="font-bold text-white text-base tracking-tight truncate">{displayName}</span> <span className="text-[10px] text-zinc-500 font-mono">{safeDate}</span> </div>
+                <div className="flex justify-between items-center"> <span className="text-zinc-400 text-sm truncate opacity-70">{chat.lastMessage}</span> </div>
             </div>
         </div>
     );
@@ -217,14 +144,7 @@ function App() {
   const { user, loading: authLoading } = useFirebaseSync();
   usePresence(user?.uid);
   
-  // Cleanup mic on page close
-  useEffect(() => {
-    return () => {
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-        }
-    };
-  }, []);
+  useEffect(() => { return () => { if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); } }; }, []);
 
   const myProfile = useUser(user?.uid);
   
@@ -289,7 +209,7 @@ function App() {
   const tapTimeoutRef = useRef<any>(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
 
-  // --- MESSAGES HOOK WITH DELETE/UPDATE ---
+  // --- MESSAGES HOOK ---
   const { messages: activeMessages, sendMessage, deleteMessage, updateMessage, markChatAsRead } = useMessages(
     (activeChatId && activeChatId !== 'saved_messages') ? activeChatId : null
   );
@@ -321,6 +241,47 @@ function App() {
           if (myProfile.photoURL) setProfilePic(myProfile.photoURL);
       }
   }, [myProfile]);
+
+  // --- DICE GAME LOGIC ---
+  const handleRollDice = async () => {
+    if (!user || !activeChatId) return;
+    const diceMsg = `🎲 STREET_DICE_GAME`;
+    try { 
+        await sendMessage(diceMsg, null, null, user.uid); 
+        scrollToBottom(); 
+        if (navigator.vibrate) navigator.vibrate(50); 
+    } catch (e) { 
+        console.error(e); 
+    }
+  };
+
+  const handleMainAction = async () => {
+    if (!transcript.trim() && !imageUrl) return;
+    if (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages') return; 
+
+    try {
+        if (activeChatId === 'saved_messages' || activeChatId === null) {
+            if (editingNote) {
+                const updates: Partial<Note> = { text: transcript.trim(), editedAt: Date.now() }; 
+                if (imageUrl !== editingNote.imageUrl) updates.imageUrl = imageUrl || undefined;
+                await updateNote(editingNote.id, updates);
+                setEditingNote(null);
+            } else {
+                const categoryToUse = activeFilter as CategoryId; 
+                await addNote({ text: transcript.trim(), date: Date.now(), category: categoryToUse, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
+                scrollToBottom(); 
+            }
+        } else {
+            if (editingNote && editingNote.id) {
+                await updateMessage(editingNote.id, transcript.trim());
+                setEditingNote(null);
+            } else if (user) {
+                await sendMessage(transcript.trim(), imageUrl, null, user.uid);
+            }
+        }
+        setTranscript(''); setImageUrl(''); scrollToBottom();
+    } catch (e) { console.error(e); }
+  };
 
   useEffect(() => {
     if (user) {
@@ -400,212 +361,6 @@ function App() {
   };
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = items[i].getAsFile(); if (file) await handleImageUpload(file); break; } }
-  };
-
-  // --- RECORDING LOGIC (Tap to start / Pause support) ---
-  const startRecording = async () => {
-    if (isRecording) return; // Prevent double start
-
-    try {
-      // reuse existing mic if available
-      let stream = streamRef.current;
-      if (!stream || !stream.active) {
-           stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-           streamRef.current = stream;
-      }
-      
-      let mimeType = '';
-        if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
-        else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
-        else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
-        
-        const options = mimeType ? { mimeType } : undefined;
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mimeTypeRef.current = mediaRecorder.mimeType || mimeType;
-
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-        
-        mediaRecorder.ondataavailable = (event) => { 
-            if (event.data.size > 0) audioChunksRef.current.push(event.data); 
-        };
-
-        // Note: onstop logic is handled in finishRecording and cancelRecording
-        
-        mediaRecorder.start();
-        setIsRecording(true);
-        setIsPaused(false);
-        
-        // Timer
-        setRecordingDuration(0);
-        recordingTimerRef.current = setInterval(() => {
-           setRecordingDuration(prev => prev + 1);
-        }, 1000);
-
-    } catch (e) { 
-        console.error("Mic error", e); 
-        alert("Microphone access denied. Please check your browser permissions."); 
-    }
-  };
-
-  const togglePause = () => {
-    if (!mediaRecorderRef.current) return;
-    
-    if (isPaused) {
-        // RESUME
-        mediaRecorderRef.current.resume();
-        setIsPaused(false);
-        recordingTimerRef.current = setInterval(() => {
-           setRecordingDuration(prev => prev + 1);
-        }, 1000);
-    } else {
-        // PAUSE
-        mediaRecorderRef.current.pause();
-        setIsPaused(true);
-        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-    }
-  };
-
-  const finishRecording = () => {
-    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') return;
-
-    mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeTypeRef.current });
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = async () => {
-            const base64Audio = reader.result as string;
-            if (base64Audio.length > 500 && user && activeChatId) { 
-                await sendMessage("", null, base64Audio, user.uid); 
-                scrollToBottom('auto'); 
-            }
-        };
-        cleanupRecording();
-    };
-    
-    mediaRecorderRef.current.stop();
-  };
-
-  const cancelRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.onstop = null; // Prevent sending
-        mediaRecorderRef.current.stop();
-    }
-    cleanupRecording();
-  };
-
-  const cleanupRecording = () => {
-    setIsRecording(false);
-    setIsPaused(false);
-    setRecordingDuration(0);
-    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-    
-    // Stop mic to close the "orange dot"
-    if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-    }
-  };
-
-  const formatDuration = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
-  const handleDeleteMessage = async (id: string) => { await deleteMessage(id); };
-  const handleEditMessage = (msg: any) => { setEditingNote({ ...msg, category: 'default' }); setTranscript(msg.text); setTimeout(() => textareaRef.current?.focus(), 100); };
-
-  const handleSearchContacts = async (e: React.FormEvent) => {
-      e.preventDefault(); if (!contactSearchQuery.trim()) return; setIsSearchingContacts(true);
-      try { const results = await searchUsers(contactSearchQuery); setContactSearchResults(results.filter((u: any) => u.uid !== user?.uid)); } catch (err) { console.error(err); } finally { setIsSearchingContacts(false); }
-  };
-  const startNewChat = async (otherUid: string) => {
-      if (!otherUid) return;
-      try { const newChatId = await createChat(otherUid); if (newChatId) { setActiveChatId(newChatId); setCurrentView('room'); setContactSearchQuery(''); setContactSearchResults([]); } } catch (e) { console.error("Failed to create chat", e); }
-  };
-
-  useEffect(() => {
-    if (!showSecretAnim || currentView !== 'room') return;
-    const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-    const FONT_SIZE = 24; const FADE_SPEED = 0.1; const MASTER_SPEED = 50; const STUTTER_AMOUNT = 0.85; const RAIN_BUILDUP = 50; const COLOR_HEAD = '#FFF'; const COLOR_TRAIL = '#0D0'; const GLOW_COLOR = '#0F0'; const GLOW_INTENSITY = 10;     
-    const binary = '010101010101'; const nums = '0123456789'; const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; const alphabet = binary + nums + latin;
-    const columns = canvas.width / FONT_SIZE; const drops: number[] = [];
-    for(let x = 0; x < columns; x++) { drops[x] = Math.floor(Math.random() * -RAIN_BUILDUP); }
-    const draw = () => {
-        ctx.fillStyle = `rgba(0, 0, 0, ${FADE_SPEED})`; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.font = `bold ${FONT_SIZE}px monospace`;
-        for(let i = 0; i < drops.length; i++) {
-            if (Math.random() > STUTTER_AMOUNT) continue;
-            const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length)); const x = i * FONT_SIZE; const y = drops[i] * FONT_SIZE;
-            if (y > 0) { ctx.shadowBlur = 0; ctx.fillStyle = COLOR_TRAIL; ctx.fillText(text, x, y - FONT_SIZE); ctx.shadowColor = GLOW_COLOR; ctx.shadowBlur = GLOW_INTENSITY; ctx.fillStyle = COLOR_HEAD; ctx.fillText(text, x, y); }
-            if(y > canvas.height && Math.random() > 0.975) drops[i] = 0; drops[i]++;
-        }
-    };
-    const interval = setInterval(draw, MASTER_SPEED); const handleResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }; window.addEventListener('resize', handleResize);
-    return () => { clearInterval(interval); window.removeEventListener('resize', handleResize); };
-  }, [showSecretAnim, currentView]);
-
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
-  
-  useEffect(() => { try { const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any); const savedBg = localStorage.getItem('vibenotes_bg'); if (savedBg) setBgIndex(parseInt(savedBg)); const savedOpacity = localStorage.getItem('vibenotes_bg_opacity'); if (savedOpacity) setBgOpacity(parseFloat(savedOpacity)); const savedScale = localStorage.getItem('vibenotes_bg_scale'); if (savedScale) setBgScale(parseInt(savedScale)); } catch (e) {} }, []);
-
-  useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
-  useEffect(() => { localStorage.setItem('vibenotes_bg', bgIndex.toString()); }, [bgIndex]);
-  useEffect(() => { localStorage.setItem('vibenotes_bg_opacity', bgOpacity.toString()); }, [bgOpacity]);
-  useEffect(() => { localStorage.setItem('vibenotes_bg_scale', bgScale.toString()); }, [bgScale]);
-  useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
-
-  const cycleFilter = () => {
-      if (activeFilter === 'secret') { setActiveFilter('all'); return; }
-      const order: (CategoryId | 'all')[] = ['all', ...categories.map(c => c.id)];
-      const currentIndex = order.indexOf(activeFilter as any);
-      if (currentIndex === -1) { setActiveFilter('all'); return; }
-      const nextIndex = (currentIndex + 1) % order.length; setActiveFilter(order[nextIndex]);
-  };
-
-  const handleRollDice = async () => {
-    if (!user || !activeChatId) return;
-    const diceMsg = `🎲 STREET_DICE_GAME`;
-    try { 
-        await sendMessage(diceMsg, null, null, user.uid); 
-        scrollToBottom(); 
-        if (navigator.vibrate) navigator.vibrate(50); 
-    } catch (e) { 
-        console.error(e); 
-    }
-  };
-
-  const handleMainAction = async () => {
-    if (!transcript.trim() && !imageUrl) return;
-    if (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages') return; 
-
-    try {
-        if (activeChatId === 'saved_messages' || activeChatId === null) {
-            // NOTES
-            if (editingNote) {
-                const updates: Partial<Note> = { text: transcript.trim(), editedAt: Date.now() }; 
-                if (imageUrl !== editingNote.imageUrl) updates.imageUrl = imageUrl || undefined;
-                await updateNote(editingNote.id, updates);
-                setEditingNote(null);
-            } else {
-                const categoryToUse = activeFilter as CategoryId; 
-                await addNote({ text: transcript.trim(), date: Date.now(), category: categoryToUse, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
-                scrollToBottom(); 
-            }
-        } else {
-            // MESSAGES
-            if (editingNote && editingNote.id) {
-                // UPDATE EXISTING MESSAGE
-                await updateMessage(editingNote.id, transcript.trim());
-                setEditingNote(null);
-            } else if (user) {
-                // SEND NEW MESSAGE
-                await sendMessage(transcript.trim(), imageUrl, null, user.uid);
-            }
-        }
-        setTranscript(''); setImageUrl(''); scrollToBottom();
-    } catch (e) { console.error(e); }
   };
 
   const handleEditClick = (note: Note) => { 

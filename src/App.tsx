@@ -1,165 +1,52 @@
+// ============================================================================
+// SECTION 1: IMPORTS & CONFIGURATION
+// ============================================================================
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Search, X, Settings as SettingsIcon, ArrowUp, LayoutGrid, Image as ImageIcon, 
-  Check, Terminal, Plus, PenLine, AlignLeft, AlignCenter, AlignRight, Scan, 
-  ChevronLeft, MessageSquareDashed, Bookmark, Edit, Moon, Book,
-  Archive, Trash2, CheckCheck, Circle, Globe, Zap, Cpu, SlidersHorizontal,
-  User, AtSign, Activity, Camera, Save, Grid, UserPlus, MessageCircle, MoreVertical, Phone, PaintBucket,
-  Sun, Sunset, QrCode, Mic, Pause, Play, Dices
+  Search, X, ArrowUp, LayoutGrid, Image as ImageIcon, Check, Terminal, 
+  PenLine, AlignLeft, AlignCenter, AlignRight, ChevronLeft, MessageSquareDashed, 
+  Moon, Trash2, Globe, Zap, Cpu, SlidersHorizontal, AtSign, Activity, 
+  Camera, Grid, UserPlus, MessageCircle, Phone, PaintBucket, QrCode, Mic, 
+  Pause, Play, Dices
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
 import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers, useUser, usePresence } from './useFirebaseSync';
 import Auth from './components/Auth';
 
-const TRANSLATIONS = { 
-  search: "Search...", 
-  all: "All", 
-  typePlaceholder: "Message...", 
-  cat_hacker: "Hacker Mode"
-};
+// IMPORTED HELPERS (See src/utils.ts)
+import { 
+  TRANSLATIONS, CLAUDE_ORANGE, HACKER_GREEN, HACKER_CONFIG,
+  getBubbleColors, normalizeDate, isSameDay, getDateLabel, compressImage
+} from './utils';
+import { ChatListItem } from './components/ChatListItem';
 
-const CLAUDE_ORANGE = '#da7756'; 
-const HACKER_GREEN = '#4ade80';
+// ============================================================================
+// END SECTION 1
+// ============================================================================
 
-const HACKER_CONFIG: CategoryConfig = {
-    id: 'secret', 
-    label: 'Anon', 
-    emoji: '💻',
-    colorClass: 'bg-green-500' 
-};
-
-// --- HELPER FOR BUBBLE STYLES ---
-const getBubbleColors = (style: string, isMe: boolean, isHacker: boolean) => {
-    if (isHacker) {
-        return { 
-            bg: 'bg-black', 
-            border: 'border border-green-500/30 hover:border-green-500 transition-colors', 
-            text: 'text-green-500', 
-            subtext: 'text-green-500/60' 
-        };
-    }
-
-    if (!isMe) {
-        return { 
-            bg: 'bg-zinc-800', 
-            border: 'border-transparent', 
-            text: 'text-zinc-100', 
-            subtext: 'text-zinc-400 opacity-60' 
-        };
-    }
-
-    switch(style) {
-        case 'minimal_solid': return { bg: 'bg-white', border: 'border-transparent', text: 'text-black', subtext: 'text-zinc-500' };
-        case 'minimal_glass': return { bg: 'bg-white/20 backdrop-blur-md', border: 'border-white/50', text: 'text-white', subtext: 'text-white/70' };
-        case 'clear': return { bg: 'bg-white/5 backdrop-blur-sm', border: 'border border-white/20', text: 'text-white', subtext: 'text-white/60' };
-        case 'solid_gray': return { bg: 'bg-zinc-700', border: 'border-transparent', text: 'text-white', subtext: 'text-zinc-300' };
-        case 'whatsapp': return { bg: 'bg-[#005c4b]', border: 'border-transparent', text: 'text-white', subtext: 'text-[#85a8a1]' };
-        case 'telegram': return { bg: 'bg-[#2b5278]', border: 'border-transparent', text: 'text-white', subtext: 'text-[#8aa8c7]' };
-        case 'blue_gradient': return { bg: 'bg-gradient-to-br from-blue-500 to-blue-600', border: 'border-transparent', text: 'text-white', subtext: 'text-blue-100/80' };
-        case 'purple': return { bg: 'bg-[#6d28d9]', border: 'border-transparent', text: 'text-white', subtext: 'text-[#ddd6fe]' };
-        default: return { bg: 'bg-white', border: 'border-transparent', text: 'text-black', subtext: 'text-zinc-500' };
-    }
-};
-
-// --- DATE UTILS ---
-const normalizeDate = (d: any): number => {
-    try {
-        if (!d) return 0;
-        if (typeof d === 'number') return d;
-        if (typeof d.toMillis === 'function') return d.toMillis();
-        if (d.seconds) return d.seconds * 1000;
-        const parsed = new Date(d).getTime();
-        return isNaN(parsed) ? 0 : parsed;
-    } catch { return 0; }
-};
-
-const isSameDay = (d1: any, d2: any) => {
-    const t1 = normalizeDate(d1);
-    const t2 = normalizeDate(d2);
-    if (!t1 || !t2) return false;
-    const date1 = new Date(t1);
-    const date2 = new Date(t2);
-    return date1.getDate() === date2.getDate() && date1.getMonth() === date2.getMonth() && date1.getFullYear() === date2.getFullYear();
-};
-
-const getDateLabel = (d: any) => {
-    const timestamp = normalizeDate(d);
-    if (!timestamp) return '';
-    const date = new Date(timestamp);
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (isSameDay(timestamp, today.getTime())) return 'Today';
-    if (isSameDay(timestamp, yesterday.getTime())) return 'Yesterday';
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-};
-
-const compressImage = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width, height = img.height;
-        const MAX_SIZE = 600;
-        if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } } 
-        else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
-        canvas.width = width; canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.6));
-      };
-      img.onerror = reject;
-    };
-    reader.onerror = reject;
-  });
-};
-
-const ChatListItem = ({ chat, active, isEditing, onSelect, onClick, index }: any) => {
-    const otherUser = useUser(chat.otherUserId);
-    const displayName = otherUser?.displayName || 'Unknown';
-    const photoURL = otherUser?.photoURL;
-    const initial = displayName ? displayName[0].toUpperCase() : '?';
-    const safeDate = getDateLabel(normalizeDate(chat.timestamp));
-
-    return (
-        <div onClick={isEditing ? onSelect : onClick} style={{ animationDelay: `${index * 0.05}s`, animationFillMode: 'backwards' }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer border border-transparent animate-in slide-in-from-right-8 fade-in duration-500 ${active ? 'bg-white/10 border-white/5' : 'hover:bg-white/5'}`}>
-            {isEditing && ( <div className="flex items-center justify-center animate-in slide-in-from-left-2 fade-in duration-200"> <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${active ? 'bg-[#da7756] border-[#da7756] scale-110' : 'border-zinc-700 bg-black/40'}`}> {active && <Check size={14} className="text-white" strokeWidth={4} />} </div> </div> )}
-            <div className="w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-lg shadow-black/30 overflow-hidden relative">
-                {photoURL ? (<img src={photoURL} className="w-full h-full object-cover" alt="avatar" onError={(e) => { e.currentTarget.style.display = 'none'; }} />) : null}
-                <span className={`absolute ${photoURL ? '-z-10' : ''}`}>{initial}</span>
-            </div>
-            <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                <div className="flex justify-between items-baseline"> <span className="font-bold text-white text-base tracking-tight truncate">{displayName}</span> <span className="text-[10px] text-zinc-500 font-mono">{safeDate}</span> </div>
-                <div className="flex justify-between items-center"> <span className="text-zinc-400 text-sm truncate opacity-70">{chat.lastMessage}</span> </div>
-            </div>
-        </div>
-    );
-};
 
 function App() {
+  // ============================================================================
+  // SECTION 2: STATE & HOOKS
+  // ============================================================================
   const { user, loading: authLoading } = useFirebaseSync();
   usePresence(user?.uid);
   
   useEffect(() => { return () => { if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); } }; }, []);
 
   const myProfile = useUser(user?.uid);
-  
   const { notes = [], addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
   const { chats: realChats, createChat } = useChats(user?.uid || null);
   
+  // View State
   const [currentView, setCurrentView] = useState<'list' | 'room'>('list');
   const [activeTab, setActiveTab] = useState<'contacts' | 'calls' | 'chats' | 'settings'>('chats');
   const [activeChatId, setActiveChatId] = useState<string | null>(null); 
   const [isEditing, setIsEditing] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
-  const [contactSearchQuery, setContactSearchQuery] = useState('');
-  const [contactSearchResults, setContactSearchResults] = useState<any[]>([]);
-  const [isSearchingContacts, setIsSearchingContacts] = useState(false);
+  
+  // Profile & Settings State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [profileName, setProfileName] = useState("Vibe User");
@@ -171,19 +58,24 @@ function App() {
   const [bgIndex, setBgIndex] = useState<number>(1);
   const [bgOpacity, setBgOpacity] = useState<number>(0.45);
   const [bgScale, setBgScale] = useState<number>(100);
+  const [bubbleStyle, setBubbleStyle] = useState<string>('minimal_solid');
+  const [redModeIntensity, setRedModeIntensity] = useState<number>(0);
+  const [isAutoRedMode, setIsAutoRedMode] = useState<boolean>(false);
+
+  // Interaction State
+  const [contactSearchQuery, setContactSearchQuery] = useState('');
+  const [contactSearchResults, setContactSearchResults] = useState<any[]>([]);
+  const [isSearchingContacts, setIsSearchingContacts] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [bubbleStyle, setBubbleStyle] = useState<string>('minimal_solid');
-  const [redModeIntensity, setRedModeIntensity] = useState<number>(0);
-  const [isAutoRedMode, setIsAutoRedMode] = useState<boolean>(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [showQRCode, setShowQRCode] = useState(false);
 
-  // --- RECORDING STATE ---
+  // Audio State
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -193,9 +85,9 @@ function App() {
   const streamRef = useRef<MediaStream | null>(null);
   const recordingTimerRef = useRef<any>(null);
 
+  // Refs
   const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
   const otherChatUser = useUser(currentChatObject?.otherUserId);
-  
   const searchInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null); 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -205,22 +97,15 @@ function App() {
 
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all' | 'secret'>('all');
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
-  const [isStartup, setIsStartup] = useState(true);
   const [secretTaps, setSecretTaps] = useState(0);
   const tapTimeoutRef = useRef<any>(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
 
-  // --- MESSAGES HOOK ---
+  // Derived State
   const { messages: activeMessages, sendMessage, deleteMessage, updateMessage, markChatAsRead } = useMessages(
     (activeChatId && activeChatId !== 'saved_messages') ? activeChatId : null
   );
-
-  useEffect(() => {
-    if (activeChatId && activeChatId !== 'saved_messages' && user && activeMessages.length > 0) {
-        markChatAsRead(user.uid);
-    }
-  }, [activeChatId, activeMessages.length, user]);
-
+  
   const activeSecretConfig = HACKER_CONFIG;
   const isHackerMode = activeFilter === 'secret' || editingNote?.category === 'secret';
   const accentColor = isHackerMode ? HACKER_GREEN : CLAUDE_ORANGE;
@@ -232,8 +117,19 @@ function App() {
   };
 
   const currentConfig = activeFilter === 'all' ? null : (activeFilter === 'secret' ? HACKER_CONFIG : categories.find(c => c.id === activeFilter));
+  // ============================================================================
+  // END SECTION 2
+  // ============================================================================
 
-  useEffect(() => { const timer = setTimeout(() => { setIsStartup(false); }, 4500); return () => clearTimeout(timer); }, []);
+
+  // ============================================================================
+  // SECTION 3: EFFECTS (Data Sync, Animation, Persistence)
+  // ============================================================================
+  useEffect(() => {
+    if (activeChatId && activeChatId !== 'saved_messages' && user && activeMessages.length > 0) {
+        markChatAsRead(user.uid);
+    }
+  }, [activeChatId, activeMessages.length, user]);
 
   useEffect(() => {
       if (myProfile) {
@@ -243,17 +139,54 @@ function App() {
       }
   }, [myProfile]);
 
-  // --- DICE GAME LOGIC ---
+  // Matrix Animation
+  useEffect(() => {
+    if (!showSecretAnim || currentView !== 'room') return;
+    const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const FONT_SIZE = 24; const FADE_SPEED = 0.1; const MASTER_SPEED = 50; const STUTTER_AMOUNT = 0.85; const RAIN_BUILDUP = 50; const COLOR_HEAD = '#FFF'; const COLOR_TRAIL = '#0D0'; const GLOW_COLOR = '#0F0'; const GLOW_INTENSITY = 10;     
+    const binary = '010101010101'; const nums = '0123456789'; const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; const alphabet = binary + nums + latin;
+    const columns = canvas.width / FONT_SIZE; const drops: number[] = [];
+    for(let x = 0; x < columns; x++) { drops[x] = Math.floor(Math.random() * -RAIN_BUILDUP); }
+    const draw = () => {
+        ctx.fillStyle = `rgba(0, 0, 0, ${FADE_SPEED})`; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.font = `bold ${FONT_SIZE}px monospace`;
+        for(let i = 0; i < drops.length; i++) {
+            if (Math.random() > STUTTER_AMOUNT) continue;
+            const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length)); const x = i * FONT_SIZE; const y = drops[i] * FONT_SIZE;
+            if (y > 0) { ctx.shadowBlur = 0; ctx.fillStyle = COLOR_TRAIL; ctx.fillText(text, x, y - FONT_SIZE); ctx.shadowColor = GLOW_COLOR; ctx.shadowBlur = GLOW_INTENSITY; ctx.fillStyle = COLOR_HEAD; ctx.fillText(text, x, y); }
+            if(y > canvas.height && Math.random() > 0.975) drops[i] = 0; drops[i]++;
+        }
+    };
+    const interval = setInterval(draw, MASTER_SPEED); const handleResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }; window.addEventListener('resize', handleResize);
+    return () => { clearInterval(interval); window.removeEventListener('resize', handleResize); };
+  }, [showSecretAnim, currentView]);
+
+  // Scroll to bottom trigger
+  useEffect(() => {
+    if (currentView === 'room') { scrollToBottom(); }
+  }, [activeMessages, notes, currentView]);
+  
+  // LocalStorage Persistence
+  useEffect(() => { try { const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any); const savedBg = localStorage.getItem('vibenotes_bg'); if (savedBg) setBgIndex(parseInt(savedBg)); const savedOpacity = localStorage.getItem('vibenotes_bg_opacity'); if (savedOpacity) setBgOpacity(parseFloat(savedOpacity)); const savedScale = localStorage.getItem('vibenotes_bg_scale'); if (savedScale) setBgScale(parseInt(savedScale)); } catch (e) {} }, []);
+  useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
+  useEffect(() => { localStorage.setItem('vibenotes_bg', bgIndex.toString()); }, [bgIndex]);
+  useEffect(() => { localStorage.setItem('vibenotes_bg_opacity', bgOpacity.toString()); }, [bgOpacity]);
+  useEffect(() => { localStorage.setItem('vibenotes_bg_scale', bgScale.toString()); }, [bgScale]);
+  useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
+  // ============================================================================
+  // END SECTION 3
+  // ============================================================================
+
+
+  // ============================================================================
+  // SECTION 4: HANDLERS & LOGIC
+  // ============================================================================
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
+  
   const handleRollDice = async () => {
     if (!user || !activeChatId) return;
     const diceMsg = `🎲 STREET_DICE_GAME|||{"p1Score":0,"p2Score":0,"turn":"p1","dice":[4,5,6],"message":"FIRST TO 5","msgColor":"text-zinc-500"}`;
-    try { 
-        await sendMessage(diceMsg, null, null, user.uid); 
-        scrollToBottom(); 
-        if (navigator.vibrate) navigator.vibrate(50); 
-    } catch (e) { 
-        console.error(e); 
-    }
+    try { await sendMessage(diceMsg, null, null, user.uid); scrollToBottom(); if (navigator.vibrate) navigator.vibrate(50); } catch (e) { console.error(e); }
   };
 
   const handleMainAction = async () => {
@@ -262,7 +195,6 @@ function App() {
 
     try {
         if (activeChatId === 'saved_messages' || activeChatId === null) {
-            // NOTES
             if (editingNote) {
                 const updates: Partial<Note> = { text: transcript.trim(), editedAt: Date.now() }; 
                 if (imageUrl !== editingNote.imageUrl) updates.imageUrl = imageUrl || undefined;
@@ -274,13 +206,8 @@ function App() {
                 scrollToBottom(); 
             }
         } else {
-            // MESSAGES
-            if (editingNote && editingNote.id) {
-                await updateMessage(editingNote.id, transcript.trim());
-                setEditingNote(null);
-            } else if (user) {
-                await sendMessage(transcript.trim(), imageUrl, null, user.uid);
-            }
+            if (editingNote && editingNote.id) { await updateMessage(editingNote.id, transcript.trim()); setEditingNote(null); } 
+            else if (user) { await sendMessage(transcript.trim(), imageUrl, null, user.uid); }
         }
         setTranscript(''); setImageUrl(''); scrollToBottom();
     } catch (e) { console.error(e); }
@@ -303,10 +230,8 @@ function App() {
     if (secretTaps + 1 >= 5) { setActiveFilter('secret'); setSecretTaps(0); setShowSecretAnim(true); setTimeout(() => setShowSecretAnim(false), 8000); if (navigator.vibrate) navigator.vibrate([100, 50, 100]); }
   };
 
-  const toggleEditMode = () => { if (isEditing) setSelectedChatIds(new Set()); setIsEditing(!isEditing); };
   const toggleChatSelection = (id: string) => { const newSet = new Set(selectedChatIds); if (newSet.has(id)) newSet.delete(id); else newSet.add(id); setSelectedChatIds(newSet); };
-  const handleDeleteSelected = () => { setSelectedChatIds(new Set()); setIsEditing(false); };
-
+  
   const handleProfileSave = () => {
       setIsEditingProfile(false); setShowAvatarSelector(false);
       localStorage.setItem('vibenotes_profile_name', profileName); localStorage.setItem('vibenotes_profile_handle', profileHandle); localStorage.setItem('vibenotes_profile_bio', profileBio);
@@ -324,30 +249,22 @@ function App() {
     const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = items[i].getAsFile(); if (file) await handleImageUpload(file); break; } }
   };
 
-  // --- RECORDING LOGIC ---
+  // Recording Logic
   const startRecording = async () => {
     if (isRecording) return; 
     try {
       let stream = streamRef.current;
-      if (!stream || !stream.active) {
-           stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-           streamRef.current = stream;
-      }
+      if (!stream || !stream.active) { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); streamRef.current = stream; }
       let mimeType = '';
       if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
       else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
       else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
-        
       const options = mimeType ? { mimeType } : undefined;
       const mediaRecorder = new MediaRecorder(stream, options);
-      mimeTypeRef.current = mediaRecorder.mimeType || mimeType;
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
+      mimeTypeRef.current = mediaRecorder.mimeType || mimeType; mediaRecorderRef.current = mediaRecorder; audioChunksRef.current = [];
       mediaRecorder.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
       mediaRecorder.start();
-      setIsRecording(true);
-      setIsPaused(false);
-      setRecordingDuration(0);
+      setIsRecording(true); setIsPaused(false); setRecordingDuration(0);
       recordingTimerRef.current = setInterval(() => { setRecordingDuration(prev => prev + 1); }, 1000);
     } catch (e) { console.error("Mic error", e); alert("Microphone access denied."); }
   };
@@ -362,41 +279,16 @@ function App() {
     if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') return;
     mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeTypeRef.current });
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = async () => {
-            const base64Audio = reader.result as string;
-            if (base64Audio.length > 500 && user && activeChatId) { 
-                await sendMessage("", null, base64Audio, user.uid); 
-                scrollToBottom('auto'); 
-            }
-        };
+        const reader = new FileReader(); reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => { const base64Audio = reader.result as string; if (base64Audio.length > 500 && user && activeChatId) { await sendMessage("", null, base64Audio, user.uid); scrollToBottom('auto'); } };
         cleanupRecording();
     };
     mediaRecorderRef.current.stop();
   };
 
-  const cancelRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.onstop = null; 
-        mediaRecorderRef.current.stop();
-    }
-    cleanupRecording();
-  };
-
-  const cleanupRecording = () => {
-    setIsRecording(false);
-    setIsPaused(false);
-    setRecordingDuration(0);
-    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-    if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
-  };
-
-  const formatDuration = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
+  const cancelRecording = () => { if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') { mediaRecorderRef.current.onstop = null; mediaRecorderRef.current.stop(); } cleanupRecording(); };
+  const cleanupRecording = () => { setIsRecording(false); setIsPaused(false); setRecordingDuration(0); if (recordingTimerRef.current) clearInterval(recordingTimerRef.current); if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; } };
+  const formatDuration = (sec: number) => { const m = Math.floor(sec / 60); const s = sec % 60; return `${m}:${s.toString().padStart(2, '0')}`; };
 
   const handleDeleteMessage = async (id: string) => { await deleteMessage(id); };
   const handleEditMessage = (msg: any) => { setEditingNote({ ...msg, category: 'default' }); setTranscript(msg.text); setTimeout(() => textareaRef.current?.focus(), 100); };
@@ -410,44 +302,6 @@ function App() {
       try { const newChatId = await createChat(otherUid); if (newChatId) { setActiveChatId(newChatId); setCurrentView('room'); setContactSearchQuery(''); setContactSearchResults([]); } } catch (e) { console.error("Failed to create chat", e); }
   };
 
-  useEffect(() => {
-    if (!showSecretAnim || currentView !== 'room') return;
-    const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-    const FONT_SIZE = 24; const FADE_SPEED = 0.1; const MASTER_SPEED = 50; const STUTTER_AMOUNT = 0.85; const RAIN_BUILDUP = 50; const COLOR_HEAD = '#FFF'; const COLOR_TRAIL = '#0D0'; const GLOW_COLOR = '#0F0'; const GLOW_INTENSITY = 10;     
-    const binary = '010101010101'; const nums = '0123456789'; const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; const alphabet = binary + nums + latin;
-    const columns = canvas.width / FONT_SIZE; const drops: number[] = [];
-    for(let x = 0; x < columns; x++) { drops[x] = Math.floor(Math.random() * -RAIN_BUILDUP); }
-    const draw = () => {
-        ctx.fillStyle = `rgba(0, 0, 0, ${FADE_SPEED})`; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.font = `bold ${FONT_SIZE}px monospace`;
-        for(let i = 0; i < drops.length; i++) {
-            if (Math.random() > STUTTER_AMOUNT) continue;
-            const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length)); const x = i * FONT_SIZE; const y = drops[i] * FONT_SIZE;
-            if (y > 0) { ctx.shadowBlur = 0; ctx.fillStyle = COLOR_TRAIL; ctx.fillText(text, x, y - FONT_SIZE); ctx.shadowColor = GLOW_COLOR; ctx.shadowBlur = GLOW_INTENSITY; ctx.fillStyle = COLOR_HEAD; ctx.fillText(text, x, y); }
-            if(y > canvas.height && Math.random() > 0.975) drops[i] = 0; drops[i]++;
-        }
-    };
-    const interval = setInterval(draw, MASTER_SPEED); const handleResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }; window.addEventListener('resize', handleResize);
-    return () => { clearInterval(interval); window.removeEventListener('resize', handleResize); };
-  }, [showSecretAnim, currentView]);
-
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
-  
-  // --- ADDED THIS USEEFFECT ---
-  useEffect(() => {
-    if (currentView === 'room') {
-       scrollToBottom();
-    }
-  }, [activeMessages, notes, currentView]);
-  
-  useEffect(() => { try { const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any); const savedBg = localStorage.getItem('vibenotes_bg'); if (savedBg) setBgIndex(parseInt(savedBg)); const savedOpacity = localStorage.getItem('vibenotes_bg_opacity'); if (savedOpacity) setBgOpacity(parseFloat(savedOpacity)); const savedScale = localStorage.getItem('vibenotes_bg_scale'); if (savedScale) setBgScale(parseInt(savedScale)); } catch (e) {} }, []);
-
-  useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
-  useEffect(() => { localStorage.setItem('vibenotes_bg', bgIndex.toString()); }, [bgIndex]);
-  useEffect(() => { localStorage.setItem('vibenotes_bg_opacity', bgOpacity.toString()); }, [bgOpacity]);
-  useEffect(() => { localStorage.setItem('vibenotes_bg_scale', bgScale.toString()); }, [bgScale]);
-  useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
-
   const cycleFilter = () => {
       if (activeFilter === 'secret') { setActiveFilter('all'); return; }
       const order: (CategoryId | 'all')[] = ['all', ...categories.map(c => c.id)];
@@ -456,18 +310,13 @@ function App() {
       const nextIndex = (currentIndex + 1) % order.length; setActiveFilter(order[nextIndex]);
   };
 
-  const handleEditClick = (note: Note) => { 
-    setActiveFilter(note.category);
-    setEditingNote(note); setTranscript(note.text); setImageUrl(note.imageUrl || ''); 
-    setTimeout(() => { textareaRef.current?.focus(); textareaRef.current?.select(); }, 50);
-  };
+  const handleEditClick = (note: Note) => { setActiveFilter(note.category); setEditingNote(note); setTranscript(note.text); setImageUrl(note.imageUrl || ''); setTimeout(() => { textareaRef.current?.focus(); textareaRef.current?.select(); }, 50); };
   const handleDeleteNote = async (id: string) => { await deleteNoteFromFirebase(id); };
   const handleToggleExpand = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
   const togglePin = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
 
   const safeNotes = (notes || []).map(n => {
-      const date = normalizeDate(n.date);
-      const editedAt = n.editedAt ? normalizeDate(n.editedAt) : undefined;
+      const date = normalizeDate(n.date); const editedAt = n.editedAt ? normalizeDate(n.editedAt) : undefined;
       const fallbackCat = (DEFAULT_CATEGORIES && DEFAULT_CATEGORIES.length > 0) ? DEFAULT_CATEGORIES[0].id : 'default';
       const validCategory = categories.some(c => c.id === n.category) || n.category === 'secret' ? n.category : fallbackCat;
       const effectiveDate = editedAt && editedAt > date ? editedAt : date;
@@ -475,21 +324,23 @@ function App() {
   });
 
   const filteredNotes = safeNotes.filter(n => {
-      const matchesSearch = n.text.toLowerCase().includes(searchQuery.toLowerCase());
-      if (!matchesSearch) return false;
-      if (activeFilter === 'all') return n.category !== 'secret';
-      if (activeFilter === 'secret') return n.category === 'secret';
+      const matchesSearch = n.text.toLowerCase().includes(searchQuery.toLowerCase()); if (!matchesSearch) return false;
+      if (activeFilter === 'all') return n.category !== 'secret'; if (activeFilter === 'secret') return n.category === 'secret';
       return n.category === activeFilter;
-  }).sort((a, b) => { 
-      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1; 
-      return a.date - b.date; 
-  });
+  }).sort((a, b) => { if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1; return a.date - b.date; });
 
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
 
   if (authLoading) return <div className="min-h-screen bg-black" />;
   if (!user) return <Auth />;
+  // ============================================================================
+  // END SECTION 4
+  // ============================================================================
 
+
+  // ============================================================================
+  // SECTION 5: RENDER - BOTTOM NAVIGATION
+  // ============================================================================
   const BottomTabBar = () => (
       <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-2xl border border-white/5 rounded-full shadow-2xl shadow-black/50 p-1.5 flex gap-1 z-50">
          <button onClick={() => setActiveTab('contacts')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Globe size={22} className={`transition-all duration-300 ${activeTab === 'contacts' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'contacts' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
@@ -498,11 +349,16 @@ function App() {
          <button onClick={() => setActiveTab('settings')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Cpu size={22} className={`transition-all duration-300 ${activeTab === 'settings' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'settings' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
       </div>
   );
+  // ============================================================================
+  // END SECTION 5
+  // ============================================================================
 
   return (
     <div className={`fixed top-0 left-0 w-full h-[100dvh] bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       
-      {/* IMAGE ZOOM OVERLAY */}
+      {/* =========================================================================
+          SECTION 6: RENDER - OVERLAYS (Zoom, QR, BG)
+         ========================================================================= */}
       {zoomedImage && (
           <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-in fade-in duration-200" onClick={() => setZoomedImage(null)}>
               <img src={zoomedImage} className="max-w-full max-h-full object-contain p-4 transition-transform duration-300 scale-100" />
@@ -510,7 +366,6 @@ function App() {
           </div>
       )}
 
-      {/* QR CODE OVERLAY */}
       {showQRCode && (
           <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-200" onClick={() => setShowQRCode(false)}>
               <div className="bg-white rounded-3xl p-8 flex flex-col items-center gap-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
@@ -533,7 +388,14 @@ function App() {
       </div>
 
       <div className="fixed inset-0 z-0 pointer-events-none mix-blend-overlay transition-opacity duration-1000" style={{ backgroundColor: '#ff4500', opacity: redModeIntensity / 100 }} />
+      {/* =========================================================================
+          END SECTION 6
+         ========================================================================= */}
 
+
+      {/* =========================================================================
+          SECTION 7: RENDER - LIST VIEW (Chats, Contacts, Settings)
+         ========================================================================= */}
       {currentView === 'list' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in fade-in slide-in-from-left-5 duration-300">
            {activeTab === 'chats' && (
@@ -730,7 +592,14 @@ function App() {
            <BottomTabBar />
         </div>
       )}
+      {/* =========================================================================
+          END SECTION 7
+         ========================================================================= */}
 
+
+      {/* =========================================================================
+          SECTION 8: RENDER - ROOM VIEW (Chat)
+         ========================================================================= */}
       {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
             <div className="fixed top-0 left-0 right-0 z-40">
@@ -799,7 +668,6 @@ function App() {
 
                         return (
                             <React.Fragment key={note.id}>
-                                {/* UPDATED DATE HEADER: White text, no background pill */}
                                 {showHeader && (
                                   <div className="flex justify-center my-2 w-full select-none">
                                     <span className="text-white/90 text-[11px] font-bold uppercase tracking-widest drop-shadow-md shadow-black">
@@ -840,7 +708,6 @@ function App() {
 
                         return (
                             <React.Fragment key={msg.id}>
-                                {/* UPDATED DATE HEADER: White text, no background pill */}
                                 {showHeader && (
                                   <div className="flex justify-center my-4 w-full select-none">
                                     <span className="text-white/90 text-[11px] font-bold uppercase tracking-widest drop-shadow-md shadow-black">
@@ -876,6 +743,9 @@ function App() {
               </div>
            </div>
 
+           {/* =========================================================================
+               SECTION 9: RENDER - INPUT AREA (Bottom Bar)
+              ========================================================================= */}
            <div className="flex-none w-full p-2 pb-6 md:pb-3 bg-black/60 backdrop-blur-xl z-50 border-t border-zinc-800/50">
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  
@@ -952,9 +822,15 @@ function App() {
                  )}
              </div>
            </div>
+           {/* =========================================================================
+               END SECTION 9
+              ========================================================================= */}
 
         </div>
       )}
+      {/* =========================================================================
+          END SECTION 8
+         ========================================================================= */}
 
       <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
     </div>

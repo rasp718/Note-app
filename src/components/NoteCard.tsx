@@ -10,26 +10,27 @@ const triggerHaptic = (pattern: number | number[] = 15) => {
     } 
 };
 
-// --- STREET DICE COMPONENTS ---
+// --- GAME LOGIC ---
 type RollResult = 
   | { type: 'auto_win'; label: '4-5-6 HEAD CRACK'; value: 100 }
   | { type: 'auto_loss'; label: '1-2-3 TRASH'; value: -1 }
   | { type: 'triple'; label: 'TRIPLES'; value: number }
   | { type: 'point'; label: 'POINT'; value: number }
-  | { type: 'junk'; label: 'ROLL AGAIN'; value: 0 };
+  | { type: 'junk'; label: 'NOTHING'; value: 0 };
 
 const analyzeRoll = (dice: number[]): RollResult => {
     const sorted = [...dice].sort((a, b) => a - b);
     const s = sorted.join('');
     if (s === '456') return { type: 'auto_win', label: '4-5-6 HEAD CRACK', value: 100 };
-    if (s === '123') return { type: 'auto_loss', label: '1-2-3 TRASH', value: -1 };
+    if (s === '123') return { type: 'auto_loss', label: '1-2-3 AUTO LOSS', value: -1 };
     if (sorted[0] === sorted[1] && sorted[1] === sorted[2]) return { type: 'triple', label: `TRIPLE ${sorted[0]}s`, value: 20 + sorted[0] };
     if (sorted[0] === sorted[1]) return { type: 'point', label: `POINT IS ${sorted[2]}`, value: sorted[2] };
     if (sorted[1] === sorted[2]) return { type: 'point', label: `POINT IS ${sorted[0]}`, value: sorted[0] };
     if (sorted[0] === sorted[2]) return { type: 'point', label: `POINT IS ${sorted[1]}`, value: sorted[1] };
-    return { type: 'junk', label: 'NOTHING', value: 0 };
+    return { type: 'junk', label: 'TRASH. ROLL AGAIN.', value: 0 };
 };
 
+// --- VISUAL DIE COMPONENT ---
 const RedDie = ({ val, rolling, shakeOffset }: { val: number, rolling: boolean, shakeOffset: {x:number, y:number} }) => {
     const pips: any = {
         1: ['center'], 2: ['top-left', 'bottom-right'], 3: ['top-left', 'center', 'bottom-right'],
@@ -61,63 +62,73 @@ const RedDie = ({ val, rolling, shakeOffset }: { val: number, rolling: boolean, 
     );
 };
 
-const StreetDiceGame = () => {
-    const [p1Score, setP1Score] = useState(0);
-    const [p2Score, setP2Score] = useState(0);
-    const [turn, setTurn] = useState<'p1' | 'p2'>('p1');
-    const [p1Roll, setP1Roll] = useState<RollResult | null>(null);
-    const [dice, setDice] = useState([4, 5, 6]);
+// --- GAME COMPONENT ---
+interface GameState {
+    p1Score: number;
+    p2Score: number;
+    turn: 'p1' | 'p2';
+    p1Roll: { value: number, label: string } | null; // The point P1 set
+    dice: number[];
+    message: string;
+    msgColor: string;
+    p1Id?: string; // ID of who started game
+}
+
+const StreetDiceGame = ({ dataStr, onSave, isMe, myId }: { dataStr: string, onSave: (d: string) => void, isMe: boolean, myId: string }) => {
+    // PARSE STATE
+    let state: GameState = { 
+        p1Score: 0, p2Score: 0, turn: 'p1', p1Roll: null, 
+        dice: [4,5,6], message: 'RACE TO 5', msgColor: 'text-zinc-500', p1Id: myId 
+    };
+    
+    try {
+        const parsed = JSON.parse(dataStr);
+        state = { ...state, ...parsed };
+    } catch(e) {}
+
+    // Init P1 ID if fresh game
+    useEffect(() => {
+        if (!state.p1Id && isMe) {
+            onSave(JSON.stringify({ ...state, p1Id: myId }));
+        }
+    }, []);
+
+    // Local Animation State
     const [isRolling, setIsRolling] = useState(false);
     const [isShaking, setIsShaking] = useState(false);
-    const [message, setMessage] = useState("RACE TO 5");
-    const [msgColor, setMsgColor] = useState("text-zinc-500");
     const [shakeOffset, setShakeOffset] = useState({x:0, y:0});
-    
-    // Refs for holding logic
     const shakeInterval = useRef<any>(null);
     const longPressTimeout = useRef<any>(null);
 
-    // Shake Logic
+    // DETERMINE IF IT IS MY TURN
+    // P1 is the creator (p1Id). P2 is anyone else.
+    const isMyTurn = (state.turn === 'p1' && myId === state.p1Id) || (state.turn === 'p2' && myId !== state.p1Id);
+
     const startShake = () => {
-        if(isRolling || p1Score >=5 || p2Score >=5) return;
+        if(isRolling || !isMyTurn) return;
         setIsShaking(true);
-        setMessage("HOLD IT...");
-        setMsgColor("text-zinc-400");
-        
-        // Haptics Loop & Visual Jitter
         shakeInterval.current = setInterval(() => {
             triggerHaptic(10);
             setShakeOffset({ x: (Math.random()-0.5)*10, y: (Math.random()-0.5)*10 });
         }, 50);
-
-        // Force Roll after 3 seconds (No infinite holding)
-        longPressTimeout.current = setTimeout(() => {
-            releaseShake();
-        }, 3000);
+        longPressTimeout.current = setTimeout(() => releaseShake(), 2500);
     };
 
     const releaseShake = () => {
         if(!isShaking) return;
-        
-        // Cleanup Shake
         clearInterval(shakeInterval.current);
         clearTimeout(longPressTimeout.current);
         setShakeOffset({x:0, y:0});
         setIsShaking(false);
-        
-        // Trigger Roll
         executeRoll();
     };
 
     const executeRoll = () => {
         setIsRolling(true);
-        setMessage("ROLLING...");
-        
-        // Animation Loop
+        // Animate locally for a bit
         let rolls = 0;
         const rollInt = setInterval(() => {
-            setDice([Math.ceil(Math.random()*6), Math.ceil(Math.random()*6), Math.ceil(Math.random()*6)]);
-            rolls++;
+            rolls++; // Just visual noise
             if(rolls > 8) {
                 clearInterval(rollInt);
                 finalizeRoll();
@@ -127,74 +138,104 @@ const StreetDiceGame = () => {
 
     const finalizeRoll = () => {
         setIsRolling(false);
-        const finalDice = [Math.ceil(Math.random()*6), Math.ceil(Math.random()*6), Math.ceil(Math.random()*6)];
-        setDice(finalDice);
-        triggerHaptic(50); // Impact haptic
+        triggerHaptic(50);
         
+        // CALCULATE RESULT
+        const finalDice = [Math.ceil(Math.random()*6), Math.ceil(Math.random()*6), Math.ceil(Math.random()*6)];
         const result = analyzeRoll(finalDice);
-        processTurn(result);
-    };
+        
+        // CLONE STATE TO MODIFY
+        const next = { ...state, dice: finalDice };
 
-    const processTurn = (result: RollResult) => {
+        // 1. TRASH RULE: If Junk, Keep Turn, Update Message
         if (result.type === 'junk') {
-            setMessage("TRASH. ROLL AGAIN.");
-            setMsgColor("text-zinc-500");
+            next.message = "TRASH. ROLL AGAIN.";
+            next.msgColor = "text-zinc-500";
+            // Turn does NOT flip
+            onSave(JSON.stringify(next));
             return;
         }
 
-        if (turn === 'p1') {
-            if (result.type === 'auto_win') roundWin('p1', result.label);
-            else if (result.type === 'auto_loss') roundWin('p2', "P1 ROLLED 1-2-3");
-            else {
-                setP1Roll(result);
-                setTurn('p2');
-                setMessage(`${result.label}. P2 TO BEAT.`);
-                setMsgColor("text-white");
+        // 2. VALID ROLL LOGIC
+        if (next.turn === 'p1') {
+            // Player 1 Logic
+            if (result.type === 'auto_win') {
+                next.message = "P1 AUTO WIN!";
+                next.msgColor = "text-green-400";
+                next.p1Score += 1;
+                next.p1Roll = null;
+                // P1 Keeps Dice on win? Let's stick to P1 keeps rolling until they lose
+                // But for simplicity, let's reset to P1 turn for next round
+                next.turn = 'p1'; 
+            } else if (result.type === 'auto_loss') {
+                next.message = "P1 ROLLED 1-2-3 (LOSS)";
+                next.msgColor = "text-red-400";
+                next.p2Score += 1;
+                next.p1Roll = null;
+                next.turn = 'p1'; // Reset round
+            } else {
+                // Point Set
+                next.p1Roll = { value: result.value, label: result.label };
+                next.turn = 'p2';
+                next.message = `${result.label}. OPP TO BEAT.`;
+                next.msgColor = "text-white";
             }
         } else {
-            if (!p1Roll) return;
-            if (result.type === 'auto_win') { roundWin('p2', result.label); return; }
-            if (result.type === 'auto_loss') { roundWin('p1', "P2 ROLLED 1-2-3"); return; }
+            // Player 2 Logic (Chasing P1)
+            if (!next.p1Roll) return; // Should allow P2 to roll if no point? No, P1 must set point.
 
-            if (result.value > p1Roll.value) roundWin('p2', `${result.label} BEATS ${p1Roll.label}`);
-            else if (result.value < p1Roll.value) roundWin('p1', `${p1Roll.label} HELD UP`);
-            else {
-                setMessage("WASH! RE-ROLL ROUND.");
-                setMsgColor("text-yellow-500");
-                setP1Roll(null);
-                setTurn('p1');
+            if (result.type === 'auto_win') {
+                next.message = "P2 AUTO WIN!";
+                next.msgColor = "text-red-400";
+                next.p2Score += 1;
+                next.p1Roll = null;
+                next.turn = 'p1';
+            } else if (result.type === 'auto_loss') {
+                next.message = "P2 ROLLED 1-2-3 (LOSS)";
+                next.msgColor = "text-green-400";
+                next.p1Score += 1;
+                next.p1Roll = null;
+                next.turn = 'p1';
+            } else {
+                // Compare Points
+                if (result.value > next.p1Roll.value) {
+                    next.message = `P2 WINS! (${result.label})`;
+                    next.msgColor = "text-red-400";
+                    next.p2Score += 1;
+                } else if (result.value < next.p1Roll.value) {
+                    next.message = `P1 WINS! (${next.p1Roll.label} HELD)`;
+                    next.msgColor = "text-green-400";
+                    next.p1Score += 1;
+                } else {
+                    next.message = "WASH! RE-ROLL ROUND.";
+                    next.msgColor = "text-yellow-500";
+                }
+                // End of Round
+                next.p1Roll = null;
+                next.turn = 'p1';
             }
         }
+
+        // SAVE TO FIREBASE
+        onSave(JSON.stringify(next));
     };
 
-    const roundWin = (winner: 'p1' | 'p2', reason: string) => {
-        setMessage(reason);
-        setMsgColor(winner === 'p1' ? 'text-green-400' : 'text-red-400');
-        triggerHaptic([50, 50, 100]);
-        setTimeout(() => {
-            if (winner === 'p1') setP1Score(s => s + 1);
-            else setP2Score(s => s + 1);
-            setP1Roll(null);
-            setTurn('p1');
-        }, 1500);
-    };
-
-    const gameOver = p1Score >= 5 || p2Score >= 5;
+    const gameOver = state.p1Score >= 5 || state.p2Score >= 5;
 
     return (
         <div className="w-full bg-zinc-900 rounded-xl overflow-hidden border border-zinc-700 relative shadow-2xl select-none min-w-[260px]">
             {/* Header */}
             <div className="flex justify-between items-center p-3 bg-black/30 border-b border-zinc-800">
-                <div className="flex flex-col gap-1"><span className="text-[10px] font-bold text-zinc-500 tracking-widest">YOU</span><div className="flex gap-1">{[...Array(5)].map((_, i) => (<div key={i} className={`w-1.5 h-4 rounded-sm transition-all ${i < p1Score ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-zinc-800'}`}/>))}</div></div>
-                <div className="text-center"><span className="text-[9px] text-zinc-600 font-mono tracking-widest">STREAK</span><div className="flex items-center justify-center gap-1 text-orange-500 font-bold text-xs"><Trophy size={10} /> <span>3</span></div></div>
-                <div className="flex flex-col gap-1 items-end"><span className="text-[10px] font-bold text-zinc-500 tracking-widest">OPP</span><div className="flex gap-1">{[...Array(5)].map((_, i) => (<div key={i} className={`w-1.5 h-4 rounded-sm transition-all ${i < p2Score ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-zinc-800'}`}/>))}</div></div>
+                <div className="flex flex-col gap-1"><span className="text-[10px] font-bold text-zinc-500 tracking-widest">P1</span><div className="flex gap-1">{[...Array(5)].map((_, i) => (<div key={i} className={`w-1.5 h-4 rounded-sm transition-all ${i < state.p1Score ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-zinc-800'}`}/>))}</div></div>
+                <div className="text-center"><span className="text-[9px] text-zinc-600 font-mono tracking-widest">STREAK</span><div className="flex items-center justify-center gap-1 text-orange-500 font-bold text-xs"><Trophy size={10} /> <span>{Math.max(state.p1Score, state.p2Score)}</span></div></div>
+                <div className="flex flex-col gap-1 items-end"><span className="text-[10px] font-bold text-zinc-500 tracking-widest">P2</span><div className="flex gap-1">{[...Array(5)].map((_, i) => (<div key={i} className={`w-1.5 h-4 rounded-sm transition-all ${i < state.p2Score ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-zinc-800'}`}/>))}</div></div>
             </div>
 
             {/* The Pit */}
             <div className="h-40 relative flex flex-col items-center justify-center gap-4" style={{ backgroundImage: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' }}>
-                <div className={`absolute top-3 font-black text-xs tracking-widest transition-colors duration-300 ${msgColor} drop-shadow-md text-center px-4`}>{message}</div>
+                <div className={`absolute top-3 font-black text-xs tracking-widest transition-colors duration-300 ${state.msgColor} drop-shadow-md text-center px-4`}>{state.message}</div>
                 <div className="flex gap-3 z-10">
-                    {dice.map((d, i) => <RedDie key={i} val={d} rolling={isRolling} shakeOffset={shakeOffset} />)}
+                    {state.dice.map((d, i) => <RedDie key={i} val={d} rolling={isRolling} shakeOffset={shakeOffset} />)}
                 </div>
             </div>
 
@@ -202,18 +243,25 @@ const StreetDiceGame = () => {
             <div className="p-2 bg-zinc-950 border-t border-zinc-800">
                 {!gameOver ? (
                     <button 
-                        onPointerDown={(e) => { e.currentTarget.releasePointerCapture(e.pointerId); startShake(); }}
-                        onPointerUp={releaseShake}
-                        onPointerLeave={releaseShake}
-                        disabled={isRolling || (turn === 'p2' && false)} // Disabled p2 check for local testing
-                        className={`w-full py-3 rounded-lg font-black tracking-widest text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2
-                        ${turn === 'p1' ? 'bg-zinc-100 text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'}`}
-                    >
-                        {isRolling ? '...' : (isShaking ? 'RELEASE TO ROLL' : (turn === 'p1' ? 'HOLD TO SHAKE' : 'OPPONENT TURN'))}
+                    onPointerDown={(e) => { 
+                        if(isMyTurn) {
+                            e.preventDefault();
+                            e.currentTarget.releasePointerCapture(e.pointerId); 
+                            startShake(); 
+                        }
+                    }}
+                    onContextMenu={(e) => e.preventDefault()}
+                    onPointerUp={() => isMyTurn && releaseShake()}
+                    onPointerLeave={() => isMyTurn && releaseShake()}
+                    disabled={isRolling || !isMyTurn}
+                    className={`w-full py-3 rounded-lg font-black tracking-widest text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 select-none touch-none
+                    ${isMyTurn ? 'bg-zinc-100 text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700'}`}
+                >
+                        {isRolling ? '...' : (isShaking ? 'RELEASE TO ROLL' : (isMyTurn ? 'HOLD TO SHAKE' : 'WAITING FOR OPPONENT...'))}
                     </button>
                 ) : (
                     <div className="w-full py-3 rounded-lg bg-green-500 text-black font-black text-xs text-center tracking-widest animate-pulse">
-                        {p1Score >= 5 ? 'YOU WON THE BAG 💰' : 'PAY THE MAN 💀'}
+                        GAME OVER
                     </div>
                 )}
             </div>
@@ -221,57 +269,7 @@ const StreetDiceGame = () => {
     );
 };
 
-// ... (Rest of NoteCard remains similar, just integrating the new component)
-// --- AUDIO PLAYER ---
-const AudioPlayer = ({ src, barColor }: any) => {
-    // (Same AudioPlayer code as before)
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [playbackRate, setPlaybackRate] = useState(1);
-    const audioRef = useRef<HTMLAudioElement>(null);
-    const [bars] = useState(() => Array.from({ length: 30 }, () => Math.floor(Math.random() * 50) + 20));
-    useEffect(() => {
-        const audio = audioRef.current; if (!audio) return;
-        const handleTimeUpdate = () => { if (Number.isFinite(audio.duration)) { setDuration(audio.duration); setCurrentTime(audio.currentTime); setProgress((audio.currentTime / audio.duration) * 100); } };
-        const handleEnded = () => { setIsPlaying(false); setProgress(0); setCurrentTime(0); };
-        const handleLoadedMetadata = () => { setDuration(audio.duration); };
-        audio.addEventListener('timeupdate', handleTimeUpdate); audio.addEventListener('ended', handleEnded); audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-        return () => { audio.removeEventListener('timeupdate', handleTimeUpdate); audio.removeEventListener('ended', handleEnded); audio.removeEventListener('loadedmetadata', handleLoadedMetadata); };
-    }, []);
-    const togglePlay = async (e: any) => { e.stopPropagation(); if(!audioRef.current) return; if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); } else { try { await audioRef.current.play(); setIsPlaying(true); } catch (err) { console.error(err); } } };
-    const toggleSpeed = (e: any) => { e.stopPropagation(); if (!audioRef.current) return; const newRate = playbackRate === 1 ? 1.5 : (playbackRate === 1.5 ? 2 : 1); audioRef.current.playbackRate = newRate; setPlaybackRate(newRate); };
-    const formatTime = (time: number) => { if (!time || isNaN(time)) return "0:00"; const m = Math.floor(time / 60); const s = Math.floor(time % 60); return `${m}:${s.toString().padStart(2, '0')}`; };
-    const activeColor = barColor || '#da7756';
-    return (
-        <div className="flex items-center gap-2 min-w-[200px] sm:min-w-[240px] bg-[#1f2937] rounded-full p-1 pr-4 border border-zinc-700 select-none shadow-sm mt-1 mb-1">
-            <button onClick={togglePlay} className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-400 hover:text-white transition-colors shrink-0"> {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />} </button>
-            <div className="flex-1 flex items-center gap-[2px] h-8 mx-1 opacity-90"> {bars.map((height, i) => { const barPercent = (i / bars.length) * 100; const isActive = progress > barPercent; return ( <div key={i} className="w-[3px] rounded-full transition-colors duration-150" style={{ height: `${height}%`, backgroundColor: isActive ? activeColor : '#52525b' }} /> ); })} </div>
-            <span className="text-xs font-mono text-zinc-400 min-w-[35px] text-right"> {isPlaying ? formatTime(currentTime) : formatTime(duration)} </span>
-            <button onClick={toggleSpeed} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 text-[10px] font-bold text-white hover:bg-zinc-700 transition-colors ml-1 border border-zinc-600"> {playbackRate}x </button>
-            <audio ref={audioRef} src={src} preload="metadata" playsInline />
-        </div>
-    );
-};
-
-const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const handleAction = () => { triggerHaptic(); onClick(); };
-  return (
-    <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); handleAction(); }} onClick={(e) => { e.stopPropagation(); handleAction(); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="w-full flex items-center gap-3 px-3 py-3 text-sm transition-colors duration-150 cursor-pointer select-none active:bg-white/10" style={{ backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent' }}>
-      <Icon size={18} style={{ color: isHovered ? accentColor : '#a1a1aa' }} /><span className="font-medium" style={{ color: isHovered ? accentColor : '#f4f4f5' }}>{label}</span>
-    </button>
-  );
-};
-const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any) => {
-  const [isHovered, setIsHovered] = useState(false);
-  return (
-    <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? accentColor : (iconColor || '#71717a') }}><Icon size={12} /></button>
-  );
-};
-
-// --- MAIN NOTE CARD ---
+// --- MAIN NOTE CARD WRAPPER ---
 interface NoteCardProps {
   note: Note;
   categories: CategoryConfig[];
@@ -280,14 +278,16 @@ interface NoteCardProps {
   onPin?: (id: string) => void;
   onCategoryClick?: (category: CategoryId) => void;
   onEdit?: () => void;
+  onUpdate?: (id: string, text: string) => void; // ADDED THIS
   onToggleExpand?: (id: string) => void;
   onImageClick?: (url: string) => void; 
   variant?: 'default' | 'sent' | 'received';
   status?: 'sending' | 'sent' | 'read';
+  currentUserId?: string; // ADDED THIS
   customColors?: { bg: string; border: string; text: string; subtext?: string; shadow?: string; font?: string };
 }
 
-export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onToggleExpand, onImageClick, variant = 'default', status, customColors }) => {
+export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, variant = 'default', status, currentUserId, customColors }) => {
   if (!note) return null;
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -304,8 +304,21 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const hasImage = !!note.imageUrl;
   
   // --- DETECT GAME ---
-  // We removed the emoji from the check so it works even if encryption messes it up
   const isDiceGame = safeText.includes('STREET_DICE_GAME');
+  
+  // Parse Game Data if available
+  let gameData = "";
+  if (isDiceGame) {
+      const parts = safeText.split('|||');
+      if (parts.length > 1) gameData = parts[1];
+  }
+
+  const handleGameUpdate = (newJson: string) => {
+      if (onUpdate && note.id) {
+          const newText = `🎲 STREET_DICE_GAME|||${newJson}`;
+          onUpdate(note.id, newText);
+      }
+  };
 
   useEffect(() => {
     const closeMenu = (e: any) => { if (e.type === 'scroll') return; setContextMenu(null); };
@@ -381,7 +394,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
              </div>
           ) : isDiceGame ? (
              <div className="flex flex-col">
-                 <StreetDiceGame />
+                 <StreetDiceGame 
+                    dataStr={gameData} 
+                    onSave={handleGameUpdate} 
+                    isMe={currentUserId === (note as any).senderId || variant === 'sent' || variant === 'default'}
+                    myId={currentUserId || 'unknown'} 
+                 />
              </div>
           ) : hasImage ? (
             <div className="relative">
@@ -409,5 +427,53 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       </div>
       {contextMenu && typeof document !== 'undefined' && createPortal( <div className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'rgba(24, 24, 27, 0.95)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}> <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> {variant === 'default' && <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />} {onEdit && ( <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} /> )} {(variant === 'default' || variant === 'sent') && ( <> <div className="h-px bg-white/10 mx-3 my-1" /> <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> </> )} </div>, document.body )}
     </>
+  );
+};
+
+// --- AUDIO PLAYER ---
+const AudioPlayer = ({ src, barColor }: any) => {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [playbackRate, setPlaybackRate] = useState(1);
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const [bars] = useState(() => Array.from({ length: 30 }, () => Math.floor(Math.random() * 50) + 20));
+    useEffect(() => {
+        const audio = audioRef.current; if (!audio) return;
+        const handleTimeUpdate = () => { if (Number.isFinite(audio.duration)) { setDuration(audio.duration); setCurrentTime(audio.currentTime); setProgress((audio.currentTime / audio.duration) * 100); } };
+        const handleEnded = () => { setIsPlaying(false); setProgress(0); setCurrentTime(0); };
+        const handleLoadedMetadata = () => { setDuration(audio.duration); };
+        audio.addEventListener('timeupdate', handleTimeUpdate); audio.addEventListener('ended', handleEnded); audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+        return () => { audio.removeEventListener('timeupdate', handleTimeUpdate); audio.removeEventListener('ended', handleEnded); audio.removeEventListener('loadedmetadata', handleLoadedMetadata); };
+    }, []);
+    const togglePlay = async (e: any) => { e.stopPropagation(); if(!audioRef.current) return; if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); } else { try { await audioRef.current.play(); setIsPlaying(true); } catch (err) { console.error(err); } } };
+    const toggleSpeed = (e: any) => { e.stopPropagation(); if (!audioRef.current) return; const newRate = playbackRate === 1 ? 1.5 : (playbackRate === 1.5 ? 2 : 1); audioRef.current.playbackRate = newRate; setPlaybackRate(newRate); };
+    const formatTime = (time: number) => { if (!time || isNaN(time)) return "0:00"; const m = Math.floor(time / 60); const s = Math.floor(time % 60); return `${m}:${s.toString().padStart(2, '0')}`; };
+    const activeColor = barColor || '#da7756';
+    return (
+        <div className="flex items-center gap-2 min-w-[200px] sm:min-w-[240px] bg-[#1f2937] rounded-full p-1 pr-4 border border-zinc-700 select-none shadow-sm mt-1 mb-1">
+            <button onClick={togglePlay} className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-400 hover:text-white transition-colors shrink-0"> {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />} </button>
+            <div className="flex-1 flex items-center gap-[2px] h-8 mx-1 opacity-90"> {bars.map((height, i) => { const barPercent = (i / bars.length) * 100; const isActive = progress > barPercent; return ( <div key={i} className="w-[3px] rounded-full transition-colors duration-150" style={{ height: `${height}%`, backgroundColor: isActive ? activeColor : '#52525b' }} /> ); })} </div>
+            <span className="text-xs font-mono text-zinc-400 min-w-[35px] text-right"> {isPlaying ? formatTime(currentTime) : formatTime(duration)} </span>
+            <button onClick={toggleSpeed} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 text-[10px] font-bold text-white hover:bg-zinc-700 transition-colors ml-1 border border-zinc-600"> {playbackRate}x </button>
+            <audio ref={audioRef} src={src} preload="metadata" playsInline />
+        </div>
+    );
+};
+
+const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const handleAction = () => { triggerHaptic(); onClick(); };
+  return (
+    <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); handleAction(); }} onClick={(e) => { e.stopPropagation(); handleAction(); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="w-full flex items-center gap-3 px-3 py-3 text-sm transition-colors duration-150 cursor-pointer select-none active:bg-white/10" style={{ backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent' }}>
+      <Icon size={18} style={{ color: isHovered ? accentColor : '#a1a1aa' }} /><span className="font-medium" style={{ color: isHovered ? accentColor : '#f4f4f5' }}>{label}</span>
+    </button>
+  );
+};
+const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any) => {
+  const [isHovered, setIsHovered] = useState(false);
+  return (
+    <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? accentColor : (iconColor || '#71717a') }}><Icon size={12} /></button>
   );
 };

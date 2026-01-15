@@ -322,18 +322,6 @@ function App() {
       }
   }, [myProfile]);
 
-  const handleRollDice = async () => {
-    if (!user || !activeChatId) return;
-    const diceMsg = `🎲 STREET_DICE_GAME`;
-    try { 
-        await sendMessage(diceMsg, null, null, user.uid); 
-        scrollToBottom(); 
-        if (navigator.vibrate) navigator.vibrate(50); 
-    } catch (e) { 
-        console.error(e); 
-    }
-};
-
   useEffect(() => {
     if (user) {
          if (!myProfile) {
@@ -574,6 +562,18 @@ function App() {
       const currentIndex = order.indexOf(activeFilter as any);
       if (currentIndex === -1) { setActiveFilter('all'); return; }
       const nextIndex = (currentIndex + 1) % order.length; setActiveFilter(order[nextIndex]);
+  };
+
+  const handleRollDice = async () => {
+    if (!user || !activeChatId) return;
+    const diceMsg = `🎲 STREET_DICE_GAME`;
+    try { 
+        await sendMessage(diceMsg, null, null, user.uid); 
+        scrollToBottom(); 
+        if (navigator.vibrate) navigator.vibrate(50); 
+    } catch (e) { 
+        console.error(e); 
+    }
   };
 
   const handleMainAction = async () => {
@@ -1011,6 +1011,8 @@ function App() {
                                     <NoteCard 
                                         note={msgNote} categories={[]} selectedVoice={selectedVoice} 
                                         variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
+                                        currentUserId={user?.uid}
+                                        onUpdate={(id, text) => updateMessage(id, text)}
                                         onImageClick={setZoomedImage}
                                         onDelete={isMe ? (id) => handleDeleteMessage(id) : undefined}
                                         onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => handleEditMessage(msg) : undefined}

@@ -304,7 +304,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const hasImage = !!note.imageUrl;
   
   // --- DETECT GAME ---
-  const isDiceGame = safeText.includes('🎲 STREET_DICE_GAME');
+  // We removed the emoji from the check so it works even if encryption messes it up
+  const isDiceGame = safeText.includes('STREET_DICE_GAME');
 
   useEffect(() => {
     const closeMenu = (e: any) => { if (e.type === 'scroll') return; setContextMenu(null); };

@@ -5,7 +5,7 @@ import {
   ChevronLeft, MessageSquareDashed, Bookmark, Edit, Moon, Book,
   Archive, Trash2, CheckCheck, Circle, Globe, Zap, Cpu, SlidersHorizontal,
   User, AtSign, Activity, Camera, Save, Grid, UserPlus, MessageCircle, MoreVertical, Phone, PaintBucket,
-  Sun, Sunset, QrCode, Mic, Pause, Play
+  Sun, Sunset, QrCode, Mic, Pause, Play, Dices
 } from 'lucide-react'; 
 import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { NoteCard } from './components/NoteCard'; 
@@ -321,6 +321,18 @@ function App() {
           if (myProfile.photoURL) setProfilePic(myProfile.photoURL);
       }
   }, [myProfile]);
+
+  const handleRollDice = async () => {
+    if (!user || !activeChatId) return;
+    const diceMsg = `🎲 STREET_DICE_GAME`;
+    try { 
+        await sendMessage(diceMsg, null, null, user.uid); 
+        scrollToBottom(); 
+        if (navigator.vibrate) navigator.vibrate(50); 
+    } catch (e) { 
+        console.error(e); 
+    }
+};
 
   useEffect(() => {
     if (user) {
@@ -1064,12 +1076,15 @@ function App() {
                         
                         {/* MIC BUTTON (TAP TO START) */}
                         {activeChatId !== 'saved_messages' && !transcript && !imageUrl && !editingNote && (
+                            <>
                             <button 
                                 onClick={startRecording}
                                 className={`flex-shrink-0 w-10 h-10 mb-1 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-zinc-400`}
                             >
                                 <Mic size={20} />
                             </button>
+                            <button onClick={handleRollDice} className="flex-shrink-0 w-10 h-10 mb-1 ml-1 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-zinc-400"><Dices size={20} /></button>
+                            </>
                         )}
 
                         <div className="flex-1 bg-zinc-900/50 border border-zinc-700/50 rounded-2xl flex items-center px-3 py-1.5 focus-within:border-white/50 transition-colors gap-2 relative">

@@ -132,11 +132,7 @@ interface GameState {
     lastAction: string;
 }
 
-const StreetDiceGame = ({ 
-    dataStr, onSave, myId, oppName, oppAvatar 
-}: { 
-    dataStr: string, onSave: (d: string) => void, myId: string, oppName: string, oppAvatar?: string 
-}) => {
+const StreetDiceGame = ({ dataStr, onSave, myId }: { dataStr: string, onSave: (d: string) => void, myId: string }) => {
     // 1. Initialize State
     let state: GameState = { 
         p1Score: 0, p2Score: 0, turn: 'p1', p1Roll: null, 
@@ -149,6 +145,7 @@ const StreetDiceGame = ({
         state = { ...state, ...parsed };
     } catch(e) {}
 
+    // 2. Assign Player 1
     useEffect(() => {
         if (!state.p1Id && myId) {
             onSave(JSON.stringify({ ...state, p1Id: myId }));
@@ -229,7 +226,7 @@ const StreetDiceGame = ({
             } else {
                 next.p1Roll = { value: result.value, label: result.label };
                 next.turn = 'p2';
-                next.message = `POINT SET.`;
+                next.message = `${result.label}. OPP TO BEAT.`;
                 next.msgColor = "text-white";
             }
         } else {
@@ -270,21 +267,12 @@ const StreetDiceGame = ({
     const oppScore = iAmP1 ? state.p2Score : state.p1Score;
     const isGameOver = myScore >= 5 || oppScore >= 5;
 
-    // --- DYNAMIC TEXT ---
-    const getHeaderText = () => {
-        const msg = state.message;
-        // Game Over / Win State
-        if (msg.includes("WON") || msg.includes("LOST")) {
-            if (msg.includes("BANKER")) return iAmP1 ? "YOU WON!" : `${oppName} WON!`;
-            if (msg.includes("CHALLENGER")) return !iAmP1 ? "YOU WON!" : `${oppName} WON!`;
-        }
-        // Action State
-        if (state.p1Roll) {
-             if (isMyTurn) return `BEAT ${oppName}'s ${state.p1Roll.label}!`;
-             return `WAITING FOR ${oppName}...`;
-        }
-        if (isMyTurn) return "YOUR ROLL";
-        return `${oppName} IS ROLLING...`;
+    // Helper for "YOU" vs "OPP" text replacement
+    const getDisplayMessage = () => {
+        let msg = state.message;
+        if (msg.includes("BANKER")) msg = msg.replace("BANKER", iAmP1 ? "YOU" : "OPP");
+        if (msg.includes("CHALLENGER")) msg = msg.replace("CHALLENGER", !iAmP1 ? "YOU" : "OPP");
+        return msg;
     };
 
     return (
@@ -300,7 +288,7 @@ const StreetDiceGame = ({
                     <div className="flex items-center justify-center gap-1 text-orange-500 font-bold text-xs"><Trophy size={10} /> <span>{Math.max(myScore, oppScore)}</span></div>
                 </div>
                 <div className="flex flex-col gap-1 items-end">
-                    <span className="text-[10px] font-bold text-zinc-500 tracking-widest truncate max-w-[60px]">{oppName.toUpperCase()}</span>
+                    <span className="text-[10px] font-bold text-zinc-500 tracking-widest">OPP</span>
                     <div className="flex gap-1">{[...Array(5)].map((_, i) => (<div key={i} className={`w-1.5 h-4 rounded-sm transition-all ${i < oppScore ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-zinc-800'}`}/>))}</div>
                 </div>
             </div>
@@ -308,26 +296,15 @@ const StreetDiceGame = ({
             {/* The Pit */}
             <div className="h-44 relative flex flex-col items-center justify-center gap-4" style={{ backgroundImage: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' }}>
                 
-                {/* ACTION HEADER */}
-                <div className={`font-black text-xs tracking-widest transition-colors duration-300 drop-shadow-md text-center px-4 ${state.message.includes('LOST') ? 'text-red-500' : 'text-zinc-300'}`}>
-                    {getHeaderText()}
+                {/* STATUS MESSAGE */}
+                <div className={`font-black text-xs tracking-widest transition-colors duration-300 drop-shadow-md text-center px-4 ${state.message.includes('LOST') || (state.message.includes('OPP') && state.message.includes('WON')) ? 'text-red-500' : 'text-zinc-300'}`}>
+                    {getDisplayMessage()}
                 </div>
 
-                {/* CONTEXT BAR (The "Table Status" pill) */}
+                {/* TARGET INDICATOR (Persistent while rolling) */}
                 {state.p1Roll && (
-                    <div className="flex items-center gap-2 bg-black/50 px-3 py-1.5 rounded-full border border-zinc-700 animate-in fade-in slide-in-from-bottom-2">
-                         <div className="w-5 h-5 rounded-full bg-zinc-800 overflow-hidden border border-zinc-600">
-                             {/* Show Avatar of whoever set the point (Always P1) */}
-                             {iAmP1 ? (
-                                 <div className="w-full h-full bg-green-500/20 flex items-center justify-center text-[10px]">ME</div>
-                             ) : (
-                                 <img src={oppAvatar || ''} className="w-full h-full object-cover" />
-                             )}
-                         </div>
-                         <div className="flex flex-col leading-none">
-                             <span className="text-[9px] text-zinc-500 font-bold uppercase">{iAmP1 ? 'YOU' : oppName} SET POINT</span>
-                             <span className="text-sm font-black text-white font-mono">{state.p1Roll.label}</span>
-                         </div>
+                    <div className="text-[10px] font-mono text-zinc-500 bg-black/40 px-3 py-1 rounded-full border border-zinc-700 animate-pulse">
+                        TARGET: <span className="text-white font-bold">{state.p1Roll.label}</span>
                     </div>
                 )}
 
@@ -350,7 +327,7 @@ const StreetDiceGame = ({
                         className={`w-full py-3 rounded-lg font-black tracking-widest text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 select-none touch-none
                         ${isMyTurn ? 'bg-zinc-100 text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700'}`}
                     >
-                        {isRolling ? '...' : (isShaking ? 'RELEASE TO ROLL' : (isMyTurn ? 'HOLD TO SHAKE' : `WAITING FOR ${oppName}...`))}
+                        {isRolling ? '...' : (isShaking ? 'RELEASE TO ROLL' : (isMyTurn ? 'HOLD TO SHAKE' : 'WAITING FOR OPP...'))}
                     </button>
                 ) : (
                     <div className={`w-full py-3 rounded-lg font-black text-xs text-center tracking-widest animate-pulse ${myScore >= 5 ? 'bg-green-500 text-black' : 'bg-red-900/50 text-red-200 border border-red-800'}`}>
@@ -377,12 +354,10 @@ interface NoteCardProps {
   variant?: 'default' | 'sent' | 'received';
   status?: 'sending' | 'sent' | 'read';
   currentUserId?: string;
-  opponentName?: string; // ADDED
-  opponentAvatar?: string; // ADDED
   customColors?: { bg: string; border: string; text: string; subtext?: string; shadow?: string; font?: string };
 }
 
-export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, variant = 'default', status, currentUserId, opponentName = "OPP", opponentAvatar, customColors }) => {
+export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, variant = 'default', status, currentUserId, customColors }) => {
   if (!note) return null;
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -488,9 +463,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                  <StreetDiceGame 
                     dataStr={gameData} 
                     onSave={handleGameUpdate} 
-                    myId={currentUserId || 'unknown'}
-                    oppName={opponentName}
-                    oppAvatar={opponentAvatar}
+                    myId={currentUserId || 'unknown'} 
                  />
              </div>
           ) : hasImage ? (

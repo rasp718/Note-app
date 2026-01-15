@@ -63,7 +63,7 @@ const AudioPlayer = ({ src, barColor }: any) => {
 type RollResult = 
   | { type: 'auto_win'; label: '4-5-6 HEAD CRACK'; value: 100 }
   | { type: 'auto_loss'; label: '1-2-3 TRASH'; value: -1 }
-  | { type: 'triple'; label: 'TRIPLE'; value: number }
+  | { type: 'triple'; label: 'TRIPLES'; value: number }
   | { type: 'point'; label: 'POINT'; value: number }
   | { type: 'junk'; label: 'NOTHING'; value: 0 };
 
@@ -433,7 +433,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
   const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
   
-  const paddingClass = (hasImage || audioUrl || isDiceGame) ? 'p-1' : 'p-3';
+  // Use p-1 for ALL types to keep borders thin (images, games, and text)
+  const paddingClass = 'p-1';
 
   const StatusIcon = ({ isOverlay = false }) => {
     if (variant !== 'sent') return null;

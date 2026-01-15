@@ -433,6 +433,13 @@ function App() {
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
   
+  // --- ADDED THIS USEEFFECT ---
+  useEffect(() => {
+    if (currentView === 'room') {
+       scrollToBottom();
+    }
+  }, [activeMessages, notes, currentView]);
+  
   useEffect(() => { try { const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any); const savedBg = localStorage.getItem('vibenotes_bg'); if (savedBg) setBgIndex(parseInt(savedBg)); const savedOpacity = localStorage.getItem('vibenotes_bg_opacity'); if (savedOpacity) setBgOpacity(parseFloat(savedOpacity)); const savedScale = localStorage.getItem('vibenotes_bg_scale'); if (savedScale) setBgScale(parseInt(savedScale)); } catch (e) {} }, []);
 
   useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);

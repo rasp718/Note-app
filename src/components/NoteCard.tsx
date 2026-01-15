@@ -340,10 +340,13 @@ const StreetDiceGame = ({
             <div className="p-2 bg-zinc-950 border-t border-zinc-800">
                 {!isGameOver ? (
                     <button 
+                        style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+                        onTouchStart={(e) => e.stopPropagation()}
                         onPointerDown={(e) => { 
+                            e.stopPropagation();
                             if(isMyTurn) { e.preventDefault(); e.currentTarget.releasePointerCapture(e.pointerId); startShake(); }
                         }}
-                        onContextMenu={(e) => e.preventDefault()}
+                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
                         onPointerUp={() => isMyTurn && releaseShake()}
                         onPointerLeave={() => isMyTurn && releaseShake()}
                         disabled={isRolling || !isMyTurn}

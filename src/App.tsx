@@ -398,6 +398,7 @@ function App() {
          ========================================================================= */}
       {currentView === 'list' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in fade-in slide-in-from-left-5 duration-300">
+           {/* --- HEADERS --- */}
            {activeTab === 'chats' && (
              <div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <div className="max-w-2xl mx-auto w-full flex items-end justify-between">
@@ -419,8 +420,11 @@ function App() {
              </div>
            )}
 
+           {/* --- MAIN CONTENT AREA --- */}
            <div key={activeTab + 'content'} className="flex-1 overflow-y-auto no-scrollbar pb-24">
                <div className="max-w-2xl mx-auto w-full">
+                   
+                   {/* 1. CHATS TAB */}
                    {activeTab === 'chats' && (
                      <>
                         <div className="px-4 mb-4">
@@ -462,6 +466,7 @@ function App() {
                      </>
                    )}
 
+                   {/* 2. CONTACTS TAB */}
                    {activeTab === 'contacts' && (
                      <div className="p-4 space-y-6">
                         <form onSubmit={handleSearchContacts} className="relative">
@@ -503,8 +508,10 @@ function App() {
                     </div>
                    )}
 
+                   {/* 3. SETTINGS TAB - (THIS WAS MISSING) */}
                    {activeTab === 'settings' && (
-                     <div className="p-4 space-y-6">
+                     <div className="p-4 space-y-6 animate-in slide-in-from-bottom-4 fade-in duration-300">
+                        {/* PROFILE CARD */}
                         <div className="relative overflow-hidden bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col gap-6 backdrop-blur-xl group">
                            <div className="absolute top-4 right-4">
                                 {isEditingProfile ? (<button onClick={handleProfileSave} className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center"><Check size={16} strokeWidth={3} /></button>) : (<button onClick={() => setIsEditingProfile(true)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 hover:text-white"><Edit size={14} /></button>)}
@@ -534,9 +541,14 @@ function App() {
                            </div>
                         </div>
 
+                        {/* INTERFACE SETTINGS */}
                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6">
                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
+                            
+                            {/* ALIGNMENT */}
                             <div className="space-y-3"><label className="text-white text-sm font-medium">Message Alignment</label><div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800"><button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button><button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button><button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button></div></div>
+                            
+                            {/* BUBBLE STYLES */}
                             <div className="space-y-3">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
                                 <div className="grid grid-cols-2 gap-3">
@@ -544,40 +556,25 @@ function App() {
                                     <button onClick={() => changeBubbleStyle('minimal_glass')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'minimal_glass' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Minimal Glass"><div className="absolute inset-0 bg-white/20 backdrop-blur-md" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Glass</span></button>
                                     <button onClick={() => changeBubbleStyle('clear')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'clear' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Clear White"><div className="absolute inset-0 bg-white/5 border border-white/20" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Clear</span></button>
                                     <button onClick={() => changeBubbleStyle('solid_gray')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'solid_gray' ? 'border-zinc-400 ring-1 ring-zinc-400/50' : 'border-white/5 hover:border-zinc-400/50'}`} title="Solid Gray"><div className="absolute inset-0 bg-zinc-700" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Solid Gray</span></button>
-                                    
-                                    {/* NEW: Forest (WhatsApp) */}
-                                    <button onClick={() => changeBubbleStyle('whatsapp')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'whatsapp' ? 'border-[#25D366] ring-1 ring-[#25D366]/50' : 'border-white/5 hover:border-[#25D366]/50'}`} title="Forest Style">
-                                        <div className="absolute inset-0 bg-[#005c4b]" />
-                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Forest</span>
-                                    </button>
-
-                                    {/* NEW: Ocean (Telegram) */}
-                                    <button onClick={() => changeBubbleStyle('telegram')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'telegram' ? 'border-[#2AABEE] ring-1 ring-[#2AABEE]/50' : 'border-white/5 hover:border-[#2AABEE]/50'}`} title="Ocean Style">
-                                        <div className="absolute inset-0 bg-[#2b5278]" />
-                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Ocean</span>
-                                    </button>
-                                    
-                                    {/* NEW: Royal (Purple) */}
-                                    <button onClick={() => changeBubbleStyle('purple')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'purple' ? 'border-purple-500 ring-1 ring-purple-500/50' : 'border-white/5 hover:border-purple-500/50'}`} title="Royal Style">
-                                        <div className="absolute inset-0 bg-[#6d28d9]" />
-                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Royal</span>
-                                    </button>
-
-                                    {/* NEW: Blue Gradient */}
-                                    <button onClick={() => changeBubbleStyle('blue_gradient')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'blue_gradient' ? 'border-blue-500 ring-1 ring-blue-500/50' : 'border-white/5 hover:border-blue-500/50'}`} title="Blue Gradient">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600" />
-                                        <span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Blue</span>
-                                    </button>
+                                    <button onClick={() => changeBubbleStyle('whatsapp')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'whatsapp' ? 'border-[#25D366] ring-1 ring-[#25D366]/50' : 'border-white/5 hover:border-[#25D366]/50'}`} title="Forest Style"><div className="absolute inset-0 bg-[#005c4b]" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Forest</span></button>
+                                    <button onClick={() => changeBubbleStyle('telegram')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'telegram' ? 'border-[#2AABEE] ring-1 ring-[#2AABEE]/50' : 'border-white/5 hover:border-[#2AABEE]/50'}`} title="Ocean Style"><div className="absolute inset-0 bg-[#2b5278]" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Ocean</span></button>
+                                    <button onClick={() => changeBubbleStyle('purple')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'purple' ? 'border-purple-500 ring-1 ring-purple-500/50' : 'border-white/5 hover:border-purple-500/50'}`} title="Royal Style"><div className="absolute inset-0 bg-[#6d28d9]" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Royal</span></button>
+                                    <button onClick={() => changeBubbleStyle('blue_gradient')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'blue_gradient' ? 'border-blue-500 ring-1 ring-blue-500/50' : 'border-white/5 hover:border-blue-500/50'}`} title="Blue Gradient"><div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Blue</span></button>
                                 </div>
                             </div>
+                            
+                            {/* NIGHT MODE */}
                             <div className="space-y-4 pt-2 border-t border-white/5">
                                 <button onClick={toggleAutoRedMode} className={`w-full py-3 rounded-xl border flex items-center justify-between px-4 transition-all ${isAutoRedMode ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}><span className="font-medium flex items-center gap-2 text-sm"><Moon size={16} /> Auto Night Shift</span><div className={`w-10 h-6 rounded-full relative transition-colors ${isAutoRedMode ? 'bg-white' : 'bg-zinc-700'}`}><div className={`absolute top-1 left-1 bg-black w-4 h-4 rounded-full transition-transform ${isAutoRedMode ? 'translate-x-4' : 'translate-x-0'}`} /></div></button>
                                 <p className="text-xs text-zinc-500 px-1">{isAutoRedMode ? "Automatically enables red filter after sunset (6 PM - 6 AM)." : "Night shift is disabled."}</p>
                             </div>
+
+                            {/* WALLPAPER SLIDERS */}
                             <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Wallpaper Scale</label><span className="text-zinc-500 text-xs font-mono">{bgScale >= 100 ? 'COVER' : `${bgScale}%`}</span></div><input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
                              <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Opacity</label><span className="text-zinc-500 text-xs font-mono">{Math.round(bgOpacity * 100)}%</span></div><input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
                         </div>
 
+                        {/* BACKGROUND GRID */}
                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-4">
                              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
                              <div className="grid grid-cols-4 gap-3">

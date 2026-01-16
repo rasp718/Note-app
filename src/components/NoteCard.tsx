@@ -146,76 +146,108 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
 // ============================================================================
 // SECTION 4: RENDER & JSX
 // ============================================================================
-  const bgColor = customColors?.bg || 'bg-zinc-900';
-  const textColor = customColors?.text || 'text-zinc-300';
-  const subtextColor = customColors?.subtext || 'text-zinc-400 opacity-60'; 
-  const shadowClass = customColors?.shadow || 'shadow-sm';
-  const chatBorderClasses = customColors?.border || 'border-none';
-  const paddingClass = 'p-1';
-  let radiusClass = 'rounded-2xl'; 
-  if (variant === 'sent') radiusClass = 'rounded-2xl rounded-br-none';
-  if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
-  const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
-  
-  const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
+const bgColor = customColors?.bg || 'bg-zinc-900';
+const textColor = customColors?.text || 'text-zinc-300';
+const subtextColor = customColors?.subtext || 'text-zinc-400 opacity-60'; 
+const shadowClass = customColors?.shadow || 'shadow-sm';
+const chatBorderClasses = customColors?.border || 'border-none';
+const paddingClass = 'p-1';
+let radiusClass = 'rounded-2xl'; 
+if (variant === 'sent') radiusClass = 'rounded-2xl rounded-br-none';
+if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
+const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
 
-  const StatusIcon = ({ isOverlay = false }) => {
-    if (variant !== 'sent') return null;
-    const defaultColor = customColors?.bg?.includes('white') ? 'text-blue-500' : 'text-blue-400';
-    const pendingColor = customColors?.bg?.includes('white') ? 'text-zinc-400' : 'text-white/50';
-    const colorClass = isOverlay ? "text-white" : (status === 'read' ? defaultColor : pendingColor);
-    if (status === 'sending') return <div className={`w-3 h-3 border-2 border-t-transparent rounded-full animate-spin ${isOverlay ? 'border-white' : 'border-white/50'}`} />;
-    if (status === 'read') return <CheckCheck size={14} className={colorClass} strokeWidth={2.5} />;
-    return <Check size={14} className={colorClass} strokeWidth={2} />;
-  };
+const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 
-  return (
-    <>
-      <div className={`relative ${variant === 'default' ? 'w-fit max-w-[85%]' : 'max-w-[85%]'} overflow-visible group`} onContextMenu={handleContextMenu}>
-        <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} relative transition-all duration-300 ease-out`} style={{ transform: `translateX(${swipeOffset}px)`, opacity: isExiting ? 0 : 1 }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-          
-          {audioUrl ? (
-             <div className="flex flex-col gap-1">
-                <AudioPlayer src={audioUrl} barColor={audioBarColor} />
-                <div className="flex justify-end px-2 pb-1"><div className="flex items-center gap-1"><span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>{variant === 'sent' && <StatusIcon />}</div></div>
+const StatusIcon = ({ isOverlay = false }) => {
+  if (variant !== 'sent') return null;
+  const defaultColor = customColors?.bg?.includes('white') ? 'text-blue-500' : 'text-blue-400';
+  const pendingColor = customColors?.bg?.includes('white') ? 'text-zinc-400' : 'text-white/50';
+  const colorClass = isOverlay ? "text-white" : (status === 'read' ? defaultColor : pendingColor);
+  if (status === 'sending') return <div className={`w-3 h-3 border-2 border-t-transparent rounded-full animate-spin ${isOverlay ? 'border-white' : 'border-white/50'}`} />;
+  if (status === 'read') return <CheckCheck size={14} className={colorClass} strokeWidth={2.5} />;
+  return <Check size={14} className={colorClass} strokeWidth={2} />;
+};
+
+return (
+  <>
+    <div className={`relative ${variant === 'default' ? 'w-fit max-w-[85%]' : 'max-w-[85%]'} overflow-visible group`} onContextMenu={handleContextMenu}>
+      <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} relative transition-all duration-300 ease-out`} style={{ transform: `translateX(${swipeOffset}px)`, opacity: isExiting ? 0 : 1 }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+        
+        {audioUrl ? (
+           <div className="flex flex-col gap-1">
+              <AudioPlayer src={audioUrl} barColor={audioBarColor} />
+              <div className="flex justify-end px-2 pb-1"><div className="flex items-center gap-1"><span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>{variant === 'sent' && <StatusIcon />}</div></div>
+           </div>
+        ) : isDiceGame ? (
+           <div className="flex flex-col">
+               <StreetDiceGame 
+                  dataStr={gameData} 
+                  onSave={handleGameUpdate} 
+                  myId={currentUserId || 'unknown'}
+                  oppName={opponentName}
+                  oppAvatar={opponentAvatar}
+               />
+           </div>
+        ) : hasImage ? (
+          <div className="relative">
+              <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="rounded-xl overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative">
+                  <img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" />
+                  <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1.5 shadow-sm">
+                      <span className="text-[10px] font-medium text-white/90">{formatTime(note.date)}</span>
+                      {variant === 'sent' && <StatusIcon isOverlay={true} />}
+                  </div>
+              </div>
+          </div>
+        ) : (
+           <div className="flex flex-col min-w-[80px]">
+             <div className={`block w-full px-2 pb-2 pt-1`}>
+                 {safeText && <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>}
+                 <div className="float-right ml-2 mt-2 flex items-center gap-1 align-bottom h-4">
+                     {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#da7756'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}
+                     <span className={`text-[10px] font-medium select-none ${subtextColor}`}>{formatTime(note.date)}</span>
+                     {variant === 'sent' && <div className="ml-0.5"><StatusIcon /></div>}
+                 </div>
              </div>
-          ) : isDiceGame ? (
-             <div className="flex flex-col">
-                 <StreetDiceGame 
-                    dataStr={gameData} 
-                    onSave={handleGameUpdate} 
-                    myId={currentUserId || 'unknown'}
-                    oppName={opponentName}
-                    oppAvatar={opponentAvatar}
-                 />
-             </div>
-          ) : hasImage ? (
-            <div className="relative">
-                <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="rounded-xl overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative">
-                    <img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" />
-                    <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1.5 shadow-sm">
-                        <span className="text-[10px] font-medium text-white/90">{formatTime(note.date)}</span>
-                        {variant === 'sent' && <StatusIcon isOverlay={true} />}
-                    </div>
-                </div>
-            </div>
-          ) : (
-             <div className="flex flex-col min-w-[80px]">
-               <div className={`block w-full px-2 pb-2 pt-1`}>
-                   {safeText && <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>}
-                   <div className="float-right ml-2 mt-2 flex items-center gap-1 align-bottom h-4">
-                       {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#da7756'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}
-                       <span className={`text-[10px] font-medium select-none ${subtextColor}`}>{formatTime(note.date)}</span>
-                       {variant === 'sent' && <div className="ml-0.5"><StatusIcon /></div>}
-                   </div>
-               </div>
-             </div>
-          )}
-        </div>
+           </div>
+        )}
       </div>
-      {contextMenu && typeof document !== 'undefined' && createPortal( <div className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'rgba(24, 24, 27, 0.95)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}> <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> {variant === 'default' && <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />} {onEdit && ( <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} /> )} {(variant === 'default' || variant === 'sent') && ( <> <div className="h-px bg-white/10 mx-3 my-1" /> <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> </> )} </div>, document.body )}
-    </>
-  );
+    </div>
+    
+    {/* MENU PORTAL */}
+    {contextMenu && typeof document !== 'undefined' && createPortal(
+      <div 
+        className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" 
+        style={{ 
+          top: contextMenu.y, 
+          left: contextMenu.x, 
+          backgroundColor: 'rgba(24, 24, 27, 0.95)', 
+          boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' 
+        }} 
+        onClick={(e) => e.stopPropagation()} 
+        onTouchStart={(e) => e.stopPropagation()}
+      > 
+        <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
+        
+        {variant === 'default' && (
+          <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />
+        )} 
+        
+        {onEdit && ( 
+          <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} /> 
+        )} 
+        
+        {(variant === 'default' || variant === 'sent') && ( 
+          <> 
+            <div className="h-px bg-white/10 mx-3 my-1" /> 
+            <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> 
+          </> 
+        )} 
+      </div>, 
+      document.body 
+    )}
+  </>
+);
 };
 // ============================================================================
 // END SECTION 4

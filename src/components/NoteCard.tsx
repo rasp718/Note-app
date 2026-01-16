@@ -1,9 +1,39 @@
+// ============================================================================
+// SECTION 1: IMPORTS & TYPES
+// ============================================================================
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck, Play, Pause, Trophy, Dices, RotateCcw } from 'lucide-react';
+import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck } from 'lucide-react';
 import { Note, CategoryConfig, CategoryId } from '../types';
+import { AudioPlayer } from './AudioPlayer';
+import { StreetDiceGame } from './StreetDiceGame';
 
-// --- UTILS ---
+interface NoteCardProps {
+  note: Note;
+  categories: CategoryConfig[];
+  selectedVoice: SpeechSynthesisVoice | null;
+  onDelete?: (id: string) => void;
+  onPin?: (id: string) => void;
+  onCategoryClick?: (category: CategoryId) => void;
+  onEdit?: () => void;
+  onUpdate?: (id: string, text: string) => void;
+  onToggleExpand?: (id: string) => void;
+  onImageClick?: (url: string) => void; 
+  variant?: 'default' | 'sent' | 'received';
+  status?: 'sending' | 'sent' | 'read';
+  currentUserId?: string;
+  opponentName?: string;
+  opponentAvatar?: string;
+  customColors?: { bg: string; border: string; text: string; subtext?: string; shadow?: string; font?: string };
+}
+// ============================================================================
+// END SECTION 1
+// ============================================================================
+
+
+// ============================================================================
+// SECTION 2: HELPER COMPONENTS & UTILS
+// ============================================================================
 const triggerHaptic = (pattern: number | number[] = 15) => { 
     if (typeof navigator !== 'undefined' && navigator.vibrate) { 
         try { navigator.vibrate(pattern); } catch (e) {} 
@@ -26,388 +56,43 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any
     <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? accentColor : (iconColor || '#71717a') }}><Icon size={12} /></button>
   );
 };
+// ============================================================================
+// END SECTION 2
+// ============================================================================
 
-// --- AUDIO PLAYER ---
-const AudioPlayer = ({ src, barColor }: any) => {
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [playbackRate, setPlaybackRate] = useState(1);
-    const audioRef = useRef<HTMLAudioElement>(null);
-    const [bars] = useState(() => Array.from({ length: 30 }, () => Math.floor(Math.random() * 50) + 20));
-    useEffect(() => {
-        const audio = audioRef.current; if (!audio) return;
-        const handleTimeUpdate = () => { if (Number.isFinite(audio.duration)) { setDuration(audio.duration); setCurrentTime(audio.currentTime); setProgress((audio.currentTime / audio.duration) * 100); } };
-        const handleEnded = () => { setIsPlaying(false); setProgress(0); setCurrentTime(0); };
-        const handleLoadedMetadata = () => { setDuration(audio.duration); };
-        audio.addEventListener('timeupdate', handleTimeUpdate); audio.addEventListener('ended', handleEnded); audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-        return () => { audio.removeEventListener('timeupdate', handleTimeUpdate); audio.removeEventListener('ended', handleEnded); audio.removeEventListener('loadedmetadata', handleLoadedMetadata); };
-    }, []);
-    const togglePlay = async (e: any) => { e.stopPropagation(); if(!audioRef.current) return; if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); } else { try { await audioRef.current.play(); setIsPlaying(true); } catch (err) { console.error(err); } } };
-    const toggleSpeed = (e: any) => { e.stopPropagation(); if (!audioRef.current) return; const newRate = playbackRate === 1 ? 1.5 : (playbackRate === 1.5 ? 2 : 1); audioRef.current.playbackRate = newRate; setPlaybackRate(newRate); };
-    const formatTime = (time: number) => { if (!time || isNaN(time)) return "0:00"; const m = Math.floor(time / 60); const s = Math.floor(time % 60); return `${m}:${s.toString().padStart(2, '0')}`; };
-    const activeColor = barColor || '#da7756';
-    return (
-        <div className="flex items-center gap-2 min-w-[200px] sm:min-w-[240px] bg-[#1f2937] rounded-full p-1 pr-4 border border-zinc-700 select-none shadow-sm mt-1 mb-1">
-            <button onClick={togglePlay} className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-400 hover:text-white transition-colors shrink-0"> {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />} </button>
-            <div className="flex-1 flex items-center gap-[2px] h-8 mx-1 opacity-90"> {bars.map((height, i) => { const barPercent = (i / bars.length) * 100; const isActive = progress > barPercent; return ( <div key={i} className="w-[3px] rounded-full transition-colors duration-150" style={{ height: `${height}%`, backgroundColor: isActive ? activeColor : '#52525b' }} /> ); })} </div>
-            <span className="text-xs font-mono text-zinc-400 min-w-[35px] text-right"> {isPlaying ? formatTime(currentTime) : formatTime(duration)} </span>
-            <button onClick={toggleSpeed} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 text-[10px] font-bold text-white hover:bg-zinc-700 transition-colors ml-1 border border-zinc-600"> {playbackRate}x </button>
-            <audio ref={audioRef} src={src} preload="metadata" playsInline />
-        </div>
-    );
-};
 
-// --- GAME LOGIC ENGINE ---
-type RollResult = 
-  | { type: 'auto_win'; label: '4-5-6 HEAD CRACK'; value: 100 }
-  | { type: 'auto_loss'; label: '1-2-3 TRASH'; value: -1 }
-  | { type: 'triple'; label: 'TRIPLES'; value: number }
-  | { type: 'point'; label: 'POINT'; value: number }
-  | { type: 'junk'; label: 'NOTHING'; value: 0 };
-
-const analyzeRoll = (dice: number[]): RollResult => {
-    const sorted = [...dice].sort((a, b) => a - b);
-    const s = sorted.join('');
-    
-    // Instant Win/Loss
-    if (s === '456') return { type: 'auto_win', label: '4-5-6', value: 100 };
-    if (s === '123') return { type: 'auto_loss', label: '1-2-3', value: -1 };
-    
-    // Triples (Beats everything except 456)
-    if (sorted[0] === sorted[1] && sorted[1] === sorted[2]) return { type: 'triple', label: `TRIP ${sorted[0]}s`, value: 20 + sorted[0] };
-    
-    // Points (Pair + Singleton)
-    if (sorted[0] === sorted[1]) return { type: 'point', label: `POINT ${sorted[2]}`, value: sorted[2] };
-    if (sorted[1] === sorted[2]) return { type: 'point', label: `POINT ${sorted[0]}`, value: sorted[0] };
-    if (sorted[0] === sorted[2]) return { type: 'point', label: `POINT ${sorted[1]}`, value: sorted[1] };
-    
-    // Junk
-    return { type: 'junk', label: 'TRASH', value: 0 };
-};
-
-// --- VISUAL DIE COMPONENT ---
-const RedDie = ({ val, rolling, shakeOffset }: { val: number, rolling: boolean, shakeOffset: {x:number, y:number} }) => {
-    const pips: any = {
-        1: ['center'], 2: ['top-left', 'bottom-right'], 3: ['top-left', 'center', 'bottom-right'],
-        4: ['top-left', 'top-right', 'bottom-left', 'bottom-right'], 5: ['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'],
-        6: ['top-left', 'top-right', 'mid-left', 'mid-right', 'bottom-left', 'bottom-right']
-    };
-    const getPos = (p: string) => {
-        const style: any = {};
-        if (p.includes('top')) style.top = '15%'; if (p.includes('bottom')) style.bottom = '15%';
-        if (p.includes('mid')) style.top = '50%'; if (p.includes('left')) style.left = '15%';
-        if (p.includes('right')) style.right = '15%';
-        if (p === 'center') { style.top = '50%'; style.left = '50%'; style.transform = 'translate(-50%, -50%)'; }
-        if (p.includes('mid')) style.transform = 'translateY(-50%)';
-        return style;
-    };
-
-    return (
-        <div className="w-12 h-12 rounded-xl relative shadow-lg transition-transform duration-75 border border-red-400/50"
-             style={{
-                 backgroundColor: 'rgba(220, 38, 38, 0.85)',
-                 boxShadow: 'inset 0 0 10px rgba(100,0,0,0.8), 0 4px 8px rgba(0,0,0,0.5)',
-                 transform: `translate(${shakeOffset.x}px, ${shakeOffset.y}px) rotate(${rolling ? Math.random() * 360 : 0}deg)`
-             }}>
-             {!rolling && pips[val].map((pos: string, i: number) => (
-                 <div key={i} className="absolute w-2.5 h-2.5 bg-white rounded-full shadow-sm" style={getPos(pos)} />
-             ))}
-             <div className="absolute top-1 left-1 right-1 h-1/3 bg-gradient-to-b from-white/30 to-transparent rounded-t-lg pointer-events-none" />
-        </div>
-    );
-};
-
-// --- GAME COMPONENT ---
-interface GameState {
-    p1Score: number;
-    p2Score: number;
-    turn: 'p1' | 'p2';
-    p1Roll: { value: number, label: string } | null;
-    dice: number[];
-    message: string;
-    msgColor: string;
-    p1Id?: string;
-    lastAction: string;
-}
-
-const StreetDiceGame = ({ 
-    dataStr, onSave, myId, oppName, oppAvatar 
-}: { 
-    dataStr: string, onSave: (d: string) => void, myId: string, oppName: string, oppAvatar?: string 
-}) => {
-    // 1. Initialize State
-    let state: GameState = { 
-        p1Score: 0, p2Score: 0, turn: 'p1', p1Roll: null, 
-        dice: [4,5,6], message: 'RACE TO 5', msgColor: 'text-zinc-500', 
-        p1Id: '', lastAction: 'init'
-    };
-    
-    try {
-        const parsed = JSON.parse(dataStr);
-        state = { ...state, ...parsed };
-    } catch(e) {}
-
-    useEffect(() => {
-        if (!state.p1Id && myId) {
-            onSave(JSON.stringify({ ...state, p1Id: myId }));
-        }
-    }, []);
-
-    const iAmP1 = myId === state.p1Id;
-    const isMyTurn = (state.turn === 'p1' && iAmP1) || (state.turn === 'p2' && !iAmP1);
-
-    const [isRolling, setIsRolling] = useState(false);
-    const [isShaking, setIsShaking] = useState(false);
-    const [shakeOffset, setShakeOffset] = useState({x:0, y:0});
-    const shakeInterval = useRef<any>(null);
-    const longPressTimeout = useRef<any>(null);
-
-    const startShake = () => {
-        if(isRolling || !isMyTurn) return;
-        setIsShaking(true);
-        shakeInterval.current = setInterval(() => {
-            triggerHaptic(10);
-            setShakeOffset({ x: (Math.random()-0.5)*10, y: (Math.random()-0.5)*10 });
-        }, 50);
-        longPressTimeout.current = setTimeout(() => releaseShake(), 2500);
-    };
-
-    const releaseShake = () => {
-        if(!isShaking) return;
-        clearInterval(shakeInterval.current);
-        clearTimeout(longPressTimeout.current);
-        setShakeOffset({x:0, y:0});
-        setIsShaking(false);
-        executeRoll();
-    };
-
-    const executeRoll = () => {
-        setIsRolling(true);
-        let rolls = 0;
-        const rollInt = setInterval(() => {
-            rolls++;
-            if(rolls > 8) {
-                clearInterval(rollInt);
-                finalizeRoll();
-            }
-        }, 80);
-    };
-
-    // --- GAME BRAIN ---
-    const finalizeRoll = () => {
-        setIsRolling(false);
-        triggerHaptic(50);
-        
-        const finalDice = [Math.ceil(Math.random()*6), Math.ceil(Math.random()*6), Math.ceil(Math.random()*6)];
-        const result = analyzeRoll(finalDice);
-        const next = { ...state, dice: finalDice };
-
-        // Handle Junk
-        if (result.type === 'junk') {
-            next.message = "TRASH. ROLL AGAIN.";
-            next.msgColor = "text-zinc-500";
-            onSave(JSON.stringify(next));
-            return;
-        }
-
-        // Logic
-        if (next.turn === 'p1') {
-            if (result.type === 'auto_win') {
-                next.message = "BANKER WON! (4-5-6)";
-                next.msgColor = "text-green-400";
-                next.p1Score += 1;
-                next.p1Roll = null;
-                next.turn = 'p1';
-            } else if (result.type === 'auto_loss') {
-                next.message = "BANKER LOST! (1-2-3)";
-                next.msgColor = "text-red-400";
-                next.p2Score += 1;
-                next.p1Roll = null;
-                next.turn = 'p1';
-            } else {
-                next.p1Roll = { value: result.value, label: result.label };
-                next.turn = 'p2';
-                next.message = `POINT SET.`;
-                next.msgColor = "text-white";
-            }
-        } else {
-            // P2 Chasing P1
-            if (!next.p1Roll) return;
-
-            if (result.type === 'auto_win') {
-                next.message = "CHALLENGER WON! (4-5-6)";
-                next.msgColor = "text-red-400"; 
-                next.p2Score += 1;
-                next.p1Roll = null;
-                next.turn = 'p1';
-            } else if (result.type === 'auto_loss') {
-                next.message = "CHALLENGER LOST! (1-2-3)";
-                next.msgColor = "text-green-400";
-                next.p1Score += 1;
-                next.p1Roll = null;
-                next.turn = 'p1';
-            } else {
-                // Point Comparison
-                if (result.value > next.p1Roll.value) {
-                    next.message = `CHALLENGER WON! (${result.label} vs ${next.p1Roll.label})`;
-                    next.p2Score += 1;
-                } else if (result.value < next.p1Roll.value) {
-                    next.message = `BANKER WON! (${next.p1Roll.label} vs ${result.label})`;
-                    next.p1Score += 1;
-                } else {
-                    next.message = "WASH! RE-ROLL ROUND.";
-                }
-                next.p1Roll = null;
-                next.turn = 'p1';
-            }
-        }
-        onSave(JSON.stringify(next));
-    };
-
-    const myScore = iAmP1 ? state.p1Score : state.p2Score;
-    const oppScore = iAmP1 ? state.p2Score : state.p1Score;
-    const isGameOver = myScore >= 5 || oppScore >= 5;
-
-    // --- DYNAMIC TEXT ---
-    const getHeaderText = () => {
-        const msg = state.message;
-        // Game Over / Win State
-        if (msg.includes("WON") || msg.includes("LOST")) {
-            if (msg.includes("BANKER")) return iAmP1 ? "YOU WON!" : `${oppName} WON!`;
-            if (msg.includes("CHALLENGER")) return !iAmP1 ? "YOU WON!" : `${oppName} WON!`;
-        }
-        // Action State
-        if (state.p1Roll) {
-             if (isMyTurn) return `BEAT ${oppName}'s ${state.p1Roll.label}!`;
-             return `WAITING FOR ${oppName}...`;
-        }
-        if (isMyTurn) return "YOUR ROLL";
-        return `${oppName} IS ROLLING...`;
-    };
-
-    return (
-        <div className="w-full bg-zinc-900 rounded-xl overflow-hidden border border-zinc-700 relative shadow-2xl select-none min-w-[260px]">
-            {/* Header */}
-            <div className="flex justify-between items-center p-3 bg-black/30 border-b border-zinc-800">
-                <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-zinc-500 tracking-widest">YOU</span>
-                    <div className="flex gap-1">{[...Array(5)].map((_, i) => (<div key={i} className={`w-1.5 h-4 rounded-sm transition-all ${i < myScore ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-zinc-800'}`}/>))}</div>
-                </div>
-                <div className="text-center">
-                    <span className="text-[9px] text-zinc-600 font-mono tracking-widest">WINS</span>
-                    <div className="flex items-center justify-center gap-1 text-orange-500 font-bold text-xs"><Trophy size={10} /> <span>{Math.max(myScore, oppScore)}</span></div>
-                </div>
-                <div className="flex flex-col gap-1 items-end">
-                    <span className="text-[10px] font-bold text-zinc-500 tracking-widest truncate max-w-[60px]">{oppName.toUpperCase()}</span>
-                    <div className="flex gap-1">{[...Array(5)].map((_, i) => (<div key={i} className={`w-1.5 h-4 rounded-sm transition-all ${i < oppScore ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-zinc-800'}`}/>))}</div>
-                </div>
-            </div>
-
-            {/* The Pit */}
-            <div className="h-44 relative flex flex-col items-center justify-center gap-4" style={{ backgroundImage: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' }}>
-                
-                {/* ACTION HEADER */}
-                <div className={`font-black text-xs tracking-widest transition-colors duration-300 drop-shadow-md text-center px-4 ${state.message.includes('LOST') ? 'text-red-500' : 'text-zinc-300'}`}>
-                    {getHeaderText()}
-                </div>
-
-                {/* CONTEXT BAR (The "Table Status" pill) */}
-                {state.p1Roll && (
-                    <div className="flex items-center gap-2 bg-black/50 px-3 py-1.5 rounded-full border border-zinc-700 animate-in fade-in slide-in-from-bottom-2">
-                         <div className="w-5 h-5 rounded-full bg-zinc-800 overflow-hidden border border-zinc-600">
-                             {/* Show Avatar of whoever set the point (Always P1) */}
-                             {iAmP1 ? (
-                                 <div className="w-full h-full bg-green-500/20 flex items-center justify-center text-[10px]">ME</div>
-                             ) : (
-                                 <img src={oppAvatar || ''} className="w-full h-full object-cover" />
-                             )}
-                         </div>
-                         <div className="flex flex-col leading-none">
-                             <span className="text-[9px] text-zinc-500 font-bold uppercase">{iAmP1 ? 'YOU' : oppName} SET POINT</span>
-                             <span className="text-sm font-black text-white font-mono">{state.p1Roll.label}</span>
-                         </div>
-                    </div>
-                )}
-
-                <div className="flex gap-3 z-10 mt-1">
-                    {state.dice.map((d, i) => <RedDie key={i} val={d} rolling={isRolling} shakeOffset={shakeOffset} />)}
-                </div>
-            </div>
-
-            {/* Action Button */}
-            <div className="p-2 bg-zinc-950 border-t border-zinc-800">
-                {!isGameOver ? (
-                    <button 
-                        style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        onPointerDown={(e) => { 
-                            e.stopPropagation();
-                            if(isMyTurn) { e.preventDefault(); e.currentTarget.releasePointerCapture(e.pointerId); startShake(); }
-                        }}
-                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                        onPointerUp={() => isMyTurn && releaseShake()}
-                        onPointerLeave={() => isMyTurn && releaseShake()}
-                        disabled={isRolling || !isMyTurn}
-                        className={`w-full py-3 rounded-lg font-black tracking-widest text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 select-none touch-none
-                        ${isMyTurn ? 'bg-zinc-100 text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700'}`}
-                    >
-                        {isRolling ? '...' : (isShaking ? 'RELEASE TO ROLL' : (isMyTurn ? 'HOLD TO SHAKE' : `WAITING FOR ${oppName}...`))}
-                    </button>
-                ) : (
-                    <div className={`w-full py-3 rounded-lg font-black text-xs text-center tracking-widest animate-pulse ${myScore >= 5 ? 'bg-green-500 text-black' : 'bg-red-900/50 text-red-200 border border-red-800'}`}>
-                        {myScore >= 5 ? 'YOU WON THE BAG 💰' : 'PAY THE MAN 💀'}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
-
-// --- MAIN NOTE CARD WRAPPER ---
-interface NoteCardProps {
-  note: Note;
-  categories: CategoryConfig[];
-  selectedVoice: SpeechSynthesisVoice | null;
-  onDelete?: (id: string) => void;
-  onPin?: (id: string) => void;
-  onCategoryClick?: (category: CategoryId) => void;
-  onEdit?: () => void;
-  onUpdate?: (id: string, text: string) => void;
-  onToggleExpand?: (id: string) => void;
-  onImageClick?: (url: string) => void; 
-  variant?: 'default' | 'sent' | 'received';
-  status?: 'sending' | 'sent' | 'read';
-  currentUserId?: string;
-  opponentName?: string; // ADDED
-  opponentAvatar?: string; // ADDED
-  customColors?: { bg: string; border: string; text: string; subtext?: string; shadow?: string; font?: string };
-}
-
+// ============================================================================
+// SECTION 3: MAIN COMPONENT LOGIC & STATE
+// ============================================================================
 export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, variant = 'default', status, currentUserId, opponentName = "OPP", opponentAvatar, customColors }) => {
   if (!note) return null;
+
+  // --- State ---
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   const [isExiting, setIsExiting] = useState(false); 
+  
+  // --- Refs for Interaction ---
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const touchStartTime = useRef<number>(0);
   const longPressTimer = useRef<any>(null);
   const isLongPress = useRef(false); 
-  
+
+  // --- Derived Data ---
   const safeText = String(note.text || '');
   const audioUrl = (note as any).audioUrl;
   const hasImage = !!note.imageUrl;
-  
   const isDiceGame = safeText.includes('STREET_DICE_GAME');
+  
   let gameData = "";
   if (isDiceGame) {
       const parts = safeText.split('|||');
       if (parts.length > 1) gameData = parts[1];
   }
 
+  // --- Handlers ---
   const handleGameUpdate = (newJson: string) => {
       if (onUpdate && note.id) {
           const newText = `🎲 STREET_DICE_GAME|||${newJson}`;
@@ -427,11 +112,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const handleContextMenu = (e: any) => { e.preventDefault(); e.stopPropagation(); if(variant === 'default' || variant === 'sent') openMenu(e.clientX, e.clientY); };
   const formatTime = (timestamp: any) => { try { const t = Number(timestamp); if (isNaN(t) || t === 0) return ''; return new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } };
 
+  // --- Touch & Swipe Physics ---
   const handleTouchStart = (e: any) => { 
       if (e.targetTouches.length !== 1) return; 
       touchStartX.current = e.targetTouches[0].clientX; touchStartY.current = e.targetTouches[0].clientY; touchStartTime.current = Date.now(); setIsSwiping(false); isLongPress.current = false; 
       if (variant === 'default' || variant === 'sent') { longPressTimer.current = setTimeout(() => { if (touchStartX.current && touchStartY.current) { isLongPress.current = true; openMenu(touchStartX.current, touchStartY.current); } }, 600); }
   };
+
   const handleTouchMove = (e: any) => { 
       if (!touchStartX.current || !touchStartY.current || isExiting) return; 
       const diffX = e.targetTouches[0].clientX - touchStartX.current; const diffY = e.targetTouches[0].clientY - touchStartY.current; 
@@ -439,6 +126,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       if (isLongPress.current) return; 
       if (variant === 'default' && diffX < 0 && Math.abs(diffX) > Math.abs(diffY)) { setIsSwiping(true); setSwipeOffset(diffX); } 
   };
+
   const handleTouchEnd = (e: any) => { 
       if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } 
       if (isLongPress.current) { touchStartX.current = null; touchStartY.current = null; return; } 
@@ -450,19 +138,26 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       } else { setSwipeOffset(0); }
       setIsSwiping(false); touchStartX.current = null; touchStartY.current = null; 
   };
+// ============================================================================
+// END SECTION 3
+// ============================================================================
 
+
+// ============================================================================
+// SECTION 4: RENDER & JSX
+// ============================================================================
   const bgColor = customColors?.bg || 'bg-zinc-900';
   const textColor = customColors?.text || 'text-zinc-300';
   const subtextColor = customColors?.subtext || 'text-zinc-400 opacity-60'; 
   const shadowClass = customColors?.shadow || 'shadow-sm';
   const chatBorderClasses = customColors?.border || 'border-none';
+  const paddingClass = 'p-1';
   let radiusClass = 'rounded-2xl'; 
   if (variant === 'sent') radiusClass = 'rounded-2xl rounded-br-none';
   if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
   const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
   
-  // Use p-1 for ALL types to keep borders thin (images, games, and text)
-  const paddingClass = 'p-1';
+  const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 
   const StatusIcon = ({ isOverlay = false }) => {
     if (variant !== 'sent') return null;
@@ -473,8 +168,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     if (status === 'read') return <CheckCheck size={14} className={colorClass} strokeWidth={2.5} />;
     return <Check size={14} className={colorClass} strokeWidth={2} />;
   };
-
-  const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 
   return (
     <>
@@ -524,3 +217,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
     </>
   );
 };
+// ============================================================================
+// END SECTION 4
+// ============================================================================

@@ -1,52 +1,44 @@
-// ============================================================================
-// SECTION 1: IMPORTS & CONFIGURATION
-// ============================================================================
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, X, ArrowUp, LayoutGrid, Image as ImageIcon, Check, Terminal, 
   PenLine, AlignLeft, AlignCenter, AlignRight, ChevronLeft, MessageSquareDashed, 
   Moon, Trash2, Globe, Zap, Cpu, SlidersHorizontal, AtSign, Activity, 
   Camera, Grid, UserPlus, MessageCircle, Phone, PaintBucket, QrCode, Mic, 
-  Pause, Play, Dices
+  Pause, Play, Dices, Edit // <--- ADDED 'Edit' HERE
 } from 'lucide-react'; 
-import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
-import { NoteCard } from './components/NoteCard'; 
-import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers, useUser, usePresence } from './useFirebaseSync';
-import Auth from './components/Auth';
 
-// IMPORTED HELPERS (See src/utils.ts)
+// IMPORT TYPES & UTILS
+import { Note, CategoryId, CategoryConfig, DEFAULT_CATEGORIES } from './types';
 import { 
   TRANSLATIONS, CLAUDE_ORANGE, HACKER_GREEN, HACKER_CONFIG,
   getBubbleColors, normalizeDate, isSameDay, getDateLabel, compressImage
 } from './utils';
+
+// IMPORT COMPONENTS
+import { NoteCard } from './components/NoteCard'; 
 import { ChatListItem } from './components/ChatListItem';
-
-// ============================================================================
-// END SECTION 1
-// ============================================================================
-
+import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers, useUser, usePresence } from './useFirebaseSync';
+import Auth from './components/Auth';
 
 function App() {
   // ============================================================================
-  // SECTION 2: STATE & HOOKS
+  // SECTION: STATE MANAGEMENT
   // ============================================================================
   const { user, loading: authLoading } = useFirebaseSync();
   usePresence(user?.uid);
   
-  useEffect(() => { return () => { if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); } }; }, []);
-
   const myProfile = useUser(user?.uid);
   const { notes = [], addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
   const { chats: realChats, createChat } = useChats(user?.uid || null);
   
-  // View State
+  // Navigation & View
   const [currentView, setCurrentView] = useState<'list' | 'room'>('list');
   const [activeTab, setActiveTab] = useState<'contacts' | 'calls' | 'chats' | 'settings'>('chats');
   const [activeChatId, setActiveChatId] = useState<string | null>(null); 
   const [isEditing, setIsEditing] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
   
-  // Profile & Settings State
+  // Profile Settings
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [profileName, setProfileName] = useState("Vibe User");
@@ -54,6 +46,8 @@ function App() {
   const [profileBio, setProfileBio] = useState("Status: Online");
   const [profilePic, setProfilePic] = useState<string | null>(null);
   const [categories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
+  
+  // Visual Settings
   const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
   const [bgIndex, setBgIndex] = useState<number>(1);
   const [bgOpacity, setBgOpacity] = useState<number>(0.45);
@@ -62,7 +56,7 @@ function App() {
   const [redModeIntensity, setRedModeIntensity] = useState<number>(0);
   const [isAutoRedMode, setIsAutoRedMode] = useState<boolean>(false);
 
-  // Interaction State
+  // Inputs & Media
   const [contactSearchQuery, setContactSearchQuery] = useState('');
   const [contactSearchResults, setContactSearchResults] = useState<any[]>([]);
   const [isSearchingContacts, setIsSearchingContacts] = useState(false);
@@ -74,20 +68,16 @@ function App() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [showQRCode, setShowQRCode] = useState(false);
-
-  // Audio State
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+
+  // Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const mimeTypeRef = useRef<string>('');
   const streamRef = useRef<MediaStream | null>(null);
   const recordingTimerRef = useRef<any>(null);
-
-  // Refs
-  const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
-  const otherChatUser = useUser(currentChatObject?.otherUserId);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null); 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -95,13 +85,15 @@ function App() {
   const listRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Helpers
   const [activeFilter, setActiveFilter] = useState<CategoryId | 'all' | 'secret'>('all');
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [secretTaps, setSecretTaps] = useState(0);
   const tapTimeoutRef = useRef<any>(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
 
-  // Derived State
+  const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
+  const otherChatUser = useUser(currentChatObject?.otherUserId);
   const { messages: activeMessages, sendMessage, deleteMessage, updateMessage, markChatAsRead } = useMessages(
     (activeChatId && activeChatId !== 'saved_messages') ? activeChatId : null
   );
@@ -115,15 +107,10 @@ function App() {
     font: isHackerMode ? 'font-mono' : 'font-sans',
     selection: isHackerMode ? 'selection:bg-green-500/30 selection:text-green-400' : 'selection:bg-white/20 selection:text-white'
   };
-
   const currentConfig = activeFilter === 'all' ? null : (activeFilter === 'secret' ? HACKER_CONFIG : categories.find(c => c.id === activeFilter));
-  // ============================================================================
-  // END SECTION 2
-  // ============================================================================
-
 
   // ============================================================================
-  // SECTION 3: EFFECTS (Data Sync, Animation, Persistence)
+  // SECTION: EFFECTS
   // ============================================================================
   useEffect(() => {
     if (activeChatId && activeChatId !== 'saved_messages' && user && activeMessages.length > 0) {
@@ -139,7 +126,7 @@ function App() {
       }
   }, [myProfile]);
 
-  // Matrix Animation
+  // Matrix Rain
   useEffect(() => {
     if (!showSecretAnim || currentView !== 'room') return;
     const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
@@ -161,25 +148,34 @@ function App() {
     return () => { clearInterval(interval); window.removeEventListener('resize', handleResize); };
   }, [showSecretAnim, currentView]);
 
-  // Scroll to bottom trigger
-  useEffect(() => {
-    if (currentView === 'room') { scrollToBottom(); }
-  }, [activeMessages, notes, currentView]);
+  useEffect(() => { if (currentView === 'room') scrollToBottom(); }, [activeMessages, notes, currentView]);
+  useEffect(() => { return () => { if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); } }; }, []);
   
-  // LocalStorage Persistence
-  useEffect(() => { try { const savedAlignment = localStorage.getItem('vibenotes_alignment'); if(savedAlignment) setAlignment(savedAlignment as any); const savedBg = localStorage.getItem('vibenotes_bg'); if (savedBg) setBgIndex(parseInt(savedBg)); const savedOpacity = localStorage.getItem('vibenotes_bg_opacity'); if (savedOpacity) setBgOpacity(parseFloat(savedOpacity)); const savedScale = localStorage.getItem('vibenotes_bg_scale'); if (savedScale) setBgScale(parseInt(savedScale)); } catch (e) {} }, []);
+  useEffect(() => { 
+      try { 
+          const savedAlignment = localStorage.getItem('vibenotes_alignment'); 
+          if(savedAlignment) setAlignment(savedAlignment as any); 
+          const savedBg = localStorage.getItem('vibenotes_bg'); 
+          if (savedBg) setBgIndex(parseInt(savedBg)); 
+          const savedOpacity = localStorage.getItem('vibenotes_bg_opacity'); 
+          if (savedOpacity) setBgOpacity(parseFloat(savedOpacity)); 
+          const savedScale = localStorage.getItem('vibenotes_bg_scale'); 
+          if (savedScale) setBgScale(parseInt(savedScale)); 
+          const savedBubble = localStorage.getItem('vibenotes_bubble_style');
+          if (savedBubble) setBubbleStyle(savedBubble);
+      } catch (e) {} 
+  }, []);
+
   useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
   useEffect(() => { localStorage.setItem('vibenotes_bg', bgIndex.toString()); }, [bgIndex]);
   useEffect(() => { localStorage.setItem('vibenotes_bg_opacity', bgOpacity.toString()); }, [bgOpacity]);
   useEffect(() => { localStorage.setItem('vibenotes_bg_scale', bgScale.toString()); }, [bgScale]);
+  useEffect(() => { localStorage.setItem('vibenotes_bubble_style', bubbleStyle); }, [bubbleStyle]);
+  
   useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
-  // ============================================================================
-  // END SECTION 3
-  // ============================================================================
-
 
   // ============================================================================
-  // SECTION 4: HANDLERS & LOGIC
+  // SECTION: ACTIONS & HANDLERS
   // ============================================================================
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
   
@@ -221,7 +217,7 @@ function App() {
       else { const hour = new Date().getHours(); if (hour >= 18 || hour < 6) { setRedModeIntensity(50); } else { setRedModeIntensity(0); } }
   };
 
-  const changeBubbleStyle = (style: string) => { setBubbleStyle(style); localStorage.setItem('vibenotes_bubble_style', style); };
+  const changeBubbleStyle = (style: string) => { setBubbleStyle(style); };
 
   const handleSecretTrigger = () => {
     setSecretTaps(prev => prev + 1);
@@ -249,7 +245,6 @@ function App() {
     const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = items[i].getAsFile(); if (file) await handleImageUpload(file); break; } }
   };
 
-  // Recording Logic
   const startRecording = async () => {
     if (isRecording) return; 
     try {
@@ -331,16 +326,12 @@ function App() {
 
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
 
+  // ============================================================================
+  // SECTION: RENDER
+  // ============================================================================
   if (authLoading) return <div className="min-h-screen bg-black" />;
   if (!user) return <Auth />;
-  // ============================================================================
-  // END SECTION 4
-  // ============================================================================
 
-
-  // ============================================================================
-  // SECTION 5: RENDER - BOTTOM NAVIGATION
-  // ============================================================================
   const BottomTabBar = () => (
       <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-2xl border border-white/5 rounded-full shadow-2xl shadow-black/50 p-1.5 flex gap-1 z-50">
          <button onClick={() => setActiveTab('contacts')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Globe size={22} className={`transition-all duration-300 ${activeTab === 'contacts' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'contacts' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
@@ -349,16 +340,12 @@ function App() {
          <button onClick={() => setActiveTab('settings')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Cpu size={22} className={`transition-all duration-300 ${activeTab === 'settings' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'settings' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
       </div>
   );
-  // ============================================================================
-  // END SECTION 5
-  // ============================================================================
 
   return (
     <div className={`fixed top-0 left-0 w-full h-[100dvh] bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
+      {/* ... (Rest of your JSX remains exactly the same, the fix was in the import) */}
       
-      {/* =========================================================================
-          SECTION 6: RENDER - OVERLAYS (Zoom, QR, BG)
-         ========================================================================= */}
+      {/* OVERLAY: ZOOM */}
       {zoomedImage && (
           <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-in fade-in duration-200" onClick={() => setZoomedImage(null)}>
               <img src={zoomedImage} className="max-w-full max-h-full object-contain p-4 transition-transform duration-300 scale-100" />
@@ -366,6 +353,7 @@ function App() {
           </div>
       )}
 
+      {/* OVERLAY: QR */}
       {showQRCode && (
           <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-200" onClick={() => setShowQRCode(false)}>
               <div className="bg-white rounded-3xl p-8 flex flex-col items-center gap-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
@@ -383,22 +371,18 @@ function App() {
           </div>
       )}
       
+      {/* BACKGROUND */}
       <div className="fixed inset-0 z-0 pointer-events-none select-none overflow-hidden bg-black">
         <div className="absolute inset-0 transition-opacity duration-300" style={{ backgroundImage: `url(/bg${bgIndex}.jpg)`, backgroundSize: bgScale >= 100 ? 'cover' : `${bgScale}%`, backgroundPosition: 'center', backgroundRepeat: 'repeat', opacity: bgOpacity }} />
       </div>
 
       <div className="fixed inset-0 z-0 pointer-events-none mix-blend-overlay transition-opacity duration-1000" style={{ backgroundColor: '#ff4500', opacity: redModeIntensity / 100 }} />
-      {/* =========================================================================
-          END SECTION 6
-         ========================================================================= */}
 
-
-      {/* =========================================================================
-          SECTION 7: RENDER - LIST VIEW (Chats, Contacts, Settings)
-         ========================================================================= */}
+      {/* VIEW: LIST */}
       {currentView === 'list' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in fade-in slide-in-from-left-5 duration-300">
-           {/* --- HEADERS --- */}
+           
+           {/* -- HEADERS -- */}
            {activeTab === 'chats' && (
              <div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <div className="max-w-2xl mx-auto w-full flex items-end justify-between">
@@ -420,11 +404,10 @@ function App() {
              </div>
            )}
 
-           {/* --- MAIN CONTENT AREA --- */}
            <div key={activeTab + 'content'} className="flex-1 overflow-y-auto no-scrollbar pb-24">
                <div className="max-w-2xl mx-auto w-full">
                    
-                   {/* 1. CHATS TAB */}
+                   {/* -- CHATS TAB -- */}
                    {activeTab === 'chats' && (
                      <>
                         <div className="px-4 mb-4">
@@ -466,7 +449,7 @@ function App() {
                      </>
                    )}
 
-                   {/* 2. CONTACTS TAB */}
+                   {/* -- CONTACTS TAB -- */}
                    {activeTab === 'contacts' && (
                      <div className="p-4 space-y-6">
                         <form onSubmit={handleSearchContacts} className="relative">
@@ -508,9 +491,10 @@ function App() {
                     </div>
                    )}
 
-                   {/* 3. SETTINGS TAB - (THIS WAS MISSING) */}
+                   {/* -- SETTINGS TAB -- */}
                    {activeTab === 'settings' && (
                      <div className="p-4 space-y-6 animate-in slide-in-from-bottom-4 fade-in duration-300">
+                        
                         {/* PROFILE CARD */}
                         <div className="relative overflow-hidden bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col gap-6 backdrop-blur-xl group">
                            <div className="absolute top-4 right-4">
@@ -563,7 +547,7 @@ function App() {
                                 </div>
                             </div>
                             
-                            {/* NIGHT MODE */}
+                            {/* RED MODE */}
                             <div className="space-y-4 pt-2 border-t border-white/5">
                                 <button onClick={toggleAutoRedMode} className={`w-full py-3 rounded-xl border flex items-center justify-between px-4 transition-all ${isAutoRedMode ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}><span className="font-medium flex items-center gap-2 text-sm"><Moon size={16} /> Auto Night Shift</span><div className={`w-10 h-6 rounded-full relative transition-colors ${isAutoRedMode ? 'bg-white' : 'bg-zinc-700'}`}><div className={`absolute top-1 left-1 bg-black w-4 h-4 rounded-full transition-transform ${isAutoRedMode ? 'translate-x-4' : 'translate-x-0'}`} /></div></button>
                                 <p className="text-xs text-zinc-500 px-1">{isAutoRedMode ? "Automatically enables red filter after sunset (6 PM - 6 AM)." : "Night shift is disabled."}</p>
@@ -589,16 +573,11 @@ function App() {
            <BottomTabBar />
         </div>
       )}
-      {/* =========================================================================
-          END SECTION 7
-         ========================================================================= */}
 
-
-      {/* =========================================================================
-          SECTION 8: RENDER - ROOM VIEW (Chat)
-         ========================================================================= */}
+      {/* VIEW: ROOM */}
       {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
+            {/* Header and other room view code remains unchanged */}
             <div className="fixed top-0 left-0 right-0 z-40">
                 <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative z-50">
                     <div className="flex items-center gap-1 w-full">
@@ -740,68 +719,26 @@ function App() {
               </div>
            </div>
 
-           {/* =========================================================================
-               SECTION 9: RENDER - INPUT AREA (Bottom Bar)
-              ========================================================================= */}
            <div className="flex-none w-full p-2 pb-6 md:pb-3 bg-black/60 backdrop-blur-xl z-50 border-t border-zinc-800/50">
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  
                  {isRecording ? (
-                    // --- WHATSAPP STYLE RECORDING UI (PAUSE SUPPORT + CLAUDE ORANGE) ---
                     <div className="flex-1 flex items-center gap-2 animate-in slide-in-from-bottom-2 fade-in duration-200">
-                        {/* TRASH (CANCEL) */}
-                        <button 
-                            onClick={cancelRecording} 
-                            className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-red-500 hover:bg-white/10 transition-all"
-                        >
-                            <Trash2 size={22} />
-                        </button>
-
-                        {/* RECORDING STATUS PILL */}
+                        <button onClick={cancelRecording} className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-red-500 hover:bg-white/10 transition-all"> <Trash2 size={22} /> </button>
                         <div className="flex-1 bg-zinc-900 rounded-full h-12 flex items-center px-4 justify-between border border-zinc-700/50 relative overflow-hidden gap-2">
-                            
-                            {/* PAUSE TOGGLE */}
-                            <button onClick={togglePause} className="z-20 w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 text-white hover:bg-zinc-700 transition-colors">
-                                {isPaused ? <Play size={14} fill="white" /> : <Pause size={14} fill="white" />}
-                            </button>
-
-                            {/* Timer & Dot */}
-                            <div className="flex items-center gap-2 z-10 min-w-[60px]">
-                                <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isPaused ? 'bg-amber-500' : 'bg-red-500 animate-pulse'}`} />
-                                <span className="text-white font-mono font-medium">{formatDuration(recordingDuration)}</span>
-                            </div>
-                            
-                            {/* Fake Waveform Animation (Claude Orange) */}
-                            <div className="flex-1 flex items-center justify-center gap-0.5 h-6 opacity-80 overflow-hidden relative">
-                                {!isPaused && [...Array(16)].map((_, i) => (
-                                    <div key={i} className="w-1 rounded-full animate-pulse bg-[#da7756]" style={{ height: `${Math.random() * 100}%`, animationDuration: '0.6s', animationDelay: `${i * 0.05}s` }} />
-                                ))}
-                                {isPaused && <span className="text-xs text-zinc-500 uppercase font-bold tracking-widest">Paused</span>}
-                            </div>
+                            <button onClick={togglePause} className="z-20 w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 text-white hover:bg-zinc-700 transition-colors"> {isPaused ? <Play size={14} fill="white" /> : <Pause size={14} fill="white" />} </button>
+                            <div className="flex items-center gap-2 z-10 min-w-[60px]"> <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isPaused ? 'bg-amber-500' : 'bg-red-500 animate-pulse'}`} /> <span className="text-white font-mono font-medium">{formatDuration(recordingDuration)}</span> </div>
+                            <div className="flex-1 flex items-center justify-center gap-0.5 h-6 opacity-80 overflow-hidden relative"> {!isPaused && [...Array(16)].map((_, i) => ( <div key={i} className="w-1 rounded-full animate-pulse bg-[#da7756]" style={{ height: `${Math.random() * 100}%`, animationDuration: '0.6s', animationDelay: `${i * 0.05}s` }} /> ))} {isPaused && <span className="text-xs text-zinc-500 uppercase font-bold tracking-widest">Paused</span>} </div>
                         </div>
-
-                        {/* SEND BUTTON (Claude Orange) */}
-                        <button 
-                            onClick={finishRecording} 
-                            className="w-12 h-12 flex items-center justify-center rounded-full bg-[#da7756] text-white shadow-lg shadow-orange-900/20 active:scale-95 transition-transform"
-                        >
-                            <ArrowUp size={24} strokeWidth={3} />
-                        </button>
+                        <button onClick={finishRecording} className="w-12 h-12 flex items-center justify-center rounded-full bg-[#da7756] text-white shadow-lg shadow-orange-900/20 active:scale-95 transition-transform"> <ArrowUp size={24} strokeWidth={3} /> </button>
                     </div>
                  ) : (
-                    // --- STANDARD INPUT UI ---
                     <>
                         {activeChatId === 'saved_messages' && (<button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">{activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}</button>)}
                         
-                        {/* MIC BUTTON (TAP TO START) */}
                         {activeChatId !== 'saved_messages' && !transcript && !imageUrl && !editingNote && (
                             <>
-                            <button 
-                                onClick={startRecording}
-                                className={`flex-shrink-0 w-10 h-10 mb-1 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-zinc-400`}
-                            >
-                                <Mic size={20} />
-                            </button>
+                            <button onClick={startRecording} className={`flex-shrink-0 w-10 h-10 mb-1 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-zinc-400`}> <Mic size={20} /> </button>
                             <button onClick={handleRollDice} className="flex-shrink-0 w-10 h-10 mb-1 ml-1 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-zinc-400"><Dices size={20} /></button>
                             </>
                         )}
@@ -819,15 +756,9 @@ function App() {
                  )}
              </div>
            </div>
-           {/* =========================================================================
-               END SECTION 9
-              ========================================================================= */}
 
         </div>
       )}
-      {/* =========================================================================
-          END SECTION 8
-         ========================================================================= */}
 
       <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
     </div>

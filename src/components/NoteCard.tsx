@@ -1,7 +1,4 @@
 // src/components/NoteCard.tsx
-// ============================================================================
-// SECTION 1: IMPORTS & TYPES
-// ============================================================================
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck } from 'lucide-react';
@@ -29,7 +26,7 @@ interface NoteCardProps {
 }
 
 // ============================================================================
-// SECTION 2: HELPER COMPONENTS & UTILS
+// HELPER COMPONENTS
 // ============================================================================
 const triggerHaptic = (pattern: number | number[] = 15) => { 
     if (typeof navigator !== 'undefined' && navigator.vibrate) { 
@@ -71,7 +68,7 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any
 };
 
 // ============================================================================
-// SECTION 3: MAIN COMPONENT
+// MAIN COMPONENT
 // ============================================================================
 export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, variant = 'default', status, currentUserId, opponentName = "OPP", opponentAvatar, customColors }) => {
   if (!note) return null;
@@ -124,6 +121,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       const menuH = 260; 
       let x = clientX; 
       let y = clientY; 
+      
+      // Safety check for NaN
+      if (isNaN(x) || x < 0) x = 10;
+      if (isNaN(y) || y < 0) y = 10;
+
       if (typeof window !== 'undefined') { 
           if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 20; 
           if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 20; 
@@ -134,7 +136,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const handleContextMenu = (e: any) => { 
       e.preventDefault(); 
       e.stopPropagation(); 
-      // Allowed on all variants now (received messages just show Reply/Copy)
       openMenu(e.clientX, e.clientY); 
   };
 
@@ -154,7 +155,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
               isLongPress.current = true; 
               openMenu(touchStartX.current, touchStartY.current); 
           } 
-      }, 600); 
+      }, 500); // Decreased from 600ms for responsiveness
   };
 
   const handleTouchMove = (e: any) => { 
@@ -162,12 +163,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       const diffX = e.targetTouches[0].clientX - touchStartX.current; 
       const diffY = e.targetTouches[0].clientY - touchStartY.current; 
       
-      if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) { 
+      // Increased threshold from 10 to 15 to prevent accidental cancellation during long press
+      if (Math.abs(diffX) > 15 || Math.abs(diffY) > 15) { 
           if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } 
       } 
       
       if (isLongPress.current) return; 
-      // Only allow swipe delete on notes/saved messages (default variant)
+      
       if (variant === 'default' && diffX < 0 && Math.abs(diffX) > Math.abs(diffY)) { setIsSwiping(true); setSwipeOffset(diffX); } 
   };
 
@@ -207,7 +209,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
   const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 
-  const StatusIcon = ({ isOverlay = false }) => {
+  const StatusIcon = ({ isOverlay = false }: { isOverlay?: boolean }) => {
     if (variant !== 'sent') return null;
     const defaultColor = customColors?.bg?.includes('white') ? 'text-blue-500' : 'text-blue-400';
     const pendingColor = customColors?.bg?.includes('white') ? 'text-zinc-400' : 'text-white/50';
@@ -270,34 +272,37 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       </div>
       
       {/* MENU PORTAL */}
-      {contextMenu && typeof document !== 'undefined' && createPortal(
-        <div 
-            className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" 
-            style={{ 
-                top: contextMenu.y, 
-                left: contextMenu.x, 
-                backgroundColor: 'rgba(24, 24, 27, 0.95)', 
-                boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' 
-            }} 
-            onClick={(e) => e.stopPropagation()} 
-            onTouchStart={(e) => e.stopPropagation()}
-        > 
-          <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
-          
-          {variant === 'default' && (
-            <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />
-          )} 
-          
-          {onEdit && ( 
-            <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} /> 
-          )} 
-          
-          {(variant === 'default' || variant === 'sent') && ( 
-            <> 
-              <div className="h-px bg-white/10 mx-3 my-1" /> 
-              <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> 
-            </> 
-          )} 
+      {contextMenu && typeof document !== 'undefined' && document.body && createPortal(
+        <div className="fixed inset-0 z-[9999]" onClick={() => setContextMenu(null)} onTouchStart={() => setContextMenu(null)}>
+            {/* BACKDROP ABOVE */}
+            <div 
+                className="absolute z-[10000] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" 
+                style={{ 
+                    top: contextMenu.y, 
+                    left: contextMenu.x, 
+                    backgroundColor: 'rgba(24, 24, 27, 0.95)', 
+                    boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' 
+                }} 
+                onClick={(e) => e.stopPropagation()} 
+                onTouchStart={(e) => e.stopPropagation()}
+            > 
+              <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
+              
+              {variant === 'default' && (
+                <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />
+              )} 
+              
+              {onEdit && ( 
+                <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} /> 
+              )} 
+              
+              {(variant === 'default' || variant === 'sent') && ( 
+                <> 
+                  <div className="h-px bg-white/10 mx-3 my-1" /> 
+                  <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> 
+                </> 
+              )} 
+            </div>
         </div>, 
         document.body 
       )}

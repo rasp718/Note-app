@@ -1,3 +1,4 @@
+// src/components/NoteCard.tsx
 // ============================================================================
 // SECTION 1: IMPORTS & TYPES
 // ============================================================================
@@ -26,10 +27,6 @@ interface NoteCardProps {
   opponentAvatar?: string;
   customColors?: { bg: string; border: string; text: string; subtext?: string; shadow?: string; font?: string };
 }
-// ============================================================================
-// END SECTION 1
-// ============================================================================
-
 
 // ============================================================================
 // SECTION 2: HELPER COMPONENTS & UTILS
@@ -42,10 +39,26 @@ const triggerHaptic = (pattern: number | number[] = 15) => {
 
 const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
   const [isHovered, setIsHovered] = useState(false);
-  const handleAction = () => { triggerHaptic(); onClick(); };
+  
+  const handleAction = (e: any) => { 
+      e.preventDefault();
+      e.stopPropagation();
+      triggerHaptic(); 
+      onClick(); 
+  };
+
   return (
-    <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); handleAction(); }} onClick={(e) => { e.stopPropagation(); handleAction(); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="w-full flex items-center gap-3 px-3 py-3 text-sm transition-colors duration-150 cursor-pointer select-none active:bg-white/10" style={{ backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent' }}>
-      <Icon size={18} style={{ color: isHovered ? accentColor : '#a1a1aa' }} /><span className="font-medium" style={{ color: isHovered ? accentColor : '#f4f4f5' }}>{label}</span>
+    <button 
+        type="button" 
+        onPointerDown={handleAction}
+        onClick={handleAction} 
+        onMouseEnter={() => setIsHovered(true)} 
+        onMouseLeave={() => setIsHovered(false)} 
+        className="w-full flex items-center gap-3 px-3 py-3 text-sm transition-colors duration-150 cursor-pointer select-none active:bg-white/10" 
+        style={{ backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent' }}
+    >
+      <Icon size={18} style={{ color: isHovered ? accentColor : '#a1a1aa' }} />
+      <span className="font-medium" style={{ color: isHovered ? accentColor : '#f4f4f5' }}>{label}</span>
     </button>
   );
 };
@@ -56,13 +69,9 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any
     <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? accentColor : (iconColor || '#71717a') }}><Icon size={12} /></button>
   );
 };
-// ============================================================================
-// END SECTION 2
-// ============================================================================
-
 
 // ============================================================================
-// SECTION 3: MAIN COMPONENT LOGIC & STATE
+// SECTION 3: MAIN COMPONENT
 // ============================================================================
 export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, variant = 'default', status, currentUserId, opponentName = "OPP", opponentAvatar, customColors }) => {
   if (!note) return null;
@@ -73,14 +82,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const [isSwiping, setIsSwiping] = useState(false);
   const [isExiting, setIsExiting] = useState(false); 
   
-  // --- Refs for Interaction ---
+  // --- Refs ---
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const touchStartTime = useRef<number>(0);
   const longPressTimer = useRef<any>(null);
   const isLongPress = useRef(false); 
 
-  // --- Derived Data ---
+  // --- Data ---
   const safeText = String(note.text || '');
   const audioUrl = (note as any).audioUrl;
   const hasImage = !!note.imageUrl;
@@ -108,147 +117,190 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
 
   const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; window.speechSynthesis.speak(utterance); } };
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
-  const openMenu = (clientX: number, clientY: number) => { triggerHaptic(); const menuW = 200; const menuH = 260; let x = clientX; let y = clientY; if (typeof window !== 'undefined') { if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 20; if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 20; } setContextMenu({ x: Math.max(10, x), y: Math.max(10, y) }); };
-  const handleContextMenu = (e: any) => { e.preventDefault(); e.stopPropagation(); if(variant === 'default' || variant === 'sent') openMenu(e.clientX, e.clientY); };
+  
+  const openMenu = (clientX: number, clientY: number) => { 
+      triggerHaptic(); 
+      const menuW = 200; 
+      const menuH = 260; 
+      let x = clientX; 
+      let y = clientY; 
+      if (typeof window !== 'undefined') { 
+          if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 20; 
+          if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 20; 
+      } 
+      setContextMenu({ x: Math.max(10, x), y: Math.max(10, y) }); 
+  };
+
+  const handleContextMenu = (e: any) => { 
+      e.preventDefault(); 
+      e.stopPropagation(); 
+      // Allowed on all variants now (received messages just show Reply/Copy)
+      openMenu(e.clientX, e.clientY); 
+  };
+
   const formatTime = (timestamp: any) => { try { const t = Number(timestamp); if (isNaN(t) || t === 0) return ''; return new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } };
 
-  // --- Touch & Swipe Physics ---
+  // --- Touch Logic ---
   const handleTouchStart = (e: any) => { 
       if (e.targetTouches.length !== 1) return; 
-      touchStartX.current = e.targetTouches[0].clientX; touchStartY.current = e.targetTouches[0].clientY; touchStartTime.current = Date.now(); setIsSwiping(false); isLongPress.current = false; 
-      if (variant === 'default' || variant === 'sent') { longPressTimer.current = setTimeout(() => { if (touchStartX.current && touchStartY.current) { isLongPress.current = true; openMenu(touchStartX.current, touchStartY.current); } }, 600); }
+      touchStartX.current = e.targetTouches[0].clientX; 
+      touchStartY.current = e.targetTouches[0].clientY; 
+      touchStartTime.current = Date.now(); 
+      setIsSwiping(false); 
+      isLongPress.current = false; 
+      
+      longPressTimer.current = setTimeout(() => { 
+          if (touchStartX.current && touchStartY.current) { 
+              isLongPress.current = true; 
+              openMenu(touchStartX.current, touchStartY.current); 
+          } 
+      }, 600); 
   };
 
   const handleTouchMove = (e: any) => { 
       if (!touchStartX.current || !touchStartY.current || isExiting) return; 
-      const diffX = e.targetTouches[0].clientX - touchStartX.current; const diffY = e.targetTouches[0].clientY - touchStartY.current; 
-      if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } } 
+      const diffX = e.targetTouches[0].clientX - touchStartX.current; 
+      const diffY = e.targetTouches[0].clientY - touchStartY.current; 
+      
+      if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) { 
+          if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } 
+      } 
+      
       if (isLongPress.current) return; 
+      // Only allow swipe delete on notes/saved messages (default variant)
       if (variant === 'default' && diffX < 0 && Math.abs(diffX) > Math.abs(diffY)) { setIsSwiping(true); setSwipeOffset(diffX); } 
   };
 
   const handleTouchEnd = (e: any) => { 
       if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } 
       if (isLongPress.current) { touchStartX.current = null; touchStartY.current = null; return; } 
+      
       if (variant === 'default' && onDelete && note.id) {
           const touchDuration = Date.now() - touchStartTime.current;
           const isFling = touchDuration < 300 && swipeOffset < -50; 
           const isDrag = swipeOffset < -150; 
-          if (isFling || isDrag) { triggerHaptic(); setIsExiting(true); setSwipeOffset(-window.innerWidth); setTimeout(() => { onDelete(note.id); }, 200); } else { setSwipeOffset(0); }
+          if (isFling || isDrag) { 
+              triggerHaptic(); 
+              setIsExiting(true); 
+              setSwipeOffset(-window.innerWidth); 
+              setTimeout(() => { onDelete(note.id); }, 200); 
+          } else { setSwipeOffset(0); }
       } else { setSwipeOffset(0); }
-      setIsSwiping(false); touchStartX.current = null; touchStartY.current = null; 
+      
+      setIsSwiping(false); 
+      touchStartX.current = null; 
+      touchStartY.current = null; 
   };
-// ============================================================================
-// END SECTION 3
-// ============================================================================
 
+  // --- Render Props ---
+  const bgColor = customColors?.bg || 'bg-zinc-900';
+  const textColor = customColors?.text || 'text-zinc-300';
+  const subtextColor = customColors?.subtext || 'text-zinc-400 opacity-60'; 
+  const shadowClass = customColors?.shadow || 'shadow-sm';
+  const chatBorderClasses = customColors?.border || 'border-none';
+  const paddingClass = 'p-1';
+  
+  let radiusClass = 'rounded-2xl'; 
+  if (variant === 'sent') radiusClass = 'rounded-2xl rounded-br-none';
+  if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
+  
+  const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
+  const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 
-// ============================================================================
-// SECTION 4: RENDER & JSX
-// ============================================================================
-const bgColor = customColors?.bg || 'bg-zinc-900';
-const textColor = customColors?.text || 'text-zinc-300';
-const subtextColor = customColors?.subtext || 'text-zinc-400 opacity-60'; 
-const shadowClass = customColors?.shadow || 'shadow-sm';
-const chatBorderClasses = customColors?.border || 'border-none';
-const paddingClass = 'p-1';
-let radiusClass = 'rounded-2xl'; 
-if (variant === 'sent') radiusClass = 'rounded-2xl rounded-br-none';
-if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
-const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
-
-const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
-
-const StatusIcon = ({ isOverlay = false }) => {
-  if (variant !== 'sent') return null;
-  const defaultColor = customColors?.bg?.includes('white') ? 'text-blue-500' : 'text-blue-400';
-  const pendingColor = customColors?.bg?.includes('white') ? 'text-zinc-400' : 'text-white/50';
-  const colorClass = isOverlay ? "text-white" : (status === 'read' ? defaultColor : pendingColor);
-  if (status === 'sending') return <div className={`w-3 h-3 border-2 border-t-transparent rounded-full animate-spin ${isOverlay ? 'border-white' : 'border-white/50'}`} />;
-  if (status === 'read') return <CheckCheck size={14} className={colorClass} strokeWidth={2.5} />;
-  return <Check size={14} className={colorClass} strokeWidth={2} />;
-};
-
-return (
-  <>
-    <div className={`relative ${variant === 'default' ? 'w-fit max-w-[85%]' : 'max-w-[85%]'} overflow-visible group`} onContextMenu={handleContextMenu}>
-      <div className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} relative transition-all duration-300 ease-out`} style={{ transform: `translateX(${swipeOffset}px)`, opacity: isExiting ? 0 : 1 }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-        
-        {audioUrl ? (
-           <div className="flex flex-col gap-1">
-              <AudioPlayer src={audioUrl} barColor={audioBarColor} />
-              <div className="flex justify-end px-2 pb-1"><div className="flex items-center gap-1"><span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>{variant === 'sent' && <StatusIcon />}</div></div>
-           </div>
-        ) : isDiceGame ? (
-           <div className="flex flex-col">
-               <StreetDiceGame 
-                  dataStr={gameData} 
-                  onSave={handleGameUpdate} 
-                  myId={currentUserId || 'unknown'}
-                  oppName={opponentName}
-                  oppAvatar={opponentAvatar}
-               />
-           </div>
-        ) : hasImage ? (
-          <div className="relative">
-              <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="rounded-xl overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative">
-                  <img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" />
-                  <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1.5 shadow-sm">
-                      <span className="text-[10px] font-medium text-white/90">{formatTime(note.date)}</span>
-                      {variant === 'sent' && <StatusIcon isOverlay={true} />}
-                  </div>
-              </div>
-          </div>
-        ) : (
-           <div className="flex flex-col min-w-[80px]">
-             <div className={`block w-full px-2 pb-2 pt-1`}>
-                 {safeText && <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>}
-                 <div className="float-right ml-2 mt-2 flex items-center gap-1 align-bottom h-4">
-                     {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#da7756'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}
-                     <span className={`text-[10px] font-medium select-none ${subtextColor}`}>{formatTime(note.date)}</span>
-                     {variant === 'sent' && <div className="ml-0.5"><StatusIcon /></div>}
-                 </div>
-             </div>
-           </div>
-        )}
-      </div>
-    </div>
+  const StatusIcon = ({ isOverlay = false }) => {
+    if (variant !== 'sent') return null;
+    const defaultColor = customColors?.bg?.includes('white') ? 'text-blue-500' : 'text-blue-400';
+    const pendingColor = customColors?.bg?.includes('white') ? 'text-zinc-400' : 'text-white/50';
+    const colorClass = isOverlay ? "text-white" : (status === 'read' ? defaultColor : pendingColor);
     
-    {/* MENU PORTAL */}
-    {contextMenu && typeof document !== 'undefined' && createPortal(
-      <div 
-        className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" 
-        style={{ 
-          top: contextMenu.y, 
-          left: contextMenu.x, 
-          backgroundColor: 'rgba(24, 24, 27, 0.95)', 
-          boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' 
-        }} 
-        onClick={(e) => e.stopPropagation()} 
-        onTouchStart={(e) => e.stopPropagation()}
-      > 
-        <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
-        
-        {variant === 'default' && (
-          <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />
-        )} 
-        
-        {onEdit && ( 
-          <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} /> 
-        )} 
-        
-        {(variant === 'default' || variant === 'sent') && ( 
-          <> 
-            <div className="h-px bg-white/10 mx-3 my-1" /> 
-            <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> 
-          </> 
-        )} 
-      </div>, 
-      document.body 
-    )}
-  </>
-);
+    if (status === 'sending') return <div className={`w-3 h-3 border-2 border-t-transparent rounded-full animate-spin ${isOverlay ? 'border-white' : 'border-white/50'}`} />;
+    if (status === 'read') return <CheckCheck size={14} className={colorClass} strokeWidth={2.5} />;
+    return <Check size={14} className={colorClass} strokeWidth={2} />;
+  };
+
+  return (
+    <>
+      <div className={`relative ${variant === 'default' ? 'w-fit max-w-[85%]' : 'max-w-[85%]'} overflow-visible group`} onContextMenu={handleContextMenu}>
+        <div 
+            className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} relative transition-all duration-300 ease-out`} 
+            style={{ transform: `translateX(${swipeOffset}px)`, opacity: isExiting ? 0 : 1 }} 
+            onTouchStart={handleTouchStart} 
+            onTouchMove={handleTouchMove} 
+            onTouchEnd={handleTouchEnd}
+        >
+          
+          {audioUrl ? (
+             <div className="flex flex-col gap-1">
+                <AudioPlayer src={audioUrl} barColor={audioBarColor} />
+                <div className="flex justify-end px-2 pb-1"><div className="flex items-center gap-1"><span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>{variant === 'sent' && <StatusIcon />}</div></div>
+             </div>
+          ) : isDiceGame ? (
+             <div className="flex flex-col">
+                 <StreetDiceGame 
+                    dataStr={gameData} 
+                    onSave={handleGameUpdate} 
+                    myId={currentUserId || 'unknown'}
+                    oppName={opponentName}
+                    oppAvatar={opponentAvatar}
+                 />
+             </div>
+          ) : hasImage ? (
+            <div className="relative">
+                <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="rounded-xl overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative">
+                    <img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" />
+                    <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1.5 shadow-sm">
+                        <span className="text-[10px] font-medium text-white/90">{formatTime(note.date)}</span>
+                        {variant === 'sent' && <StatusIcon isOverlay={true} />}
+                    </div>
+                </div>
+            </div>
+          ) : (
+             <div className="flex flex-col min-w-[80px]">
+               <div className={`block w-full px-2 pb-2 pt-1`}>
+                   {safeText && <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>}
+                   <div className="float-right ml-2 mt-2 flex items-center gap-1 align-bottom h-4">
+                       {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#da7756'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}
+                       <span className={`text-[10px] font-medium select-none ${subtextColor}`}>{formatTime(note.date)}</span>
+                       {variant === 'sent' && <div className="ml-0.5"><StatusIcon /></div>}
+                   </div>
+               </div>
+             </div>
+          )}
+        </div>
+      </div>
+      
+      {/* MENU PORTAL */}
+      {contextMenu && typeof document !== 'undefined' && createPortal(
+        <div 
+            className="fixed z-[9999] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" 
+            style={{ 
+                top: contextMenu.y, 
+                left: contextMenu.x, 
+                backgroundColor: 'rgba(24, 24, 27, 0.95)', 
+                boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' 
+            }} 
+            onClick={(e) => e.stopPropagation()} 
+            onTouchStart={(e) => e.stopPropagation()}
+        > 
+          <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
+          
+          {variant === 'default' && (
+            <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />
+          )} 
+          
+          {onEdit && ( 
+            <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} /> 
+          )} 
+          
+          {(variant === 'default' || variant === 'sent') && ( 
+            <> 
+              <div className="h-px bg-white/10 mx-3 my-1" /> 
+              <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> 
+            </> 
+          )} 
+        </div>, 
+        document.body 
+      )}
+    </>
+  );
 };
-// ============================================================================
-// END SECTION 4
-// ============================================================================

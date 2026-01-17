@@ -1,4 +1,3 @@
-// src/components/NoteCard.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck } from 'lucide-react';
@@ -17,6 +16,10 @@ interface NoteCardProps {
   onUpdate?: (id: string, text: string) => void;
   onToggleExpand?: (id: string) => void;
   onImageClick?: (url: string) => void; 
+  // NEW PROPS FOR REACTIONS
+  currentReaction?: string; 
+  onReact?: (emoji: string) => void;
+  // END NEW PROPS
   variant?: 'default' | 'sent' | 'received';
   status?: 'sending' | 'sent' | 'read';
   currentUserId?: string;
@@ -70,7 +73,11 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
-export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, variant = 'default', status, currentUserId, opponentName = "OPP", opponentAvatar, customColors }) => {
+export const NoteCard: React.FC<NoteCardProps> = ({ 
+  note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, 
+  currentReaction, onReact, // Destructure new props
+  variant = 'default', status, currentUserId, opponentName = "OPP", opponentAvatar, customColors 
+}) => {
   if (!note) return null;
 
   // --- State ---
@@ -118,11 +125,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
   const openMenu = (clientX: number, clientY: number) => { 
       triggerHaptic(); 
       const menuW = 200; 
-      const menuH = 260; 
+      const menuH = 300; // Increased height for emoji bar
       let x = clientX; 
       let y = clientY; 
       
-      // Safety check for NaN
       if (isNaN(x) || x < 0) x = 10;
       if (isNaN(y) || y < 0) y = 10;
 
@@ -137,6 +143,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       e.preventDefault(); 
       e.stopPropagation(); 
       openMenu(e.clientX, e.clientY); 
+  };
+
+  const handleDoubleTap = (e: any) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerHaptic([10, 50]); // Distinct double tap vibe
+      if (onReact) onReact('❤️');
   };
 
   const formatTime = (timestamp: any) => { try { const t = Number(timestamp); if (isNaN(t) || t === 0) return ''; return new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } };
@@ -155,7 +168,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
               isLongPress.current = true; 
               openMenu(touchStartX.current, touchStartY.current); 
           } 
-      }, 500); // Decreased from 600ms for responsiveness
+      }, 500); 
   };
 
   const handleTouchMove = (e: any) => { 
@@ -163,13 +176,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
       const diffX = e.targetTouches[0].clientX - touchStartX.current; 
       const diffY = e.targetTouches[0].clientY - touchStartY.current; 
       
-      // Increased threshold from 10 to 15 to prevent accidental cancellation during long press
       if (Math.abs(diffX) > 15 || Math.abs(diffY) > 15) { 
           if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } 
       } 
       
       if (isLongPress.current) return; 
-      
       if (variant === 'default' && diffX < 0 && Math.abs(diffX) > Math.abs(diffY)) { setIsSwiping(true); setSwipeOffset(diffX); } 
   };
 
@@ -222,7 +233,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
 
   return (
     <>
-      <div className={`relative ${variant === 'default' ? 'w-fit max-w-[85%]' : 'max-w-[85%]'} overflow-visible group`} onContextMenu={handleContextMenu}>
+      <div className={`relative ${variant === 'default' ? 'w-fit max-w-[85%]' : 'max-w-[85%]'} overflow-visible group`} onContextMenu={handleContextMenu} onDoubleClick={handleDoubleTap}>
         <div 
             className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} relative transition-all duration-300 ease-out`} 
             style={{ transform: `translateX(${swipeOffset}px)`, opacity: isExiting ? 0 : 1 }} 
@@ -268,6 +279,17 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                </div>
              </div>
           )}
+
+          {/* REACTION BADGE */}
+          {currentReaction && (
+              <div 
+                  onClick={(e) => { e.stopPropagation(); if (onReact) onReact(currentReaction); }}
+                  className={`absolute -bottom-2 ${variant === 'sent' ? 'right-0' : 'left-0'} bg-[#1c1c1d] border border-[#3f3f40] text-white text-[12px] rounded-full px-1.5 py-0.5 shadow-sm animate-in zoom-in duration-200 z-10 select-none cursor-pointer flex items-center justify-center hover:scale-110 transition-transform`}
+                  style={{ minWidth: '20px' }}
+              >
+                  {currentReaction}
+              </div>
+          )}
         </div>
       </div>
       
@@ -286,6 +308,21 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, categories, selectedVo
                 onClick={(e) => e.stopPropagation()} 
                 onTouchStart={(e) => e.stopPropagation()}
             > 
+              {/* EMOJI BAR - WHATSAPP STYLE */}
+              {onReact && (
+                  <div className="flex justify-between px-2 py-2 mb-1 border-b border-white/10">
+                      {['👍', '❤️', '😂', '😮', '😢', '🔥'].map(emoji => (
+                          <button 
+                              key={emoji}
+                              onClick={() => { onReact(emoji); setContextMenu(null); }}
+                              className={`w-8 h-8 flex items-center justify-center text-lg rounded-full transition-all active:scale-90 ${currentReaction === emoji ? 'bg-white/20' : 'hover:bg-white/10'}`}
+                          >
+                              {emoji}
+                          </button>
+                      ))}
+                  </div>
+              )}
+
               <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
               
               {variant === 'default' && (

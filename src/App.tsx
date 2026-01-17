@@ -74,6 +74,13 @@ function App() {
   const [showScrollButton, setShowScrollButton] = useState(false);
 
   // NEW STATES
+  const [reactions, setReactions] = useState(() => {
+      try { return JSON.parse(localStorage.getItem('vibenotes_reactions') || '{}'); } catch { return {}; }
+  });
+  const [activeReactionId, setActiveReactionId] = useState(null);
+  
+  useEffect(() => { localStorage.setItem('vibenotes_reactions', JSON.stringify(reactions)); }, [reactions]);
+
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [mutedChats, setMutedChats] = useState(new Set());
   const [savedContacts, setSavedContacts] = useState(() => {
@@ -268,10 +275,23 @@ function App() {
   };
 
   const handleBlockConfirm = () => {
-      setShowBlockModal(false);
-      setCurrentView('list'); 
-      setActiveChatId(null);
-  };
+    setShowBlockModal(false);
+    setCurrentView('list'); 
+    setActiveChatId(null);
+};
+
+const handleAddReaction = (msgId, emoji) => {
+    setReactions(prev => {
+        const current = prev[msgId];
+        if (current === emoji) { // Toggle off if same
+            const next = { ...prev };
+            delete next[msgId];
+            return next;
+        }
+        return { ...prev, [msgId]: emoji };
+    });
+    setActiveReactionId(null);
+};
 
   const handleProfileSave = () => {
       setIsEditingProfile(false); setShowAvatarSelector(false);
@@ -807,6 +827,7 @@ function App() {
                                             </div>
                                         </div>
                                     )}
+                                    
                                     <NoteCard 
                                         note={msgNote} categories={[]} selectedVoice={selectedVoice} 
                                         variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
@@ -817,6 +838,8 @@ function App() {
                                         onImageClick={setZoomedImage}
                                         onDelete={isMe ? (id) => handleDeleteMessage(id) : undefined}
                                         onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => handleEditMessage(msg) : undefined}
+                                        currentReaction={reactions[msg.id]}
+                                        onReact={(emoji) => handleAddReaction(msg.id, emoji)}
                                     />
                                 </div>
                             </React.Fragment>

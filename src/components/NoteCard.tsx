@@ -31,23 +31,10 @@ interface NoteCardProps {
 // ============================================================================
 // HELPER COMPONENTS
 // ============================================================================
-// Base64 encoded "Pop" sound - tricks the brain into feeling a tap on iOS
-const POP_SOUND = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAAAAAP///yH/If8h/yH/If8=";
-const audioHaptic = typeof window !== 'undefined' ? new Audio(POP_SOUND) : null;
-
 const triggerHaptic = (pattern: number | number[] = 15) => { 
-    // 1. Real Vibration (Android/Desktop)
-    if (typeof navigator !== 'undefined' && navigator.vibrate) { 
-        try { navigator.vibrate(pattern); } catch (e) {} 
-    } 
-
-    // 2. Phantom Haptic (iOS Audio Trick)
-    // We clone the node to allow rapid-fire overlapping clicks
-    if (audioHaptic) {
-        const sound = audioHaptic.cloneNode() as HTMLAudioElement;
-        sound.volume = 0.2; // Keep it subtle
-        sound.play().catch(() => {});
-    }
+  if (typeof navigator !== 'undefined' && navigator.vibrate) { 
+      try { navigator.vibrate(pattern); } catch (e) {} 
+  } 
 };
 
 const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {

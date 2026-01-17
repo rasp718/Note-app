@@ -83,6 +83,9 @@ function App() {
 
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [mutedChats, setMutedChats] = useState(new Set());
+  // NEW: Store who we found in the URL
+  const [incomingInvite, setIncomingInvite] = useState(null);
+
   const [savedContacts, setSavedContacts] = useState(() => {
     try {
       const saved = localStorage.getItem('vibenotes_contacts');
@@ -93,6 +96,36 @@ function App() {
   useEffect(() => {
     localStorage.setItem('vibenotes_contacts', JSON.stringify(savedContacts));
   }, [savedContacts]);
+
+  // Check URL for Invite Links (e.g. /invite/neo)
+  useEffect(() => {
+      const path = window.location.pathname;
+      // Regex to find /invite/username
+      const match = path.match(/\/invite\/([^/]+)/);
+      if (match && match[1]) {
+          setIncomingInvite(match[1]); // Save the username found
+          // Clean the URL so it doesn't trigger again on refresh
+          window.history.replaceState(null, "", "/");
+      }
+  }, []);
+
+  const handleAcceptInvite = () => {
+      if (!incomingInvite) return;
+      // Create a contact object from the invite
+      const newContact = {
+          uid: `invited-${Date.now()}`,
+          displayName: incomingInvite, // Capitalize or format as needed
+          handle: `@${incomingInvite}`,
+          photoURL: null, // We don't have their pic yet
+          isOnline: false
+      };
+      
+      if (!savedContacts.find(c => c.handle === newContact.handle)) {
+          setSavedContacts([...savedContacts, newContact]);
+      }
+      setIncomingInvite(null);
+      setActiveTab('contacts'); // Switch to contacts so user sees them
+  };
 
   // Refs
   const mediaRecorderRef = useRef(null);
@@ -439,7 +472,8 @@ const handleAddReaction = (msgId, emoji) => {
                       <p className="text-zinc-500 font-mono">{profileHandle}</p>
                   </div>
                   <div className="bg-white p-2 rounded-xl border-2 border-black">
-                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${profileHandle}`} alt="QR Code" className="w-full h-full" />
+                      {/* Generates a URL so phone cameras recognize it as a link to your app */}
+                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${window.location.origin}/invite/${profileHandle.replace('@','')}`} alt="QR Code" className="w-full h-full" />
                   </div>
                   <p className="text-xs text-center text-zinc-400">Scan to connect securely</p>
                   <button onClick={() => setShowQRCode(false)} className="w-full py-3 bg-black text-white font-bold rounded-xl">Close</button>
@@ -1019,6 +1053,44 @@ const handleAddReaction = (msgId, emoji) => {
                             <span className="font-bold text-sm">Block User</span>
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* OVERLAY: INCOMING INVITE MODAL */}
+      {incomingInvite && (
+        <div className="fixed inset-0 z-[100] bg-black/70 flex flex-col justify-end md:justify-center md:items-center animate-in fade-in duration-200">
+            <div className="absolute inset-0" onClick={() => setIncomingInvite(null)} />
+            
+            <div className="relative w-full max-w-sm mx-auto p-4 z-10 animate-in slide-in-from-bottom duration-300 md:animate-in md:zoom-in-95 md:duration-200">
+                <div className="flex flex-col gap-2">
+                    <div className="bg-[#1c1c1d] rounded-[14px] overflow-hidden shadow-2xl shadow-black/50">
+                        <div className="p-6 flex flex-col items-center justify-center gap-3 border-b border-white/10 min-h-[120px]">
+                            <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center text-3xl">
+                                🎁
+                            </div>
+                            <div className="text-center space-y-1">
+                                <h3 className="text-white font-bold text-lg">Add {incomingInvite}?</h3>
+                                <p className="text-[13px] text-zinc-500 leading-tight px-4">
+                                    <b>@{incomingInvite}</b> wants to chat with you on VibeNotes.
+                                </p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={handleAcceptInvite}
+                            className="w-full py-4 text-[17px] text-blue-500 font-bold hover:bg-white/5 active:bg-white/10 transition-colors"
+                        >
+                            Add to Contacts
+                        </button>
+                    </div>
+
+                    <button 
+                        onClick={() => setIncomingInvite(null)}
+                        className="w-full py-4 bg-[#1c1c1d] rounded-[14px] text-[17px] font-semibold text-zinc-400 hover:bg-white/5 active:bg-white/10 transition-colors shadow-2xl shadow-black/50"
+                    >
+                        Ignore
+                    </button>
                 </div>
             </div>
         </div>

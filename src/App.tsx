@@ -488,7 +488,13 @@ function App() {
                             </div>
                         </div>
 
-                        {realChats.map((chat, index) => (
+                        {/* Deduplicate chats to show only one instance per user */}
+                        {realChats.reduce((acc, chat) => {
+                            if (!acc.find(c => c.otherUserId === chat.otherUserId)) {
+                                acc.push(chat);
+                            }
+                            return acc;
+                        }, []).map((chat, index) => (
                           <ChatListItem 
                             key={chat.id} 
                             chat={chat} 

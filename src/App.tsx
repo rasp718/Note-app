@@ -217,6 +217,7 @@ const handleCreateGroup = async () => {
             type: 'group',
             displayName: groupName,
             participants: participants,
+            createdBy: user.uid, // Store the Admin ID
             photoURL: null, 
             createdAt: serverTimestamp(),
             lastMessageTimestamp: serverTimestamp(),
@@ -1178,7 +1179,11 @@ const handleAddReaction = (msgId, emoji) => {
                         <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl overflow-hidden p-2 space-y-1">
                              <div className="px-2 py-1 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Members ({currentChatObject.participants?.length})</div>
                              {currentChatObject.participants.map(uid => (
-                                 <GroupMemberRow key={uid} userId={uid} isAdmin={false} />
+                                 <GroupMemberRow 
+                                    key={uid} 
+                                    userId={uid} 
+                                    isAdmin={currentChatObject.createdBy === uid} 
+                                 />
                              ))}
                              <button className="w-full py-3 text-center text-blue-500 font-bold text-sm hover:bg-white/5 rounded-xl transition-colors">Add Members</button>
                         </div>

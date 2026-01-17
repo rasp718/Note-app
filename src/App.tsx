@@ -578,7 +578,7 @@ function App() {
       {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
             {/* FLOATING BACK BUTTON - CENTERED ALIGNMENT WRAPPER */}
-            <div className="fixed bottom-28 left-0 w-full z-50 pointer-events-none">
+            <div className="fixed top-20 left-0 w-full z-50 pointer-events-none">
                 <div className="max-w-2xl mx-auto px-4">
                     <button 
                       onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 

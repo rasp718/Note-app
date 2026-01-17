@@ -729,51 +729,75 @@ function App() {
               </div>
            </div>
 
-           <div className="flex-none w-full p-2 pb-6 md:pb-3 bg-black/60 backdrop-blur-xl z-50 border-t border-zinc-800/50">
+           <div className="flex-none w-full p-2 bg-black/80 backdrop-blur-2xl z-50 border-t border-white/5">
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  
                  {isRecording ? (
-                    <div className="flex-1 flex items-center gap-2 animate-in slide-in-from-bottom-2 fade-in duration-200">
-                        <button onClick={cancelRecording} className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-red-500 hover:bg-white/10 transition-all"> <Trash2 size={22} /> </button>
-                        <div className="flex-1 bg-zinc-900 rounded-full h-12 flex items-center px-4 justify-between border border-zinc-700/50 relative overflow-hidden gap-2">
-                            <button onClick={togglePause} className="z-20 w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 text-white hover:bg-zinc-700 transition-colors"> {isPaused ? <Play size={14} fill="white" /> : <Pause size={14} fill="white" />} </button>
-                            <div className="flex items-center gap-2 z-10 min-w-[60px]"> <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isPaused ? 'bg-amber-500' : 'bg-red-500 animate-pulse'}`} /> <span className="text-white font-mono font-medium">{formatDuration(recordingDuration)}</span> </div>
-                            <div className="flex-1 flex items-center justify-center gap-0.5 h-6 opacity-80 overflow-hidden relative"> {!isPaused && [...Array(16)].map((_, i) => ( <div key={i} className="w-1 rounded-full animate-pulse bg-[#da7756]" style={{ height: `${Math.random() * 100}%`, animationDuration: '0.6s', animationDelay: `${i * 0.05}s` }} /> ))} {isPaused && <span className="text-xs text-zinc-500 uppercase font-bold tracking-widest">Paused</span>} </div>
+                    /* RECORDING STATE - NEATER LAYOUT */
+                    <div className="flex-1 flex items-center gap-2 animate-in slide-in-from-bottom-2 fade-in duration-200 h-[48px]">
+                        <button onClick={cancelRecording} className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-red-500 transition-colors"> <Trash2 size={24} /> </button>
+                        <div className="flex-1 bg-zinc-900/80 rounded-full h-full flex items-center px-2 gap-3 border border-white/10 relative overflow-hidden">
+                            <div className="flex items-center gap-2 z-10 pl-2"> <div className={`w-2.5 h-2.5 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-red-500 animate-pulse'}`} /> <span className="text-white font-mono font-medium text-sm">{formatDuration(recordingDuration)}</span> </div>
+                            <div className="flex-1 flex items-center justify-center gap-0.5 h-4 opacity-50 overflow-hidden"> {!isPaused && [...Array(12)].map((_, i) => ( <div key={i} className="w-1 rounded-full animate-pulse bg-white" style={{ height: `${Math.random() * 100}%`, animationDuration: '0.4s', animationDelay: `${i * 0.05}s` }} /> ))} </div>
+                            <button onClick={togglePause} className="z-20 w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-zinc-800 text-white hover:bg-zinc-700"> {isPaused ? <Play size={12} fill="white" /> : <Pause size={12} fill="white" />} </button>
                         </div>
-                        <button onClick={finishRecording} className="w-12 h-12 flex items-center justify-center rounded-full bg-[#da7756] text-white shadow-lg shadow-orange-900/20 active:scale-95 transition-transform"> <ArrowUp size={24} strokeWidth={3} /> </button>
+                        <button onClick={finishRecording} className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full bg-[#DA7756] text-white shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"> <ArrowUp size={24} strokeWidth={3} /> </button>
                     </div>
                  ) : (
+                    /* TYPING STATE - TELEGRAM STYLE */
                     <>
-                        {/* LEFT SIDE: TOOLS (Filter, Dice, Image) */}
-                        <div className="flex items-end gap-1 mb-1">
-                            {activeChatId === 'saved_messages' && (<button onClick={cycleFilter} className="w-10 h-10 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors bg-zinc-800/50 hover:bg-zinc-800">{activeFilter === 'all' ? (<LayoutGrid size={22} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}</button>)}
-                            
-                            {activeChatId !== 'saved_messages' && !editingNote && (
-                                <button onClick={handleRollDice} className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 text-zinc-400 hover:text-white hover:bg-zinc-800"><Dices size={22} /></button>
+                        {/* LEFT SIDE: TOOLS (Transparent, Clean) */}
+                        <div className="flex items-end gap-1 pb-1">
+                            {activeChatId === 'saved_messages' ? (
+                                <button onClick={cycleFilter} className="w-10 h-10 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">
+                                    {activeFilter === 'all' ? <LayoutGrid size={24} /> : <span className="text-xl leading-none">{currentConfig?.emoji}</span>}
+                                </button>
+                            ) : (
+                                <label className="w-10 h-10 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer active:scale-95">
+                                    <ImageIcon size={26} strokeWidth={1.5} />
+                                    <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} />
+                                </label>
                             )}
-
-                            <label className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 text-zinc-400 hover:text-white hover:bg-zinc-800 cursor-pointer">
-                                <ImageIcon size={22} />
-                                <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} />
-                            </label>
+                            
+                            {/* Optional Dice - Only show if empty input to save space */}
+                            {activeChatId !== 'saved_messages' && !transcript && !editingNote && (
+                                <button onClick={handleRollDice} className="w-10 h-10 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors hidden sm:flex">
+                                    <Dices size={24} strokeWidth={1.5} />
+                                </button>
+                            )}
                         </div>
 
-                        {/* MIDDLE: INPUT FIELD */}
-                        <div className="flex-1 bg-zinc-900/50 border border-zinc-700/50 rounded-2xl flex items-center px-3 py-1.5 focus-within:border-white/50 transition-colors gap-2 relative">
-                            {imageUrl && (<div className="relative flex-shrink-0"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"><X size={10} /></button></div>)}
-                            <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} onFocus={() => { scrollToBottom('auto'); }} placeholder={editingNote ? "Edit..." : (activeChatId !== 'saved_messages' ? TRANSLATIONS.typePlaceholder : (activeFilter === 'all' ? "Select category..." : (isHackerMode ? ">_" : `${currentConfig?.label}...`)))} rows={1} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-2 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
+                        {/* MIDDLE: INPUT PILL */}
+                        <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-[20px] flex items-end px-4 py-2 focus-within:border-zinc-700 transition-colors gap-2 min-h-[44px]">
+                            {imageUrl && (
+                                <div className="relative flex-shrink-0 mb-0.5">
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div>
+                                    <button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-zinc-800 border border-zinc-700 text-white rounded-full flex items-center justify-center"><X size={12} /></button>
+                                </div>
+                            )}
+                            <textarea 
+                                ref={textareaRef} 
+                                value={transcript} 
+                                onChange={(e) => setTranscript(e.target.value)} 
+                                onPaste={(e) => handlePaste(e)} 
+                                onFocus={() => scrollToBottom('auto')} 
+                                placeholder={editingNote ? "Edit message..." : "Message"} 
+                                rows={1} 
+                                className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-[16px] resize-none max-h-32 py-1 leading-relaxed ${isHackerMode ? 'font-mono' : ''}`} 
+                                style={isHackerMode ? { color: HACKER_GREEN } : undefined} 
+                            />
                         </div>
                         
-                        {/* RIGHT SIDE: MIC OR SEND (SWAP LOGIC) */}
-                        <div className="mb-1 animate-in fade-in zoom-in duration-200">
+                        {/* RIGHT SIDE: BIGGER BUTTON */}
+                        <div className="pb-0 animate-in fade-in zoom-in duration-200">
                              {(transcript.trim() || imageUrl || editingNote) ? (
-                                <button onClick={handleMainAction} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg active:scale-95`} style={{ backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' }}>
-                                    {editingNote ? <Check size={20} strokeWidth={3} /> : <ArrowUp size={22} strokeWidth={3} />}
+                                <button onClick={handleMainAction} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg active:scale-95 bg-[#DA7756] text-white hover:bg-[#006be0]">
+                                    {editingNote ? <Check size={20} strokeWidth={3} /> : <ArrowUp size={24} strokeWidth={3} />}
                                 </button>
                              ) : (
                                 activeChatId !== 'saved_messages' && (
-                                    <button onClick={startRecording} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 active:scale-95`}> 
-                                        <Mic size={22} /> 
+                                    <button onClick={startRecording} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-white active:scale-95"> 
+                                        <Mic size={24} /> 
                                     </button>
                                 )
                              )}

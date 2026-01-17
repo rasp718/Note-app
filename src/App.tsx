@@ -4,7 +4,7 @@ import {
   PenLine, AlignLeft, AlignCenter, AlignRight, ChevronLeft, MessageSquareDashed, 
   Moon, Trash2, Globe, Zap, Cpu, SlidersHorizontal, AtSign, Activity, 
   Camera, Grid, UserPlus, MessageCircle, Phone, PaintBucket, QrCode, Mic, 
-  Pause, Play, Dices, Edit // <--- ADDED 'Edit' HERE
+  Pause, Play, Dices, Edit 
 } from 'lucide-react'; 
 
 // IMPORT TYPES & UTILS
@@ -32,11 +32,11 @@ function App() {
   const { chats: realChats, createChat } = useChats(user?.uid || null);
   
   // Navigation & View
-  const [currentView, setCurrentView] = useState<'list' | 'room'>('list');
-  const [activeTab, setActiveTab] = useState<'contacts' | 'calls' | 'chats' | 'settings'>('chats');
-  const [activeChatId, setActiveChatId] = useState<string | null>(null); 
+  const [currentView, setCurrentView] = useState('list');
+  const [activeTab, setActiveTab] = useState('chats');
+  const [activeChatId, setActiveChatId] = useState(null); 
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
+  const [selectedChatIds, setSelectedChatIds] = useState(new Set());
   
   // Profile Settings
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -44,52 +44,52 @@ function App() {
   const [profileName, setProfileName] = useState("Vibe User");
   const [profileHandle, setProfileHandle] = useState("@neo");
   const [profileBio, setProfileBio] = useState("Status: Online");
-  const [profilePic, setProfilePic] = useState<string | null>(null);
-  const [categories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
+  const [profilePic, setProfilePic] = useState(null);
+  const [categories] = useState(DEFAULT_CATEGORIES);
   
   // Visual Settings
-  const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('right');
-  const [bgIndex, setBgIndex] = useState<number>(1);
-  const [bgOpacity, setBgOpacity] = useState<number>(0.45);
-  const [bgScale, setBgScale] = useState<number>(100);
-  const [bubbleStyle, setBubbleStyle] = useState<string>('minimal_solid');
-  const [redModeIntensity, setRedModeIntensity] = useState<number>(0);
-  const [isAutoRedMode, setIsAutoRedMode] = useState<boolean>(false);
+  const [alignment, setAlignment] = useState('right');
+  const [bgIndex, setBgIndex] = useState(1);
+  const [bgOpacity, setBgOpacity] = useState(0.45);
+  const [bgScale, setBgScale] = useState(100);
+  const [bubbleStyle, setBubbleStyle] = useState('minimal_solid');
+  const [redModeIntensity, setRedModeIntensity] = useState(0);
+  const [isAutoRedMode, setIsAutoRedMode] = useState(false);
 
   // Inputs & Media
   const [contactSearchQuery, setContactSearchQuery] = useState('');
-  const [contactSearchResults, setContactSearchResults] = useState<any[]>([]);
+  const [contactSearchResults, setContactSearchResults] = useState([]);
   const [isSearchingContacts, setIsSearchingContacts] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [editingNote, setEditingNote] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [zoomedImage, setZoomedImage] = useState(null);
   const [showQRCode, setShowQRCode] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
 
   // Refs
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const mimeTypeRef = useRef<string>('');
-  const streamRef = useRef<MediaStream | null>(null);
-  const recordingTimerRef = useRef<any>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null); 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const mimeTypeRef = useRef('');
+  const streamRef = useRef(null);
+  const recordingTimerRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const textareaRef = useRef(null); 
+  const fileInputRef = useRef(null);
+  const bottomRef = useRef(null);
+  const listRef = useRef(null);
+  const canvasRef = useRef(null);
 
   // Helpers
-  const [activeFilter, setActiveFilter] = useState<CategoryId | 'all' | 'secret'>('all');
-  const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [selectedVoice, setSelectedVoice] = useState(null);
   const [secretTaps, setSecretTaps] = useState(0);
-  const tapTimeoutRef = useRef<any>(null);
+  const tapTimeoutRef = useRef(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
 
   const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
@@ -133,7 +133,7 @@ function App() {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     const FONT_SIZE = 24; const FADE_SPEED = 0.1; const MASTER_SPEED = 50; const STUTTER_AMOUNT = 0.85; const RAIN_BUILDUP = 50; const COLOR_HEAD = '#FFF'; const COLOR_TRAIL = '#0D0'; const GLOW_COLOR = '#0F0'; const GLOW_INTENSITY = 10;     
     const binary = '010101010101'; const nums = '0123456789'; const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; const alphabet = binary + nums + latin;
-    const columns = canvas.width / FONT_SIZE; const drops: number[] = [];
+    const columns = canvas.width / FONT_SIZE; const drops = [];
     for(let x = 0; x < columns; x++) { drops[x] = Math.floor(Math.random() * -RAIN_BUILDUP); }
     const draw = () => {
         ctx.fillStyle = `rgba(0, 0, 0, ${FADE_SPEED})`; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.font = `bold ${FONT_SIZE}px monospace`;
@@ -154,7 +154,7 @@ function App() {
   useEffect(() => { 
       try { 
           const savedAlignment = localStorage.getItem('vibenotes_alignment'); 
-          if(savedAlignment) setAlignment(savedAlignment as any); 
+          if(savedAlignment) setAlignment(savedAlignment); 
           const savedBg = localStorage.getItem('vibenotes_bg'); 
           if (savedBg) setBgIndex(parseInt(savedBg)); 
           const savedOpacity = localStorage.getItem('vibenotes_bg_opacity'); 
@@ -177,7 +177,7 @@ function App() {
   // ============================================================================
   // SECTION: ACTIONS & HANDLERS
   // ============================================================================
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
+  const scrollToBottom = (behavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
   
   const handleRollDice = async () => {
     if (!user || !activeChatId) return;
@@ -192,12 +192,12 @@ function App() {
     try {
         if (activeChatId === 'saved_messages' || activeChatId === null) {
             if (editingNote) {
-                const updates: Partial<Note> = { text: transcript.trim(), editedAt: Date.now() }; 
+                const updates = { text: transcript.trim(), editedAt: Date.now() }; 
                 if (imageUrl !== editingNote.imageUrl) updates.imageUrl = imageUrl || undefined;
                 await updateNote(editingNote.id, updates);
                 setEditingNote(null);
             } else {
-                const categoryToUse = activeFilter as CategoryId; 
+                const categoryToUse = activeFilter; 
                 await addNote({ text: transcript.trim(), date: Date.now(), category: categoryToUse, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
                 scrollToBottom(); 
             }
@@ -217,7 +217,7 @@ function App() {
       else { const hour = new Date().getHours(); if (hour >= 18 || hour < 6) { setRedModeIntensity(50); } else { setRedModeIntensity(0); } }
   };
 
-  const changeBubbleStyle = (style: string) => { setBubbleStyle(style); };
+  const changeBubbleStyle = (style) => { setBubbleStyle(style); };
 
   const handleSecretTrigger = () => {
     setSecretTaps(prev => prev + 1);
@@ -226,7 +226,7 @@ function App() {
     if (secretTaps + 1 >= 5) { setActiveFilter('secret'); setSecretTaps(0); setShowSecretAnim(true); setTimeout(() => setShowSecretAnim(false), 8000); if (navigator.vibrate) navigator.vibrate([100, 50, 100]); }
   };
 
-  const toggleChatSelection = (id: string) => { const newSet = new Set(selectedChatIds); if (newSet.has(id)) newSet.delete(id); else newSet.add(id); setSelectedChatIds(newSet); };
+  const toggleChatSelection = (id) => { const newSet = new Set(selectedChatIds); if (newSet.has(id)) newSet.delete(id); else newSet.add(id); setSelectedChatIds(newSet); };
   
   const handleProfileSave = () => {
       setIsEditingProfile(false); setShowAvatarSelector(false);
@@ -234,14 +234,14 @@ function App() {
       if (profilePic) localStorage.setItem('vibenotes_profile_pic', profilePic); if (user) syncUserProfile(user); 
   };
 
-  const handleAvatarUpload = async (file: File) => { try { const url = await compressImage(file); setProfilePic(url); setShowAvatarSelector(false); } catch(e) { console.error(e); } };
-  const handleSelectPreset = (num: number) => { setProfilePic(`/robot${num}.jpeg?v=1`); setShowAvatarSelector(false); };
+  const handleAvatarUpload = async (file) => { try { const url = await compressImage(file); setProfilePic(url); setShowAvatarSelector(false); } catch(e) { console.error(e); } };
+  const handleSelectPreset = (num) => { setProfilePic(`/robot${num}.jpeg?v=1`); setShowAvatarSelector(false); };
 
-  const handleImageUpload = async (file: File) => {
+  const handleImageUpload = async (file) => {
     if (!file.type.startsWith('image/')) return alert('Please select an image file');
     setIsUploadingImage(true); try { const url = await compressImage(file); setImageUrl(url); } catch (e) { console.error(e); } finally { setIsUploadingImage(false); }
   };
-  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+  const handlePaste = async (e) => {
     const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = items[i].getAsFile(); if (file) await handleImageUpload(file); break; } }
   };
 
@@ -283,32 +283,32 @@ function App() {
 
   const cancelRecording = () => { if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') { mediaRecorderRef.current.onstop = null; mediaRecorderRef.current.stop(); } cleanupRecording(); };
   const cleanupRecording = () => { setIsRecording(false); setIsPaused(false); setRecordingDuration(0); if (recordingTimerRef.current) clearInterval(recordingTimerRef.current); if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; } };
-  const formatDuration = (sec: number) => { const m = Math.floor(sec / 60); const s = sec % 60; return `${m}:${s.toString().padStart(2, '0')}`; };
+  const formatDuration = (sec) => { const m = Math.floor(sec / 60); const s = sec % 60; return `${m}:${s.toString().padStart(2, '0')}`; };
 
-  const handleDeleteMessage = async (id: string) => { await deleteMessage(id); };
-  const handleEditMessage = (msg: any) => { setEditingNote({ ...msg, category: 'default' }); setTranscript(msg.text); setTimeout(() => textareaRef.current?.focus(), 100); };
+  const handleDeleteMessage = async (id) => { await deleteMessage(id); };
+  const handleEditMessage = (msg) => { setEditingNote({ ...msg, category: 'default' }); setTranscript(msg.text); setTimeout(() => textareaRef.current?.focus(), 100); };
 
-  const handleSearchContacts = async (e: React.FormEvent) => {
+  const handleSearchContacts = async (e) => {
       e.preventDefault(); if (!contactSearchQuery.trim()) return; setIsSearchingContacts(true);
-      try { const results = await searchUsers(contactSearchQuery); setContactSearchResults(results.filter((u: any) => u.uid !== user?.uid)); } catch (err) { console.error(err); } finally { setIsSearchingContacts(false); }
+      try { const results = await searchUsers(contactSearchQuery); setContactSearchResults(results.filter((u) => u.uid !== user?.uid)); } catch (err) { console.error(err); } finally { setIsSearchingContacts(false); }
   };
-  const startNewChat = async (otherUid: string) => {
+  const startNewChat = async (otherUid) => {
       if (!otherUid) return;
       try { const newChatId = await createChat(otherUid); if (newChatId) { setActiveChatId(newChatId); setCurrentView('room'); setContactSearchQuery(''); setContactSearchResults([]); } } catch (e) { console.error("Failed to create chat", e); }
   };
 
   const cycleFilter = () => {
       if (activeFilter === 'secret') { setActiveFilter('all'); return; }
-      const order: (CategoryId | 'all')[] = ['all', ...categories.map(c => c.id)];
-      const currentIndex = order.indexOf(activeFilter as any);
+      const order = ['all', ...categories.map(c => c.id)];
+      const currentIndex = order.indexOf(activeFilter);
       if (currentIndex === -1) { setActiveFilter('all'); return; }
       const nextIndex = (currentIndex + 1) % order.length; setActiveFilter(order[nextIndex]);
   };
 
-  const handleEditClick = (note: Note) => { setActiveFilter(note.category); setEditingNote(note); setTranscript(note.text); setImageUrl(note.imageUrl || ''); setTimeout(() => { textareaRef.current?.focus(); textareaRef.current?.select(); }, 50); };
-  const handleDeleteNote = async (id: string) => { await deleteNoteFromFirebase(id); };
-  const handleToggleExpand = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
-  const togglePin = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
+  const handleEditClick = (note) => { setActiveFilter(note.category); setEditingNote(note); setTranscript(note.text); setImageUrl(note.imageUrl || ''); setTimeout(() => { textareaRef.current?.focus(); textareaRef.current?.select(); }, 50); };
+  const handleDeleteNote = async (id) => { await deleteNoteFromFirebase(id); };
+  const handleToggleExpand = async (id) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
+  const togglePin = async (id) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
 
   const safeNotes = (notes || []).map(n => {
       const date = normalizeDate(n.date); const editedAt = n.editedAt ? normalizeDate(n.editedAt) : undefined;
@@ -577,13 +577,23 @@ function App() {
       {/* VIEW: ROOM */}
       {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
+            {/* FLOATING BACK BUTTON - CENTERED ALIGNMENT WRAPPER */}
+            <div className="fixed bottom-28 left-0 w-full z-50 pointer-events-none">
+                <div className="max-w-2xl mx-auto px-4">
+                    <button 
+                      onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
+                      className="w-12 h-12 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center text-white shadow-xl active:scale-90 transition-all hover:bg-white/20 pointer-events-auto"
+                    >
+                        <ChevronLeft size={24} />
+                    </button>
+                </div>
+            </div>
+
             {/* Header and other room view code remains unchanged */}
             <div className="fixed top-0 left-0 right-0 z-40">
                 <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative z-50">
                     <div className="flex items-center gap-1 w-full">
-                        <button onClick={() => { setCurrentView('list'); setActiveChatId(null); }} className="w-10 h-10 flex items-center justify-center text-zinc-400 transition-colors active:scale-95 hover:bg-white/5 rounded-full mr-1">
-                            <ChevronLeft size={28} />
-                        </button>
+                        {/* REMOVED TOP BACK BUTTON FROM HERE */}
                         
                         {activeChatId !== 'saved_messages' ? (
                            <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors">

@@ -4,7 +4,7 @@ import {
   PenLine, AlignLeft, AlignCenter, AlignRight, ChevronLeft, ChevronDown, MessageSquareDashed, 
   Moon, Trash2, Globe, Zap, Cpu, SlidersHorizontal, AtSign, Activity, 
   Camera, Grid, UserPlus, MessageCircle, Phone, PaintBucket, QrCode, Mic, 
-  Pause, Play, Dices, Edit, Bell, BellOff, MoreHorizontal, Ban, Info
+  Pause, Play, Dices, Edit, Bell, BellOff, MoreHorizontal, Ban, Info, Users
 } from 'lucide-react'; 
 
 // IMPORT TYPES & UTILS
@@ -21,7 +21,7 @@ import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, sear
 import Auth from './components/Auth';
 // FIREBASE DIRECT INIT FOR INVITES
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, query, where, getDocs } from "firebase/firestore";
+import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCiosArE3iOxF9iGp8wduA-TlSgy1p3WUo",
@@ -99,6 +99,12 @@ function App() {
   const [mutedChats, setMutedChats] = useState(new Set());
   // NEW: Store who we found in the URL
   const [incomingInvite, setIncomingInvite] = useState(null);
+  
+  // NEW: Group Chat States
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [groupMembers, setGroupMembers] = useState(new Set());
+  const [groupStep, setGroupStep] = useState(1); // 1: Select, 2: Name
 
   const [savedContacts, setSavedContacts] = useState(() => {
     try {
@@ -168,6 +174,33 @@ const handleAcceptInvite = () => {
     
     setIncomingInvite(null);
     setActiveTab('contacts');
+};
+
+const handleCreateGroup = async () => {
+    if (!groupName.trim() || groupMembers.size === 0) return;
+    try {
+        const participants = [user.uid, ...Array.from(groupMembers)];
+        await addDoc(collection(db, "chats"), {
+            type: 'group',
+            displayName: groupName,
+            participants: participants,
+            photoURL: null, 
+            createdAt: serverTimestamp(),
+            lastMessageTimestamp: serverTimestamp(),
+            lastMessageText: 'Group created'
+        });
+        setIsGroupModalOpen(false);
+        setGroupName('');
+        setGroupMembers(new Set());
+        setGroupStep(1);
+    } catch (e) { console.error("Error creating group", e); }
+};
+
+const toggleGroupMember = (uid) => {
+    const newSet = new Set(groupMembers);
+    if (newSet.has(uid)) newSet.delete(uid);
+    else newSet.add(uid);
+    setGroupMembers(newSet);
 };
 
   // Refs
@@ -539,8 +572,8 @@ const handleAddReaction = (msgId, emoji) => {
            {activeTab === 'chats' && (
              <div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
                 <div className="max-w-2xl mx-auto w-full flex items-end justify-between">
-                    <div><h1 className="text-3xl font-black text-white tracking-tighter">FEED</h1><p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mt-1">Encrypted</p></div>
-                    <div className="flex gap-4 items-center mb-1"><button className="text-zinc-500 transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = '#71717a'}><PenLine size={20} /></button></div>
+                <div><h1 className="text-3xl font-black text-white tracking-tighter">FEED</h1><p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mt-1">Encrypted</p></div>
+                    <div className="flex gap-4 items-center mb-1"><button onClick={() => setIsGroupModalOpen(true)} className="text-zinc-500 transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = accentColor} onMouseLeave={(e) => e.currentTarget.style.color = '#71717a'}><PenLine size={20} /></button></div>
                 </div>
              </div>
            )}
@@ -781,18 +814,24 @@ const handleAddReaction = (msgId, emoji) => {
                         
                         {activeChatId !== 'saved_messages' ? (
                            <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors group">
-                               <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 relative group-hover:border-white/30 transition-colors">
-                                  {otherChatUser?.photoURL ? (
+                               <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 relative group-hover:border-white/30 transition-colors flex items-center justify-center">
+                                  {currentChatObject?.type === 'group' ? (
+                                      <Users size={20} className="text-zinc-400" />
+                                  ) : otherChatUser?.photoURL ? (
                                       <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
                                   ) : (
                                       <div className="w-full h-full flex items-center justify-center text-lg">{otherChatUser?.displayName?.[0] || '?'}</div>
                                   )}
                                </div>
                                <div className="flex-1 min-w-0">
-                                   <h3 className="font-bold text-white text-base leading-tight truncate">{otherChatUser?.displayName || 'Unknown'}</h3>
+                                   <h3 className="font-bold text-white text-base leading-tight truncate">
+                                       {currentChatObject?.type === 'group' ? currentChatObject.displayName : (otherChatUser?.displayName || 'Unknown')}
+                                   </h3>
                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                       {otherChatUser?.isOnline && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}
-                                       <p className={`text-xs truncate ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>{otherChatUser?.isOnline ? 'Online' : 'Last seen recently'}</p>
+                                       {otherChatUser?.isOnline && currentChatObject?.type !== 'group' && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}
+                                       <p className={`text-xs truncate ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>
+                                           {currentChatObject?.type === 'group' ? `${currentChatObject.participants?.length || 0} members` : (otherChatUser?.isOnline ? 'Online' : 'Last seen recently')}
+                                       </p>
                                    </div>
                                </div>
                            </div>
@@ -1096,6 +1135,85 @@ const handleAddReaction = (msgId, emoji) => {
                             <span className="font-bold text-sm">Block User</span>
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* OVERLAY: NEW GROUP MODAL */}
+      {isGroupModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="absolute inset-0" onClick={() => setIsGroupModalOpen(false)} />
+            <div className="bg-[#1c1c1d] w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col max-h-[80vh] animate-in slide-in-from-bottom-10 zoom-in-95 duration-200 border border-white/10">
+                
+                {/* Header */}
+                <div className="p-4 border-b border-white/10 flex justify-between items-center bg-zinc-900">
+                    <button onClick={() => { if(groupStep===2) setGroupStep(1); else setIsGroupModalOpen(false); }} className="text-zinc-400 hover:text-white"><ChevronLeft size={24} /></button>
+                    <h3 className="font-bold text-white">{groupStep === 1 ? 'New Group' : 'Name Group'}</h3>
+                    <div className="w-6" />
+                </div>
+
+                {/* Step 1: Select Members */}
+                {groupStep === 1 && (
+                    <div className="flex-1 overflow-y-auto p-2">
+                        {savedContacts.length === 0 ? (
+                            <div className="text-center py-10 text-zinc-500">No contacts found.<br/>Scan a QR code to add friends.</div>
+                        ) : (
+                            savedContacts.map(contact => (
+                                <div key={contact.uid} onClick={() => toggleGroupMember(contact.uid)} className="flex items-center gap-4 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors">
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${groupMembers.has(contact.uid) ? 'bg-[#DA7756] border-[#DA7756]' : 'border-zinc-600'}`}>
+                                        {groupMembers.has(contact.uid) && <Check size={14} className="text-white" strokeWidth={3} />}
+                                    </div>
+                                    <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden">
+                                        {contact.photoURL ? <img src={contact.photoURL} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center">🤖</div>}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-bold text-white truncate">{contact.displayName}</div>
+                                        <div className="text-xs text-zinc-500 truncate">{contact.handle}</div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
+
+                {/* Step 2: Name Group */}
+                {groupStep === 2 && (
+                    <div className="p-6 space-y-6">
+                        <div className="w-24 h-24 rounded-full bg-zinc-800 mx-auto flex items-center justify-center border border-white/10">
+                            <Camera size={32} className="text-zinc-500" />
+                        </div>
+                        <input 
+                            autoFocus
+                            type="text" 
+                            placeholder="Group Name" 
+                            value={groupName}
+                            onChange={(e) => setGroupName(e.target.value)}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl p-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#DA7756] transition-colors text-center font-bold text-lg"
+                        />
+                        <div className="text-center text-xs text-zinc-500">{groupMembers.size} members selected</div>
+                    </div>
+                )}
+
+                {/* Footer Action */}
+                <div className="p-4 border-t border-white/10 bg-zinc-900">
+                    {groupStep === 1 ? (
+                        <button 
+                            disabled={groupMembers.size === 0}
+                            onClick={() => setGroupStep(2)}
+                            className="w-full py-3 bg-white text-black font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                        >
+                            Next ({groupMembers.size})
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={handleCreateGroup}
+                            disabled={!groupName.trim()}
+                            className="w-full py-3 bg-[#DA7756] text-white font-bold rounded-xl disabled:opacity-50 transition-all active:scale-95"
+                        >
+                            Create Group
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

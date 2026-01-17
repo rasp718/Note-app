@@ -338,9 +338,17 @@ function App() {
       try { const results = await searchUsers(contactSearchQuery); setContactSearchResults(results.filter((u) => u.uid !== user?.uid)); } catch (err) { console.error(err); } finally { setIsSearchingContacts(false); }
   };
   const startNewChat = async (otherUid) => {
-      if (!otherUid) return;
-      try { const newChatId = await createChat(otherUid); if (newChatId) { setActiveChatId(newChatId); setCurrentView('room'); setContactSearchQuery(''); setContactSearchResults([]); } } catch (e) { console.error("Failed to create chat", e); }
-  };
+    if (!otherUid) return;
+    const existing = realChats.find(c => c.otherUserId === otherUid);
+    if (existing) {
+        setActiveChatId(existing.id);
+        setCurrentView('room');
+        setContactSearchQuery('');
+        setContactSearchResults([]);
+        return;
+    }
+    try { const newChatId = await createChat(otherUid); if (newChatId) { setActiveChatId(newChatId); setCurrentView('room'); setContactSearchQuery(''); setContactSearchResults([]); } } catch (e) { console.error("Failed to create chat", e); }
+};
 
   const cycleFilter = () => {
       if (activeFilter === 'secret') { setActiveFilter('all'); return; }
@@ -991,7 +999,7 @@ function App() {
                     <div className="bg-[#1c1c1d] rounded-[14px] overflow-hidden shadow-2xl shadow-black/50">
                         <div className="p-4 flex flex-col items-center justify-center gap-1 border-b border-white/10 min-h-[80px]">
                             <p className="text-[13px] text-zinc-500 text-center leading-tight px-4">
-                                Do you want to block <b>{otherChatUser.displayName}</b> from messaging and calling you on Telegram?
+                                Do you want to block <b>{otherChatUser.displayName}</b>?
                             </p>
                         </div>
                         <button 

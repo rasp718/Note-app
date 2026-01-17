@@ -4,7 +4,7 @@ import {
   PenLine, AlignLeft, AlignCenter, AlignRight, ChevronLeft, ChevronDown, MessageSquareDashed, 
   Moon, Trash2, Globe, Zap, Cpu, SlidersHorizontal, AtSign, Activity, 
   Camera, Grid, UserPlus, MessageCircle, Phone, PaintBucket, QrCode, Mic, 
-  Pause, Play, Dices, Edit, Bell, MoreHorizontal, Ban, Info
+  Pause, Play, Dices, Edit, Bell, BellOff, MoreHorizontal, Ban, Info
 } from 'lucide-react'; 
 
 // IMPORT TYPES & UTILS
@@ -72,6 +72,20 @@ function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
+
+  // NEW STATES
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [mutedChats, setMutedChats] = useState(new Set());
+  const [savedContacts, setSavedContacts] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vibenotes_contacts');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('vibenotes_contacts', JSON.stringify(savedContacts));
+  }, [savedContacts]);
 
   // Refs
   const mediaRecorderRef = useRef(null);
@@ -237,6 +251,28 @@ function App() {
 
   const toggleChatSelection = (id) => { const newSet = new Set(selectedChatIds); if (newSet.has(id)) newSet.delete(id); else newSet.add(id); setSelectedChatIds(newSet); };
   
+  const toggleMute = () => {
+    if (!activeChatId) return;
+    const newSet = new Set(mutedChats);
+    if (newSet.has(activeChatId)) newSet.delete(activeChatId);
+    else newSet.add(activeChatId);
+    setMutedChats(newSet);
+  };
+
+  const handleAddToContacts = () => {
+    if (!otherChatUser) return;
+    if (!savedContacts.find(c => c.uid === otherChatUser.uid)) {
+        setSavedContacts([...savedContacts, otherChatUser]);
+        alert(`${otherChatUser.displayName} added to contacts!`);
+    }
+  };
+
+  const handleBlockConfirm = () => {
+      setShowBlockModal(false);
+      setCurrentView('list'); 
+      setActiveChatId(null);
+  };
+
   const handleProfileSave = () => {
       setIsEditingProfile(false); setShowAvatarSelector(false);
       localStorage.setItem('vibenotes_profile_name', profileName); localStorage.setItem('vibenotes_profile_handle', profileHandle); localStorage.setItem('vibenotes_profile_bio', profileBio);
@@ -480,21 +516,40 @@ function App() {
                         </div>
 
                         <div className="space-y-3 pt-4">
-                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">Results</h3>
+                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">
+                                {contactSearchQuery ? 'Search Results' : 'Saved Contacts'}
+                            </h3>
+                            
                             {isSearchingContacts ? (
                                 <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div></div>
-                            ) : contactSearchResults.length > 0 ? (
-                                contactSearchResults.map((u) => (
-                                    <div key={u.uid} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-2 fade-in duration-300">
-                                        <div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden">
-                                            {u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}
+                            ) : contactSearchQuery ? (
+                                contactSearchResults.length > 0 ? (
+                                    contactSearchResults.map((u) => (
+                                        <div key={u.uid} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                            <div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden">
+                                                {u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}
+                                            </div>
+                                            <div className="flex-1"><h3 className="font-bold text-white">{u.displayName}</h3><p className="text-xs text-zinc-500 font-mono">{u.handle}</p></div>
+                                            <button onClick={() => startNewChat(u.uid)} className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all"><MessageCircle size={20} /></button>
                                         </div>
-                                        <div className="flex-1"><h3 className="font-bold text-white">{u.displayName}</h3><p className="text-xs text-zinc-500 font-mono">{u.handle}</p></div>
-                                        <button onClick={() => startNewChat(u.uid)} className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all"><MessageCircle size={20} /></button>
-                                    </div>
-                                ))
+                                    ))
+                                ) : (
+                                    <div className="text-center py-10 opacity-30"><p className="text-zinc-500 text-sm">No users found.</p></div>
+                                )
                             ) : (
-                                <div className="text-center py-10 opacity-30"><UserPlus size={48} className="mx-auto mb-4 text-zinc-600" /><p className="text-zinc-500 text-sm">Search for a handle to start connecting.</p></div>
+                                savedContacts.length > 0 ? (
+                                    savedContacts.map((u) => (
+                                        <div key={u.uid} onClick={() => startNewChat(u.uid)} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                            <div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden">
+                                                {u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}
+                                            </div>
+                                            <div className="flex-1"><h3 className="font-bold text-white">{u.displayName}</h3><p className="text-xs text-zinc-500 font-mono">{u.handle}</p></div>
+                                            <ChevronLeft size={16} className="rotate-180 text-zinc-500" />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-10 opacity-30"><UserPlus size={48} className="mx-auto mb-4 text-zinc-600" /><p className="text-zinc-500 text-sm">Your contact list is empty.</p></div>
+                                )
                             )}
                         </div>
                     </div>
@@ -863,13 +918,14 @@ function App() {
                 {/* CONTENT SECTION - Tighter spacing, overlapping image */}
                 <div className="flex-1 bg-black -mt-6 relative z-10 px-4 pt-2 pb-6 flex flex-col gap-3 overflow-y-auto no-scrollbar rounded-t-[30px]">
                     
-                    {/* Quick Actions Grid - Slightly more compact */}
+                    {/* Quick Actions Grid - WIRED UP */}
                     <div className="grid grid-cols-4 gap-2">
                         <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
                             <Phone size={20} /> <span className="text-[10px] font-bold uppercase">Call</span>
                         </button>
-                        <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
-                            <Bell size={20} /> <span className="text-[10px] font-bold uppercase">Mute</span>
+                        <button onClick={toggleMute} className={`h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 ${mutedChats.has(activeChatId) ? 'text-red-500 border-red-500/30' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                            {mutedChats.has(activeChatId) ? <BellOff size={20} /> : <Bell size={20} />} 
+                            <span className="text-[10px] font-bold uppercase">{mutedChats.has(activeChatId) ? 'Unmute' : 'Mute'}</span>
                         </button>
                         <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
                             <Search size={20} /> <span className="text-[10px] font-bold uppercase">Search</span>
@@ -903,18 +959,56 @@ function App() {
                         </div>
                     </div>
 
-                    {/* Action List - Compact & Pushed to bottom */}
+                    {/* Action List - WIRED UP */}
                     <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl overflow-hidden mt-auto mb-2">
-                        <button className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left active:bg-white/10">
-                            <UserPlus size={20} color="#DA7756" />
-                            <span className="font-bold text-sm" style={{ color: '#DA7756' }}>Add to Contacts</span>
+                        <button onClick={handleAddToContacts} className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left active:bg-white/10 group">
+                            <UserPlus size={20} className="text-[#DA7756] group-hover:text-white transition-colors" />
+                            <span className="font-bold text-sm text-[#DA7756] group-hover:text-white transition-colors">
+                                {savedContacts.find(c => c.uid === otherChatUser.uid) ? 'Contact Saved' : 'Add to Contacts'}
+                            </span>
                         </button>
                         <div className="w-full h-px bg-white/5" />
-                        <button className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left text-red-500 active:bg-red-500/10">
+                        <button onClick={() => setShowBlockModal(true)} className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left text-red-500 active:bg-red-500/10">
                             <Ban size={20} />
                             <span className="font-bold text-sm">Block User</span>
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* OVERLAY: BLOCK USER MODAL */}
+      {showBlockModal && otherChatUser && (
+        <div className="fixed inset-0 z-[100] bg-black/70 flex flex-col justify-end md:justify-center md:items-center animate-in fade-in duration-200">
+            {/* Click backdrop to close */}
+            <div className="absolute inset-0" onClick={() => setShowBlockModal(false)} />
+            
+            <div className="relative w-full max-w-sm mx-auto p-4 z-10 animate-in slide-in-from-bottom duration-300 md:animate-in md:zoom-in-95 md:duration-200">
+                <div className="flex flex-col gap-2">
+                    
+                    {/* Main Action Sheet */}
+                    <div className="bg-[#1c1c1d] rounded-[14px] overflow-hidden shadow-2xl shadow-black/50">
+                        <div className="p-4 flex flex-col items-center justify-center gap-1 border-b border-white/10 min-h-[80px]">
+                            <p className="text-[13px] text-zinc-500 text-center leading-tight px-4">
+                                Do you want to block <b>{otherChatUser.displayName}</b> from messaging and calling you on Telegram?
+                            </p>
+                        </div>
+                        <button 
+                            onClick={handleBlockConfirm}
+                            className="w-full py-4 text-[17px] text-[#ff453a] font-normal hover:bg-white/5 active:bg-white/10 transition-colors"
+                        >
+                            Block {otherChatUser.displayName}
+                        </button>
+                    </div>
+
+                    {/* Cancel Button */}
+                    <button 
+                        onClick={() => setShowBlockModal(false)}
+                        className="w-full py-4 bg-[#1c1c1d] rounded-[14px] text-[17px] font-semibold text-[#0a84ff] hover:bg-white/5 active:bg-white/10 transition-colors shadow-2xl shadow-black/50"
+                    >
+                        Cancel
+                    </button>
                 </div>
             </div>
         </div>

@@ -339,7 +339,10 @@ function App() {
   };
   const startNewChat = async (otherUid) => {
     if (!otherUid) return;
-    const existing = realChats.find(c => c.otherUserId === otherUid);
+    // Find existing chat, prioritizing the one with the most recent history
+    const existingChats = realChats.filter(c => c.otherUserId === otherUid);
+    const existing = existingChats.sort((a, b) => (b.lastMessageTimestamp || 0) - (a.lastMessageTimestamp || 0))[0];
+
     if (existing) {
         setActiveChatId(existing.id);
         setCurrentView('room');
@@ -488,13 +491,19 @@ function App() {
                             </div>
                         </div>
 
-                        {/* Deduplicate chats to show only one instance per user */}
+                        {/* Deduplicate chats: prioritize one with messages/recent timestamp */}
                         {realChats.reduce((acc, chat) => {
-                            if (!acc.find(c => c.otherUserId === chat.otherUserId)) {
+                            const existingIndex = acc.findIndex(c => c.otherUserId === chat.otherUserId);
+                            if (existingIndex > -1) {
+                                // If duplicate exists, keep the one with the newer timestamp so history isn't lost
+                                if ((chat.lastMessageTimestamp || 0) > (acc[existingIndex].lastMessageTimestamp || 0)) {
+                                    acc[existingIndex] = chat;
+                                }
+                            } else {
                                 acc.push(chat);
                             }
                             return acc;
-                        }, []).map((chat, index) => (
+                        }, []).sort((a, b) => (b.lastMessageTimestamp || 0) - (a.lastMessageTimestamp || 0)).map((chat, index) => (
                           <ChatListItem 
                             key={chat.id} 
                             chat={chat} 

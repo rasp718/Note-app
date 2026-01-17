@@ -19,6 +19,20 @@ import { NoteCard } from './components/NoteCard';
 import { ChatListItem } from './components/ChatListItem';
 import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers, useUser, usePresence } from './useFirebaseSync';
 import Auth from './components/Auth';
+// FIREBASE DIRECT INIT FOR INVITES
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, query, where, getDocs } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCiosArE3iOxF9iGp8wduA-TlSgy1p3WUo",
+  authDomain: "vibenotes-87a8f.firebaseapp.com",
+  projectId: "vibenotes-87a8f",
+  storageBucket: "vibenotes-87a8f.firebasestorage.app",
+  messagingSenderId: "306552916980",
+  appId: "1:306552916980:web:0f8e798e50747ad1c587a1"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 function App() {
   // ============================================================================
@@ -97,35 +111,59 @@ function App() {
     localStorage.setItem('vibenotes_contacts', JSON.stringify(savedContacts));
   }, [savedContacts]);
 
-  // Check URL for Invite Links (e.g. /invite/neo)
+  // Check URL for Invite Links and fetch REAL user from Firebase
   useEffect(() => {
-      const path = window.location.pathname;
-      // Regex to find /invite/username
-      const match = path.match(/\/invite\/([^/]+)/);
-      if (match && match[1]) {
-          setIncomingInvite(match[1]); // Save the username found
-          // Clean the URL so it doesn't trigger again on refresh
-          window.history.replaceState(null, "", "/");
-      }
-  }, []);
+    const checkInvite = async () => {
+        const path = window.location.pathname;
+        const match = path.match(/\/invite\/([^/]+)/); // Matches /invite/neo
+        
+        if (match && match[1]) {
+            const rawHandle = match[1];
+            // Ensure handle has @ for search
+            const handleToSearch = rawHandle.startsWith('@') ? rawHandle : `@${rawHandle}`;
+            
+            try {
+                // REAL DB LOOKUP
+                const q = query(collection(db, "users"), where("handle", "==", handleToSearch));
+                const snapshot = await getDocs(q);
+                
+                if (!snapshot.empty) {
+                    const userData = snapshot.docs[0].data();
+                    // Save the full user object (including photo & uid) to state
+                    setIncomingInvite({ ...userData, uid: snapshot.docs[0].id });
+                } else {
+                    alert("User not found!");
+                }
+            } catch (e) {
+                console.error("Error fetching invite:", e);
+            }
+            
+            // Clean URL
+            window.history.replaceState(null, "", "/");
+        }
+    };
+    checkInvite();
+}, []);
 
-  const handleAcceptInvite = () => {
-      if (!incomingInvite) return;
-      // Create a contact object from the invite
-      const newContact = {
-          uid: `invited-${Date.now()}`,
-          displayName: incomingInvite, // Capitalize or format as needed
-          handle: `@${incomingInvite}`,
-          photoURL: null, // We don't have their pic yet
-          isOnline: false
-      };
-      
-      if (!savedContacts.find(c => c.handle === newContact.handle)) {
-          setSavedContacts([...savedContacts, newContact]);
-      }
-      setIncomingInvite(null);
-      setActiveTab('contacts'); // Switch to contacts so user sees them
-  };
+const handleAcceptInvite = () => {
+    if (!incomingInvite) return;
+    
+    // Use the REAL data fetched from Firebase
+    const newContact = {
+        uid: incomingInvite.uid,
+        displayName: incomingInvite.displayName || incomingInvite.handle,
+        handle: incomingInvite.handle,
+        photoURL: incomingInvite.photoURL || null,
+        isOnline: false 
+    };
+    
+    if (!savedContacts.find(c => c.uid === newContact.uid)) {
+        setSavedContacts([...savedContacts, newContact]);
+    }
+    
+    setIncomingInvite(null);
+    setActiveTab('contacts');
+};
 
   // Refs
   const mediaRecorderRef = useRef(null);
@@ -1065,15 +1103,16 @@ const handleAddReaction = (msgId, emoji) => {
             
             <div className="relative w-full max-w-sm mx-auto p-4 z-10 animate-in slide-in-from-bottom duration-300 md:animate-in md:zoom-in-95 md:duration-200">
                 <div className="flex flex-col gap-2">
-                    <div className="bg-[#1c1c1d] rounded-[14px] overflow-hidden shadow-2xl shadow-black/50">
+                <div className="bg-[#1c1c1d] rounded-[14px] overflow-hidden shadow-2xl shadow-black/50">
                         <div className="p-6 flex flex-col items-center justify-center gap-3 border-b border-white/10 min-h-[120px]">
-                            <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center text-3xl">
-                                🎁
+                            <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center text-3xl overflow-hidden border border-white/10">
+                                {/* Show Real Profile Pic if available */}
+                                {incomingInvite.photoURL ? <img src={incomingInvite.photoURL} className="w-full h-full object-cover" /> : '🎁'}
                             </div>
                             <div className="text-center space-y-1">
-                                <h3 className="text-white font-bold text-lg">Add {incomingInvite}?</h3>
+                                <h3 className="text-white font-bold text-lg">Add {incomingInvite.displayName}?</h3>
                                 <p className="text-[13px] text-zinc-500 leading-tight px-4">
-                                    <b>@{incomingInvite}</b> wants to chat with you on VibeNotes.
+                                    <b>{incomingInvite.handle}</b> wants to chat with you on VibeNotes.
                                 </p>
                             </div>
                         </div>

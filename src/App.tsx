@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, X, ArrowUp, LayoutGrid, Image as ImageIcon, Check, Terminal, 
-  PenLine, AlignLeft, AlignCenter, AlignRight, ChevronLeft, MessageSquareDashed, 
+  PenLine, AlignLeft, AlignCenter, AlignRight, ChevronLeft, ChevronDown, MessageSquareDashed, 
   Moon, Trash2, Globe, Zap, Cpu, SlidersHorizontal, AtSign, Activity, 
   Camera, Grid, UserPlus, MessageCircle, Phone, PaintBucket, QrCode, Mic, 
   Pause, Play, Dices, Edit 
@@ -71,6 +71,7 @@ function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   // Refs
   const mediaRecorderRef = useRef(null);
@@ -178,6 +179,14 @@ function App() {
   // SECTION: ACTIONS & HANDLERS
   // ============================================================================
   const scrollToBottom = (behavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
+
+  const handleScroll = () => {
+    if (listRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = listRef.current;
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
+        setShowScrollButton(!isNearBottom);
+    }
+  };
   
   const handleRollDice = async () => {
     if (!user || !activeChatId) return;
@@ -640,10 +649,21 @@ function App() {
                 </header>
             </div>
 
-           {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}
+            {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}
 
-           <div ref={listRef} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
-              <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-1 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
+{/* SCROLL DOWN BUTTON */}
+<div className="fixed bottom-24 left-0 w-full z-40 pointer-events-none">
+                <div className="max-w-2xl mx-auto px-4 relative">
+                    <div className={`absolute right-4 bottom-0 transition-all duration-300 ${showScrollButton ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                        <button onClick={() => scrollToBottom()} className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10 text-white shadow-xl shadow-black/50 flex items-center justify-center hover:bg-zinc-700 active:scale-95 transition-all backdrop-blur-md">
+                            <ChevronDown size={24} strokeWidth={2} />
+                        </button>
+                    </div>
+                </div>
+           </div>
+
+<div ref={listRef} onScroll={handleScroll} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
+   <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-1 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
                 {activeChatId === 'saved_messages' ? (
                     filteredNotes.map((note, index) => {

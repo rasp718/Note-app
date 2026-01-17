@@ -759,12 +759,7 @@ function App() {
                                 </label>
                             )}
                             
-                            {/* Optional Dice - Only show if empty input to save space */}
-                            {activeChatId !== 'saved_messages' && !transcript && !editingNote && (
-                                <button onClick={handleRollDice} className="w-10 h-10 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors hidden sm:flex">
-                                    <Dices size={24} strokeWidth={1.5} />
-                                </button>
-                            )}
+                            {/* Old Dice button removed */}
                         </div>
 
                         {/* MIDDLE: INPUT PILL */}
@@ -783,15 +778,20 @@ function App() {
                                 onFocus={() => scrollToBottom('auto')} 
                                 placeholder={editingNote ? "Edit message..." : "Message"} 
                                 rows={1} 
-                                className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-[16px] resize-none max-h-32 py-1 leading-relaxed ${isHackerMode ? 'font-mono' : ''}`} 
+                                className={`flex-1 bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-[16px] resize-none max-h-32 py-1 leading-relaxed ${isHackerMode ? 'font-mono' : ''}`} 
                                 style={isHackerMode ? { color: HACKER_GREEN } : undefined} 
                             />
+                            {activeChatId !== 'saved_messages' && !editingNote && (
+                                <button onClick={handleRollDice} className="text-zinc-500 hover:text-white transition-colors pb-1.5 active:scale-95 flex-shrink-0" title="Roll Dice">
+                                     <Dices size={22} strokeWidth={1.5} />
+                                </button>
+                            )}
                         </div>
                         
                         {/* RIGHT SIDE: BIGGER BUTTON */}
                         <div className="pb-0 animate-in fade-in zoom-in duration-200">
                              {(transcript.trim() || imageUrl || editingNote) ? (
-                                <button onClick={handleMainAction} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg active:scale-95 bg-[#DA7756] text-white hover:bg-[#006be0]">
+                                <button onClick={handleMainAction} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg active:scale-95 bg-[#DA7756] text-white hover:bg-[#c46243]">
                                     {editingNote ? <Check size={20} strokeWidth={3} /> : <ArrowUp size={24} strokeWidth={3} />}
                                 </button>
                              ) : (

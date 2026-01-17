@@ -34,6 +34,22 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Helper component to resolve avatars in Group Chats
+const MessageAvatar = ({ userId }) => {
+    const userData = useUser(userId);
+    return (
+        <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 shadow-md">
+            {userData?.photoURL ? (
+                <img src={userData.photoURL} className="w-full h-full object-cover" />
+            ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">
+                    {userData?.displayName?.[0] || '?'}
+                </div>
+            )}
+        </div>
+    );
+};
+
 function App() {
   // ============================================================================
   // SECTION: STATE MANAGEMENT
@@ -936,11 +952,10 @@ const handleAddReaction = (msgId, emoji) => {
                                   </div>
                                 )}
                                 <div className={`flex w-full mb-0.5 items-end ${isMe ? 'justify-end' : 'justify-start gap-2'}`}>
-                                    {!isMe && (
+                                {!isMe && (
                                         <div className="flex-shrink-0 w-8 h-8 relative z-10">
-                                            <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 shadow-md">
-                                                {otherChatUser?.photoURL ? <img src={otherChatUser.photoURL} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">{otherChatUser?.displayName?.[0] || '?'}</div>}
-                                            </div>
+                                            {/* Use helper to fetch specific sender info for Groups */}
+                                            <MessageAvatar userId={msg.senderId} />
                                         </div>
                                     )}
                                     

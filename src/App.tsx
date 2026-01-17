@@ -50,6 +50,23 @@ const MessageAvatar = ({ userId }) => {
     );
 };
 
+// Helper for Profile Member List
+const GroupMemberRow = ({ userId, isAdmin }) => {
+    const userData = useUser(userId);
+    return (
+        <div className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors">
+            <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-white/5">
+                {userData?.photoURL ? <img src={userData.photoURL} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-zinc-500 text-sm">{userData?.displayName?.[0] || '?'}</div>}
+            </div>
+            <div className="flex-1 min-w-0">
+                <div className="text-white font-bold text-sm truncate">{userData?.displayName || 'Loading...'}</div>
+                <div className="text-zinc-500 text-xs truncate">{userData?.handle || (userData?.isOnline ? 'Online' : 'Last seen recently')}</div>
+            </div>
+            {isAdmin && <span className="text-[#DA7756] text-[10px] font-bold uppercase tracking-wider">Admin</span>}
+        </div>
+    );
+};
+
 function App() {
   // ============================================================================
   // SECTION: STATE MANAGEMENT
@@ -1062,8 +1079,8 @@ const handleAddReaction = (msgId, emoji) => {
         </div>
       )}
 
-      {/* VIEW: PROFILE */}
-      {currentView === 'profile' && otherChatUser && (
+      {/* VIEW: PROFILE (User or Group) */}
+      {currentView === 'profile' && (otherChatUser || currentChatObject?.type === 'group') && (
         <div className="flex-1 flex flex-col h-full z-50 animate-in slide-in-from-right duration-300 bg-black relative items-center">
             
             {/* CENTERED CONTAINER */}
@@ -1076,26 +1093,38 @@ const handleAddReaction = (msgId, emoji) => {
                     </button>
                 </div>
 
-                {/* HERO IMAGE SECTION - Height restricted to 45% of view to prevent scrolling */}
+                {/* HERO IMAGE SECTION */}
                 <div className="w-full h-[45dvh] relative flex-shrink-0">
-                    {otherChatUser.photoURL ? (
+                    {currentChatObject?.type === 'group' ? (
+                        // GROUP AVATAR
+                        <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
+                             <Users size={80} className="text-zinc-600" />
+                        </div>
+                    ) : otherChatUser?.photoURL ? (
+                        // USER PHOTO
                         <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
                     ) : (
-                        <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-8xl text-zinc-700">{otherChatUser.displayName?.[0]}</div>
+                        // USER INITIAL
+                        <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-8xl text-zinc-700">{otherChatUser?.displayName?.[0]}</div>
                     )}
-                    {/* Gradient Overlay */}
+                    
+                    {/* Gradient Overlay & Info */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent flex flex-col justify-end p-5">
-                        <h1 className="text-3xl font-black text-white tracking-tight mb-0.5">{otherChatUser.displayName}</h1>
-                        <p className={`${otherChatUser.isOnline ? 'text-green-500' : 'text-zinc-400'} font-medium text-sm`}>
-                            {otherChatUser.isOnline ? 'Online now' : 'Last seen recently'}
+                        <h1 className="text-3xl font-black text-white tracking-tight mb-0.5">
+                            {currentChatObject?.type === 'group' ? currentChatObject.displayName : otherChatUser?.displayName}
+                        </h1>
+                        <p className={`font-medium text-sm ${otherChatUser?.isOnline && currentChatObject?.type !== 'group' ? 'text-green-500' : 'text-zinc-400'}`}>
+                            {currentChatObject?.type === 'group' 
+                                ? `${currentChatObject.participants?.length || 0} members, 1 online` 
+                                : (otherChatUser?.isOnline ? 'Online now' : 'Last seen recently')}
                         </p>
                     </div>
                 </div>
 
-                {/* CONTENT SECTION - Tighter spacing, overlapping image */}
+                {/* CONTENT SECTION */}
                 <div className="flex-1 bg-black -mt-6 relative z-10 px-4 pt-2 pb-6 flex flex-col gap-3 overflow-y-auto no-scrollbar rounded-t-[30px]">
                     
-                    {/* Quick Actions Grid - WIRED UP */}
+                    {/* Actions Grid */}
                     <div className="grid grid-cols-4 gap-2">
                         <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
                             <Phone size={20} /> <span className="text-[10px] font-bold uppercase">Call</span>
@@ -1112,42 +1141,66 @@ const handleAddReaction = (msgId, emoji) => {
                         </button>
                     </div>
 
-                    {/* Info Block - Condensed */}
+                    {/* BIO / INFO SECTION */}
                     <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl p-4 space-y-4">
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500">
                                 <Info size={18} />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">Bio</p>
-                                <p className="text-white text-sm leading-snug truncate">Living in the matrix. 🕶️</p>
+                                <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">
+                                    {currentChatObject?.type === 'group' ? 'Description' : 'Bio'}
+                                </p>
+                                <p className="text-white text-sm leading-snug truncate">
+                                    {currentChatObject?.type === 'group' ? 'Welcome to the club.' : 'Living in the matrix. 🕶️'}
+                                </p>
                             </div>
                         </div>
-                        <div className="w-full h-px bg-white/5" />
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500">
-                                <AtSign size={18} />
+                        {currentChatObject?.type !== 'group' && (
+                            <>
+                            <div className="w-full h-px bg-white/5" />
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500">
+                                    <AtSign size={18} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">Username</p>
+                                    <p className="text-white font-mono text-sm truncate">@{otherChatUser.displayName?.toLowerCase().replace(/\s/g, '') || 'unknown'}</p>
+                                </div>
+                                <button className="text-zinc-500 hover:text-white"><QrCode size={18} /></button>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">Username</p>
-                                <p className="text-white font-mono text-sm truncate">@{otherChatUser.displayName?.toLowerCase().replace(/\s/g, '') || 'unknown'}</p>
-                            </div>
-                            <button className="text-zinc-500 hover:text-white"><QrCode size={18} /></button>
-                        </div>
+                            </>
+                        )}
                     </div>
 
-                    {/* Action List - WIRED UP */}
+                    {/* GROUP MEMBERS LIST */}
+                    {currentChatObject?.type === 'group' && (
+                        <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl overflow-hidden p-2 space-y-1">
+                             <div className="px-2 py-1 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Members ({currentChatObject.participants?.length})</div>
+                             {currentChatObject.participants.map(uid => (
+                                 <GroupMemberRow key={uid} userId={uid} isAdmin={false} />
+                             ))}
+                             <button className="w-full py-3 text-center text-blue-500 font-bold text-sm hover:bg-white/5 rounded-xl transition-colors">Add Members</button>
+                        </div>
+                    )}
+
+                    {/* ACTION LIST */}
                     <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl overflow-hidden mt-auto mb-2">
-                        <button onClick={handleAddToContacts} className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left active:bg-white/10 group">
-                            <UserPlus size={20} className="text-[#DA7756] group-hover:text-white transition-colors" />
-                            <span className="font-bold text-sm text-[#DA7756] group-hover:text-white transition-colors">
-                                {savedContacts.find(c => c.uid === otherChatUser.uid) ? 'Contact Saved' : 'Add to Contacts'}
-                            </span>
-                        </button>
-                        <div className="w-full h-px bg-white/5" />
+                        {currentChatObject?.type !== 'group' && (
+                            <>
+                            <button onClick={handleAddToContacts} className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left active:bg-white/10 group">
+                                <UserPlus size={20} className="text-[#DA7756] group-hover:text-white transition-colors" />
+                                <span className="font-bold text-sm text-[#DA7756] group-hover:text-white transition-colors">
+                                    {savedContacts.find(c => c.uid === otherChatUser.uid) ? 'Contact Saved' : 'Add to Contacts'}
+                                </span>
+                            </button>
+                            <div className="w-full h-px bg-white/5" />
+                            </>
+                        )}
+                        
                         <button onClick={() => setShowBlockModal(true)} className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left text-red-500 active:bg-red-500/10">
-                            <Ban size={20} />
-                            <span className="font-bold text-sm">Block User</span>
+                            {currentChatObject?.type === 'group' ? <ArrowUp className="rotate-90" size={20} /> : <Ban size={20} />}
+                            <span className="font-bold text-sm">{currentChatObject?.type === 'group' ? 'Leave Group' : 'Block User'}</span>
                         </button>
                     </div>
                 </div>

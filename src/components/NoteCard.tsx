@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck } from 'lucide-react';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Note, CategoryConfig, CategoryId } from '../types';
 import { AudioPlayer } from './AudioPlayer';
 import { StreetDiceGame } from './StreetDiceGame';
@@ -31,10 +32,16 @@ interface NoteCardProps {
 // ============================================================================
 // HELPER COMPONENTS
 // ============================================================================
-const triggerHaptic = (pattern: number | number[] = 15) => { 
-    if (typeof navigator !== 'undefined' && navigator.vibrate) { 
-        try { navigator.vibrate(pattern); } catch (e) {} 
-    } 
+const triggerHaptic = async (pattern: number | number[] = 15) => { 
+  try {
+      // 1. Try Native iPhone Taptic Engine
+      await Haptics.impact({ style: ImpactStyle.Heavy });
+  } catch (e) {
+      // 2. Fallback for Web/Android
+      if (typeof navigator !== 'undefined' && navigator.vibrate) { 
+          try { navigator.vibrate(pattern); } catch (e) {} 
+      } 
+  }
 };
 
 const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {

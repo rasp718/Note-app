@@ -147,6 +147,11 @@ function App() {
 
 const handleAcceptInvite = () => {
     if (!incomingInvite) return;
+
+    // Play Success Pop
+    const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAAAAAP///yH/If8h/yH/If8=");
+    audio.volume = 0.2;
+    audio.play().catch(() => {});
     
     // Use the REAL data fetched from Firebase
     const newContact = {
@@ -619,7 +624,7 @@ const handleAddReaction = (msgId, emoji) => {
                                 <button type="submit" disabled={isSearchingContacts} className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all disabled:opacity-50"><Search size={16} /></button>
                             </div>
                         </form>
-                        <div onClick={() => setShowQRCode(true)} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors">
+                        <div onClick={() => setShowQRCode(true)} className="bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-black/50 transition-all shadow-lg">
                             <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-black">
                                 <QrCode size={24} />
                             </div>
@@ -631,7 +636,7 @@ const handleAddReaction = (msgId, emoji) => {
                         </div>
 
                         <div className="space-y-3 pt-4">
-                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">
+                            <h3 className="text-xs font-bold text-white/80 drop-shadow-md shadow-black uppercase tracking-widest px-1 pl-2">
                                 {contactSearchQuery ? 'Search Results' : 'Saved Contacts'}
                             </h3>
                             

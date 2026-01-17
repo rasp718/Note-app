@@ -744,24 +744,40 @@ function App() {
                     </div>
                  ) : (
                     <>
-                        {activeChatId === 'saved_messages' && (<button onClick={cycleFilter} className="flex-shrink-0 w-8 h-8 mb-1 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">{activeFilter === 'all' ? (<LayoutGrid size={24} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}</button>)}
-                        
-                        {activeChatId !== 'saved_messages' && !transcript && !imageUrl && !editingNote && (
-                            <>
-                            <button onClick={startRecording} className={`flex-shrink-0 w-10 h-10 mb-1 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-zinc-400`}> <Mic size={20} /> </button>
-                            <button onClick={handleRollDice} className="flex-shrink-0 w-10 h-10 mb-1 ml-1 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-zinc-400"><Dices size={20} /></button>
-                            </>
-                        )}
+                        {/* LEFT SIDE: TOOLS (Filter, Dice, Image) */}
+                        <div className="flex items-end gap-1 mb-1">
+                            {activeChatId === 'saved_messages' && (<button onClick={cycleFilter} className="w-10 h-10 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors bg-zinc-800/50 hover:bg-zinc-800">{activeFilter === 'all' ? (<LayoutGrid size={22} />) : (<span className="text-xl leading-none">{currentConfig?.emoji}</span>)}</button>)}
+                            
+                            {activeChatId !== 'saved_messages' && !editingNote && (
+                                <button onClick={handleRollDice} className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 text-zinc-400 hover:text-white hover:bg-zinc-800"><Dices size={22} /></button>
+                            )}
 
+                            <label className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 text-zinc-400 hover:text-white hover:bg-zinc-800 cursor-pointer">
+                                <ImageIcon size={22} />
+                                <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} />
+                            </label>
+                        </div>
+
+                        {/* MIDDLE: INPUT FIELD */}
                         <div className="flex-1 bg-zinc-900/50 border border-zinc-700/50 rounded-2xl flex items-center px-3 py-1.5 focus-within:border-white/50 transition-colors gap-2 relative">
                             {imageUrl && (<div className="relative flex-shrink-0"><div className="w-8 h-8 rounded overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div><button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"><X size={10} /></button></div>)}
-                            <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} onFocus={() => { scrollToBottom('auto'); }} placeholder={editingNote ? "Edit..." : (activeChatId !== 'saved_messages' ? TRANSLATIONS.typePlaceholder : (activeFilter === 'all' ? "Select category..." : (isHackerMode ? ">_" : `${currentConfig?.label}...`)))} rows={1} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-1 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
-                            {(!transcript && !editingNote) && (<label className="cursor-pointer text-zinc-400 hover:text-white"><ImageIcon size={20} /><input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} /></label>)}
+                            <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} onPaste={(e) => handlePaste(e)} onFocus={() => { scrollToBottom('auto'); }} placeholder={editingNote ? "Edit..." : (activeChatId !== 'saved_messages' ? TRANSLATIONS.typePlaceholder : (activeFilter === 'all' ? "Select category..." : (isHackerMode ? ">_" : `${currentConfig?.label}...`)))} rows={1} className={`w-full bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-base resize-none max-h-32 py-2 ${isHackerMode ? 'font-mono' : ''}`} style={isHackerMode ? { color: HACKER_GREEN } : undefined} />
                         </div>
                         
-                        <button onClick={handleMainAction} disabled={(!transcript.trim() && !imageUrl) || (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages')} className={`flex-shrink-0 w-8 h-8 mb-1 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg`} style={(transcript.trim() || imageUrl) && (activeFilter !== 'all' || activeChatId !== 'saved_messages') ? { backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' } : { backgroundColor: 'transparent', color: '#71717a', boxShadow: 'none' }}>
-                            {editingNote ? <Check size={18} strokeWidth={3} /> : <ArrowUp size={20} strokeWidth={3} />}
-                        </button>
+                        {/* RIGHT SIDE: MIC OR SEND (SWAP LOGIC) */}
+                        <div className="mb-1 animate-in fade-in zoom-in duration-200">
+                             {(transcript.trim() || imageUrl || editingNote) ? (
+                                <button onClick={handleMainAction} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg active:scale-95`} style={{ backgroundColor: accentColor, boxShadow: `0 0 15px ${accentColor}80`, color: 'white' }}>
+                                    {editingNote ? <Check size={20} strokeWidth={3} /> : <ArrowUp size={22} strokeWidth={3} />}
+                                </button>
+                             ) : (
+                                activeChatId !== 'saved_messages' && (
+                                    <button onClick={startRecording} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 active:scale-95`}> 
+                                        <Mic size={22} /> 
+                                    </button>
+                                )
+                             )}
+                        </div>
                     </>
                  )}
              </div>

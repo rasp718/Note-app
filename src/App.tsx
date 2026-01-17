@@ -832,85 +832,89 @@ function App() {
 
       {/* VIEW: PROFILE */}
       {currentView === 'profile' && otherChatUser && (
-        <div className="flex-1 flex flex-col h-full z-50 animate-in slide-in-from-right duration-300 bg-black relative">
+        <div className="flex-1 flex flex-col h-full z-50 animate-in slide-in-from-right duration-300 bg-black relative items-center">
             
-            {/* BACK BUTTON */}
-            <div className="absolute top-4 left-4 z-50">
-                <button onClick={() => setCurrentView('room')} className="w-10 h-10 bg-black/20 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-all">
-                    <ChevronLeft size={24} />
-                </button>
-            </div>
-
-            {/* HERO IMAGE SECTION - Height restricted to 45% of view to prevent scrolling */}
-            <div className="w-full h-[45dvh] relative flex-shrink-0">
-                {otherChatUser.photoURL ? (
-                    <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
-                ) : (
-                    <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-8xl text-zinc-700">{otherChatUser.displayName?.[0]}</div>
-                )}
-                {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent flex flex-col justify-end p-5">
-                    <h1 className="text-3xl font-black text-white tracking-tight mb-0.5">{otherChatUser.displayName}</h1>
-                    <p className={`${otherChatUser.isOnline ? 'text-green-500' : 'text-zinc-400'} font-medium text-sm`}>
-                        {otherChatUser.isOnline ? 'Online now' : 'Last seen recently'}
-                    </p>
-                </div>
-            </div>
-
-            {/* CONTENT SECTION - Tighter spacing, overlapping image */}
-            <div className="flex-1 bg-black -mt-6 relative z-10 px-4 pt-2 pb-6 flex flex-col gap-3 overflow-y-auto no-scrollbar rounded-t-[30px]">
+            {/* CENTERED CONTAINER */}
+            <div className="w-full max-w-2xl h-full flex flex-col relative bg-black shadow-2xl">
                 
-                {/* Quick Actions Grid - Slightly more compact */}
-                <div className="grid grid-cols-4 gap-2">
-                    <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
-                        <Phone size={20} /> <span className="text-[10px] font-bold uppercase">Call</span>
-                    </button>
-                    <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
-                        <Bell size={20} /> <span className="text-[10px] font-bold uppercase">Mute</span>
-                    </button>
-                    <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
-                        <Search size={20} /> <span className="text-[10px] font-bold uppercase">Search</span>
-                    </button>
-                    <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
-                        <MoreHorizontal size={20} /> <span className="text-[10px] font-bold uppercase">More</span>
+                {/* BACK BUTTON */}
+                <div className="absolute top-4 left-4 z-50">
+                    <button onClick={() => setCurrentView('room')} className="w-10 h-10 bg-black/20 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-all">
+                        <ChevronLeft size={24} />
                     </button>
                 </div>
 
-                {/* Info Block - Condensed */}
-                <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl p-4 space-y-4">
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500">
-                            <Info size={18} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">Bio</p>
-                            <p className="text-white text-sm leading-snug truncate">Living in the matrix. 🕶️</p>
-                        </div>
-                    </div>
-                    <div className="w-full h-px bg-white/5" />
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500">
-                            <AtSign size={18} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">Username</p>
-                            <p className="text-white font-mono text-sm truncate">@{otherChatUser.displayName?.toLowerCase().replace(/\s/g, '') || 'unknown'}</p>
-                        </div>
-                        <button className="text-zinc-500 hover:text-white"><QrCode size={18} /></button>
+                {/* HERO IMAGE SECTION - Height restricted to 45% of view to prevent scrolling */}
+                <div className="w-full h-[45dvh] relative flex-shrink-0">
+                    {otherChatUser.photoURL ? (
+                        <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-8xl text-zinc-700">{otherChatUser.displayName?.[0]}</div>
+                    )}
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent flex flex-col justify-end p-5">
+                        <h1 className="text-3xl font-black text-white tracking-tight mb-0.5">{otherChatUser.displayName}</h1>
+                        <p className={`${otherChatUser.isOnline ? 'text-green-500' : 'text-zinc-400'} font-medium text-sm`}>
+                            {otherChatUser.isOnline ? 'Online now' : 'Last seen recently'}
+                        </p>
                     </div>
                 </div>
 
-                {/* Action List - Compact & Pushed to bottom */}
-                <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl overflow-hidden mt-auto mb-2">
-                    <button className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left active:bg-white/10">
-                        <UserPlus size={20} color="#DA7756" />
-                        <span className="font-bold text-sm" style={{ color: '#DA7756' }}>Add to Contacts</span>
-                    </button>
-                    <div className="w-full h-px bg-white/5" />
-                    <button className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left text-red-500 active:bg-red-500/10">
-                        <Ban size={20} />
-                        <span className="font-bold text-sm">Block User</span>
-                    </button>
+                {/* CONTENT SECTION - Tighter spacing, overlapping image */}
+                <div className="flex-1 bg-black -mt-6 relative z-10 px-4 pt-2 pb-6 flex flex-col gap-3 overflow-y-auto no-scrollbar rounded-t-[30px]">
+                    
+                    {/* Quick Actions Grid - Slightly more compact */}
+                    <div className="grid grid-cols-4 gap-2">
+                        <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
+                            <Phone size={20} /> <span className="text-[10px] font-bold uppercase">Call</span>
+                        </button>
+                        <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
+                            <Bell size={20} /> <span className="text-[10px] font-bold uppercase">Mute</span>
+                        </button>
+                        <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
+                            <Search size={20} /> <span className="text-[10px] font-bold uppercase">Search</span>
+                        </button>
+                        <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
+                            <MoreHorizontal size={20} /> <span className="text-[10px] font-bold uppercase">More</span>
+                        </button>
+                    </div>
+
+                    {/* Info Block - Condensed */}
+                    <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl p-4 space-y-4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500">
+                                <Info size={18} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">Bio</p>
+                                <p className="text-white text-sm leading-snug truncate">Living in the matrix. 🕶️</p>
+                            </div>
+                        </div>
+                        <div className="w-full h-px bg-white/5" />
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500">
+                                <AtSign size={18} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">Username</p>
+                                <p className="text-white font-mono text-sm truncate">@{otherChatUser.displayName?.toLowerCase().replace(/\s/g, '') || 'unknown'}</p>
+                            </div>
+                            <button className="text-zinc-500 hover:text-white"><QrCode size={18} /></button>
+                        </div>
+                    </div>
+
+                    {/* Action List - Compact & Pushed to bottom */}
+                    <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl overflow-hidden mt-auto mb-2">
+                        <button className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left active:bg-white/10">
+                            <UserPlus size={20} color="#DA7756" />
+                            <span className="font-bold text-sm" style={{ color: '#DA7756' }}>Add to Contacts</span>
+                        </button>
+                        <div className="w-full h-px bg-white/5" />
+                        <button className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left text-red-500 active:bg-red-500/10">
+                            <Ban size={20} />
+                            <span className="font-bold text-sm">Block User</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

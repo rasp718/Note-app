@@ -4,7 +4,7 @@ import {
   PenLine, AlignLeft, AlignCenter, AlignRight, ChevronLeft, ChevronDown, MessageSquareDashed, 
   Moon, Trash2, Globe, Zap, Cpu, SlidersHorizontal, AtSign, Activity, 
   Camera, Grid, UserPlus, MessageCircle, Phone, PaintBucket, QrCode, Mic, 
-  Pause, Play, Dices, Edit 
+  Pause, Play, Dices, Edit, Bell, MoreHorizontal, Ban, Info
 } from 'lucide-react'; 
 
 // IMPORT TYPES & UTILS
@@ -605,8 +605,8 @@ function App() {
                         {/* REMOVED TOP BACK BUTTON FROM HERE */}
                         
                         {activeChatId !== 'saved_messages' ? (
-                           <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors">
-                               <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 relative">
+                           <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors group">
+                               <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 relative group-hover:border-white/30 transition-colors">
                                   {otherChatUser?.photoURL ? (
                                       <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
                                   ) : (
@@ -827,6 +827,93 @@ function App() {
              </div>
            </div>
 
+        </div>
+      )}
+
+      {/* VIEW: PROFILE */}
+      {currentView === 'profile' && otherChatUser && (
+        <div className="flex-1 flex flex-col h-full z-50 animate-in slide-in-from-right duration-300 bg-black overflow-y-auto no-scrollbar relative">
+            
+            {/* BACK BUTTON */}
+            <div className="absolute top-4 left-4 z-50">
+                <button onClick={() => setCurrentView('room')} className="w-10 h-10 bg-black/40 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-all">
+                    <ChevronLeft size={24} />
+                </button>
+            </div>
+
+            {/* HERO IMAGE SECTION */}
+            <div className="w-full aspect-[4/5] relative">
+                {otherChatUser.photoURL ? (
+                    <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-9xl text-zinc-700">{otherChatUser.displayName?.[0]}</div>
+                )}
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col justify-end p-6">
+                    <h1 className="text-4xl font-black text-white tracking-tight mb-1">{otherChatUser.displayName}</h1>
+                    <p className={`${otherChatUser.isOnline ? 'text-green-500' : 'text-zinc-400'} font-medium`}>
+                        {otherChatUser.isOnline ? 'Online now' : 'Last seen recently'}
+                    </p>
+                </div>
+            </div>
+
+            {/* CONTENT SECTION */}
+            <div className="px-4 -mt-6 relative z-10 space-y-6 pb-12">
+                
+                {/* Quick Actions Grid */}
+                <div className="grid grid-cols-4 gap-3">
+                    <button className="aspect-square bg-zinc-900/80 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all">
+                        <Phone size={20} /> <span className="text-[10px] font-bold uppercase">Call</span>
+                    </button>
+                    <button className="aspect-square bg-zinc-900/80 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all">
+                        <Bell size={20} /> <span className="text-[10px] font-bold uppercase">Mute</span>
+                    </button>
+                    <button className="aspect-square bg-zinc-900/80 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all">
+                        <Search size={20} /> <span className="text-[10px] font-bold uppercase">Search</span>
+                    </button>
+                    <button className="aspect-square bg-zinc-900/80 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all">
+                        <MoreHorizontal size={20} /> <span className="text-[10px] font-bold uppercase">More</span>
+                    </button>
+                </div>
+
+                {/* Info Block */}
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-5 space-y-5">
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-400">
+                            <Info size={20} />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-zinc-500 text-xs uppercase tracking-wider font-bold mb-0.5">Bio</p>
+                            <p className="text-white text-sm leading-relaxed">Living in the matrix. 🕶️</p>
+                        </div>
+                    </div>
+                    <div className="w-full h-px bg-white/5" />
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-400">
+                            <AtSign size={20} />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-zinc-500 text-xs uppercase tracking-wider font-bold mb-0.5">Username</p>
+                            <p className="text-white font-mono text-sm">@{otherChatUser.displayName?.toLowerCase().replace(/\s/g, '') || 'unknown'}</p>
+                        </div>
+                        <button className="text-zinc-500 hover:text-white"><QrCode size={20} /></button>
+                    </div>
+                </div>
+
+                {/* Action List */}
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl overflow-hidden">
+                    <button className="w-full p-5 flex items-center gap-4 hover:bg-white/5 transition-colors text-left">
+                        <UserPlus size={20} color="#DA7756" />
+                        <span className="font-bold" style={{ color: '#DA7756' }}>Add to Contacts</span>
+                    </button>
+                    <div className="w-full h-px bg-white/5" />
+                    <button className="w-full p-5 flex items-center gap-4 hover:bg-white/5 transition-colors text-left text-red-500">
+                        <Ban size={20} />
+                        <span className="font-bold">Block User</span>
+                    </button>
+                </div>
+
+            </div>
         </div>
       )}
 

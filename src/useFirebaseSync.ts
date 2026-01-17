@@ -139,23 +139,44 @@ export const useChats = (userId: string | null) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) return;
-    const q = query(collection(db, 'chats'), where('participants', 'array-contains', userId), orderBy('timestamp', 'desc'));
+    if (!userId) {
+        setChats([]);
+        return;
+    }
+    // REMOVED orderBy('timestamp') to prevent missing index errors or missing fields hiding groups
+    const q = query(collection(db, 'chats'), where('participants', 'array-contains', userId));
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const chatsData = snapshot.docs.map(doc => {
         const data = doc.data();
-        const otherUserId = data.participants ? data.participants.find((p: string) => p !== userId) : null;
         
+        // Handle DMs vs Groups
+        let otherUserId = null;
+        if (data.type !== 'group' && data.participants) {
+            otherUserId = data.participants.find((p: string) => p !== userId);
+        }
+        
+        // Decrypt if needed
         const plainLastMessage = data.secretKey 
-            ? simpleDecrypt(data.lastMessage, data.secretKey) 
-            : data.lastMessage;
+            ? simpleDecrypt(data.lastMessage || data.lastMessageText, data.secretKey) 
+            : (data.lastMessage || data.lastMessageText || '');
+
+        // Normalize timestamp (handle both 'timestamp' and 'lastMessageTimestamp')
+        const rawTime = data.lastMessageTimestamp || data.timestamp;
+        const finalTime = normalizeDate(rawTime);
 
         return { 
-            id: doc.id, ...data, 
-            lastMessage: plainLastMessage, 
-            timestamp: normalizeDate(data.timestamp), otherUserId 
+            id: doc.id, 
+            ...data, 
+            lastMessageText: plainLastMessage, // Normalize text field
+            lastMessageTimestamp: finalTime,   // Normalize time field
+            otherUserId 
         };
       });
+      
+      // Sort client-side to ensure newest are top
+      chatsData.sort((a, b) => b.lastMessageTimestamp - a.lastMessageTimestamp);
+      
       setChats(chatsData);
       setLoading(false);
     });
@@ -169,10 +190,13 @@ export const useChats = (userId: string | null) => {
       const initialMsg = "Chat started (Encrypted)";
       const encryptedMsg = simpleEncrypt(initialMsg, secretKey);
 
+      // Create using unified field names
       const chatRef = await addDoc(collection(db, 'chats'), {
         participants: [userId, otherUid],
-        lastMessage: encryptedMsg,
+        lastMessageText: encryptedMsg, // Use consistent naming
+        lastMessage: encryptedMsg,     // Keep backward compatibility
         secretKey: secretKey,
+        lastMessageTimestamp: serverTimestamp(),
         timestamp: serverTimestamp(),
         type: 'private'
       });

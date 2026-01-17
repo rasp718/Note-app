@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck } from 'lucide-react';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Note, CategoryConfig, CategoryId } from '../types';
 import { AudioPlayer } from './AudioPlayer';
 import { StreetDiceGame } from './StreetDiceGame';
@@ -32,16 +31,23 @@ interface NoteCardProps {
 // ============================================================================
 // HELPER COMPONENTS
 // ============================================================================
-const triggerHaptic = async (pattern: number | number[] = 15) => { 
-  try {
-      // 1. Try Native iPhone Taptic Engine
-      await Haptics.impact({ style: ImpactStyle.Heavy });
-  } catch (e) {
-      // 2. Fallback for Web/Android
-      if (typeof navigator !== 'undefined' && navigator.vibrate) { 
-          try { navigator.vibrate(pattern); } catch (e) {} 
-      } 
-  }
+// Base64 encoded "Pop" sound - tricks the brain into feeling a tap on iOS
+const POP_SOUND = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAAAAAP///yH/If8h/yH/If8=";
+const audioHaptic = typeof window !== 'undefined' ? new Audio(POP_SOUND) : null;
+
+const triggerHaptic = (pattern: number | number[] = 15) => { 
+    // 1. Real Vibration (Android/Desktop)
+    if (typeof navigator !== 'undefined' && navigator.vibrate) { 
+        try { navigator.vibrate(pattern); } catch (e) {} 
+    } 
+
+    // 2. Phantom Haptic (iOS Audio Trick)
+    // We clone the node to allow rapid-fire overlapping clicks
+    if (audioHaptic) {
+        const sound = audioHaptic.cloneNode() as HTMLAudioElement;
+        sound.volume = 0.2; // Keep it subtle
+        sound.play().catch(() => {});
+    }
 };
 
 const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {

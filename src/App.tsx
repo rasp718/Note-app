@@ -1155,17 +1155,17 @@ const handleAddReaction = (msgId, emoji) => {
                                         </div>
                                     )}
                                     
-                                    {/* TAIL SVG - Sent (Right) - WhatsApp Style Curve */}
+                                    {/* TAIL SVG - Sent (Right) - Adjusted for Rounded Corner */}
                                     {isMe && isLastInGroup && !msg.imageUrl && (
-                                        <svg className="absolute bottom-[0px] -right-[7px] z-0 w-[12px] h-[13px] fill-current" viewBox="0 0 13 13">
-                                            <path d="M0,0 C1.7,6.3 6.3,11.3 13,13 H0 V0 Z" fill={tailColor} />
+                                        <svg className="absolute bottom-[0px] -right-[8px] z-0 w-[16px] h-[13px] fill-current" viewBox="0 0 16 13">
+                                            <path d="M0,0 C2,7 8,13 16,13 H0 V0 Z" fill={tailColor} />
                                         </svg>
                                     )}
 
-                                    {/* TAIL SVG - Received (Left) - WhatsApp Style Curve */}
+                                    {/* TAIL SVG - Received (Left) - Adjusted for Rounded Corner */}
                                     {!isMe && isLastInGroup && !msg.imageUrl && (
-                                        <svg className="absolute bottom-[0px] -left-[7px] z-0 w-[12px] h-[13px] fill-current" viewBox="0 0 13 13">
-                                            <path d="M13,0 C11.3,6.3 6.7,11.3 0,13 H13 V0 Z" fill={tailColor} />
+                                        <svg className="absolute bottom-[0px] -left-[8px] z-0 w-[16px] h-[13px] fill-current" viewBox="0 0 16 13">
+                                            <path d="M16,0 C14,7 8,13 0,13 H16 V0 Z" fill={tailColor} />
                                         </svg>
                                     )}
 
@@ -1182,7 +1182,7 @@ const handleAddReaction = (msgId, emoji) => {
                                             onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => handleEditMessage(msg) : undefined}
                                             currentReaction={reactions[msg.id]}
                                             onReact={(emoji) => handleAddReaction(msg.id, emoji)}
-                                            isLastInGroup={isLastInGroup}
+                                            isLastInGroup={false}
                                         />
                                     </div>
                                 </div>

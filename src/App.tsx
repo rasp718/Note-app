@@ -1183,10 +1183,10 @@ const handleAddReaction = (msgId, emoji) => {
             <div className="absolute inset-0" onClick={() => { setIsEditingGroupInfo(false); setCurrentView('room'); }} />
 
             {/* MAIN CARD - Full Screen on Mobile, Centered on Laptop */}
-            <div className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[85vh] sm:max-w-[420px] bg-[#1c1c1d] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col border-x sm:border border-white/10 animate-in slide-in-from-bottom duration-300">
+            <div className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:max-w-[420px] bg-[#1c1c1d] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col border-x sm:border border-white/10 animate-in slide-in-from-bottom duration-300">
                 
                 {/* HEADER IMAGE SECTION (BANNER) */}
-                <div className="relative h-72 sm:h-64 w-full bg-zinc-800 group/header flex-shrink-0">
+                <div className="relative h-64 sm:h-52 w-full bg-zinc-800 group/header flex-shrink-0">
                     {/* IMAGE */}
                     {(currentChatObject?.type === 'group' ? currentChatObject.photoURL : otherChatUser?.photoURL) ? (
                         <img 
@@ -1223,7 +1223,7 @@ const handleAddReaction = (msgId, emoji) => {
                     )}
 
                     {/* TEXT INFO (Over Picture, Bottom Left, Offset Right & Down) */}
-                    <div className="absolute bottom-4 left-6 right-4 z-10 flex flex-col items-start shadow-sm">
+                    <div className="absolute bottom-3 left-6 right-4 z-10 flex flex-col items-start shadow-sm">
                          {isEditingGroupInfo ? (
                              <div className="w-full space-y-2">
                                 <input 
@@ -1272,24 +1272,24 @@ const handleAddReaction = (msgId, emoji) => {
 
                 {/* SCROLLABLE CONTENT (Below Image) */}
                 <div className="flex-1 overflow-y-auto no-scrollbar bg-[#1c1c1d]">
-                    {/* Action Row - MONOCHROME */}
+                    {/* Action Row - MONOCHROME - COMPACT */}
                     {!isEditingGroupInfo && (
-                        <div className="flex items-center justify-between gap-3 p-5 border-b border-white/5">
-                            <button className="flex-1 py-3 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
-                                <Phone size={20} className="text-white"/> 
-                                <span className="text-[11px] font-medium text-zinc-400 group-hover:text-zinc-200">Call</span>
+                        <div className="flex items-center justify-between gap-1 p-3 border-b border-white/5">
+                            <button className="flex-1 py-2.5 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
+                                <Phone size={18} className="text-white"/> 
+                                <span className="text-[10px] font-medium text-zinc-400 group-hover:text-zinc-200">Call</span>
                             </button>
-                            <button onClick={toggleMute} className="flex-1 py-3 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
-                                {mutedChats.has(activeChatId) ? <BellOff size={20} className="text-red-500" /> : <Bell size={20} className="text-white" />} 
-                                <span className={`text-[11px] font-medium ${mutedChats.has(activeChatId) ? 'text-red-500' : 'text-zinc-400 group-hover:text-zinc-200'}`}>{mutedChats.has(activeChatId) ? 'Unmute' : 'Mute'}</span>
+                            <button onClick={toggleMute} className="flex-1 py-2.5 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
+                                {mutedChats.has(activeChatId) ? <BellOff size={18} className="text-red-500" /> : <Bell size={18} className="text-white" />} 
+                                <span className={`text-[10px] font-medium ${mutedChats.has(activeChatId) ? 'text-red-500' : 'text-zinc-400 group-hover:text-zinc-200'}`}>{mutedChats.has(activeChatId) ? 'Unmute' : 'Mute'}</span>
                             </button>
-                            <button className="flex-1 py-3 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
-                                <Search size={20} className="text-white"/> 
-                                <span className="text-[11px] font-medium text-zinc-400 group-hover:text-zinc-200">Search</span>
+                            <button className="flex-1 py-2.5 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
+                                <Search size={18} className="text-white"/> 
+                                <span className="text-[10px] font-medium text-zinc-400 group-hover:text-zinc-200">Search</span>
                             </button>
-                            <button onClick={() => currentChatObject?.type === 'group' ? setShowLeaveGroupModal(true) : setShowBlockModal(true)} className="flex-1 py-3 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
-                                <MoreHorizontal size={20} className="text-white"/> 
-                                <span className="text-[11px] font-medium text-zinc-400 group-hover:text-zinc-200">More</span>
+                            <button onClick={() => currentChatObject?.type === 'group' ? setShowLeaveGroupModal(true) : setShowBlockModal(true)} className="flex-1 py-2.5 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
+                                <MoreHorizontal size={18} className="text-white"/> 
+                                <span className="text-[10px] font-medium text-zinc-400 group-hover:text-zinc-200">More</span>
                             </button>
                         </div>
                     )}

@@ -82,12 +82,11 @@ const GroupMemberRow = ({ userId, isAdmin, isViewerAdmin, onRemove }) => {
     );
 };
 
-// Fixed Chat Row to display Group Photos correctly
+// Fixed Chat Row to display Group Photos correctly - SQUIRCLE STYLE
 const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
     const otherUser = useUser(chat.otherUserId);
     const isGroup = chat.type === 'group';
     const displayName = isGroup ? chat.displayName : (otherUser?.displayName || 'Unknown');
-    // Prioritize chat.photoURL for groups
     const photoURL = isGroup ? chat.photoURL : otherUser?.photoURL;
     const lastMsg = chat.lastMessageText || '';
     const timestamp = chat.lastMessageTimestamp ? getDateLabel(chat.lastMessageTimestamp) : '';
@@ -101,21 +100,22 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
                     </div>
                 </div>
             )}
-            <div className="w-14 h-14 flex-shrink-0 relative">
-                <div className="w-full h-full rounded-full bg-zinc-800 overflow-hidden border border-white/10 flex items-center justify-center shadow-lg">
+            <div className="w-14 h-14 flex-shrink-0 relative group/icon">
+                {/* SQUIRCLE SHAPE (rounded-2xl) to match Notes, Borders removed to make content bigger */}
+                <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center overflow-hidden shadow-lg shadow-black/50 relative">
                     {photoURL ? (
-                        <img src={photoURL} className="w-full h-full object-cover" alt="avatar" />
+                        <img src={photoURL} className="w-full h-full object-cover transition-transform duration-500 group-hover/icon:scale-110" alt="avatar" />
                     ) : (
-                        <span className="text-zinc-500 font-bold text-lg">{isGroup ? <Users size={24} /> : displayName?.[0]}</span>
+                        <span className="text-zinc-500 font-bold text-xl">{isGroup ? <Users size={28} /> : displayName?.[0]}</span>
                     )}
                 </div>
                 {!isGroup && otherUser?.isOnline && (
-                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-black"></div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-black z-10"></div>
                 )}
             </div>
             <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
                 <div className="flex justify-between items-baseline">
-                    <h3 className="font-bold text-white text-base truncate">{displayName}</h3>
+                    <h3 className="font-bold text-white text-base truncate tracking-tight">{displayName}</h3>
                     <span className="text-[11px] text-zinc-500 font-mono">{timestamp}</span>
                 </div>
                 <p className="text-zinc-400 text-sm truncate opacity-70">{lastMsg}</p>
@@ -982,27 +982,29 @@ const handleAddReaction = (msgId, emoji) => {
                         {/* REMOVED TOP BACK BUTTON FROM HERE */}
                         
                         {activeChatId !== 'saved_messages' ? (
-                           <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors group">
-                               <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 relative group-hover:border-white/30 transition-colors flex items-center justify-center">
+                           <div onClick={() => setCurrentView('profile')} className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-2 -ml-2 rounded-xl transition-colors group">
+                               {/* BIGGER SQUIRCLE HEADER IMAGE (1.5x larger: w-16/h-16) */}
+                               <div className="w-16 h-16 rounded-2xl bg-zinc-800 overflow-hidden border border-white/5 relative group-hover:border-white/20 transition-colors flex items-center justify-center shadow-2xl">
                                {currentChatObject?.type === 'group' ? (
                                       currentChatObject.photoURL ? (
                                           <img src={currentChatObject.photoURL} className="w-full h-full object-cover" />
                                       ) : (
-                                          <Users size={20} className="text-zinc-400" />
+                                          <Users size={28} className="text-zinc-400" />
                                       )
                                   ) : otherChatUser?.photoURL ? (
                                       <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
                                   ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-lg">{otherChatUser?.displayName?.[0] || '?'}</div>
+                                      <div className="w-full h-full flex items-center justify-center text-2xl font-black text-zinc-500">{otherChatUser?.displayName?.[0] || '?'}</div>
                                   )}
                                </div>
                                <div className="flex-1 min-w-0">
-                                   <h3 className="font-bold text-white text-base leading-tight truncate">
+                                   {/* COOLER TEXT STYLE: Larger, Black font weight, tighter tracking */}
+                                   <h3 className="font-black text-white text-2xl leading-none truncate tracking-tighter drop-shadow-md">
                                        {currentChatObject?.type === 'group' ? currentChatObject.displayName : (otherChatUser?.displayName || 'Unknown')}
                                    </h3>
-                                   <div className="flex items-center gap-1.5 mt-0.5">
-                                       {otherChatUser?.isOnline && currentChatObject?.type !== 'group' && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}
-                                       <p className={`text-xs truncate ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>
+                                   <div className="flex items-center gap-1.5 mt-1.5">
+                                       {otherChatUser?.isOnline && currentChatObject?.type !== 'group' && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}
+                                       <p className={`text-xs font-mono uppercase tracking-widest truncate ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>
                                            {currentChatObject?.type === 'group' ? `${currentChatObject.participants?.length || 0} members` : (otherChatUser?.isOnline ? 'Online' : 'Last seen recently')}
                                        </p>
                                    </div>

@@ -1147,7 +1147,10 @@ const handleAddReaction = (msgId, emoji) => {
                                     </span>
                                   </div>
                                 )}
-                                <div className={`flex w-full mb-1 items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}>
+                                <div 
+                                    style={{ zIndex: activeMessages.length - index }}
+                                    className={`flex w-full mb-1 items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
+                                >
                                 {!isMe && (
                                         <div className="flex-shrink-0 w-8 h-8 relative z-10 mb-1">
                                             {/* Use helper to fetch specific sender info for Groups */}

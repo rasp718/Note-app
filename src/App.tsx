@@ -174,8 +174,26 @@ function App() {
   // NEW: Group Chat States
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [groupName, setGroupName] = useState('');
+  const [groupImage, setGroupImage] = useState(null);
   const [groupMembers, setGroupMembers] = useState(new Set());
   const [groupStep, setGroupStep] = useState(1); // 1: Select, 2: Name
+
+  const handleGroupImageSelect = async (e) => {
+    if (e.target.files?.[0]) {
+        try {
+            const url = await compressImage(e.target.files[0]);
+            setGroupImage(url);
+        } catch (err) { console.error(err); }
+    }
+  };
+
+  const handleUpdateGroupPhoto = async (file) => {
+    if (!activeChatId) return;
+    try {
+        const url = await compressImage(file);
+        await updateDoc(doc(db, "chats", activeChatId), { photoURL: url });
+    } catch (e) { console.error(e); }
+  };
 
   const [savedContacts, setSavedContacts] = useState(() => {
     try {
@@ -255,14 +273,15 @@ const handleCreateGroup = async () => {
             type: 'group',
             displayName: groupName,
             participants: participants,
-            createdBy: user.uid, // Store the Admin ID
-            photoURL: null, 
+            createdBy: user.uid, 
+            photoURL: groupImage, 
             createdAt: serverTimestamp(),
             lastMessageTimestamp: serverTimestamp(),
             lastMessageText: 'Group created'
         });
         setIsGroupModalOpen(false);
         setGroupName('');
+        setGroupImage(null);
         setGroupMembers(new Set());
         setGroupStep(1);
     } catch (e) { console.error("Error creating group", e); }
@@ -1133,11 +1152,25 @@ const handleAddReaction = (msgId, emoji) => {
                 </div>
 
                 {/* HERO IMAGE SECTION */}
-                <div className="w-full h-[45dvh] relative flex-shrink-0">
+                <div className="w-full h-[45dvh] relative flex-shrink-0 group/hero">
                     {currentChatObject?.type === 'group' ? (
                         // GROUP AVATAR
-                        <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
-                             <Users size={80} className="text-zinc-600" />
+                        <div className="w-full h-full bg-zinc-900 flex items-center justify-center relative">
+                             {currentChatObject.photoURL ? (
+                                <img src={currentChatObject.photoURL} className="w-full h-full object-cover" />
+                             ) : (
+                                <Users size={80} className="text-zinc-600" />
+                             )}
+                             
+                             {/* Admin Edit Overlay */}
+                             {currentChatObject.createdBy === user.uid && (
+                                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/hero:opacity-100 cursor-pointer transition-opacity">
+                                    <div className="bg-black/50 p-3 rounded-full text-white backdrop-blur-md">
+                                        <Camera size={24} />
+                                    </div>
+                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleUpdateGroupPhoto(e.target.files[0]); }} />
+                                </label>
+                             )}
                         </div>
                     ) : otherChatUser?.photoURL ? (
                         // USER PHOTO
@@ -1297,9 +1330,14 @@ const handleAddReaction = (msgId, emoji) => {
                 {/* Step 2: Name Group */}
                 {groupStep === 2 && (
                     <div className="p-6 space-y-6">
-                        <div className="w-24 h-24 rounded-full bg-zinc-800 mx-auto flex items-center justify-center border border-white/10">
-                            <Camera size={32} className="text-zinc-500" />
-                        </div>
+                        <label className="w-24 h-24 rounded-full bg-zinc-800 mx-auto flex items-center justify-center border border-white/10 cursor-pointer overflow-hidden relative group">
+                            {groupImage ? (
+                                <img src={groupImage} className="w-full h-full object-cover" />
+                            ) : (
+                                <Camera size={32} className="text-zinc-500 group-hover:text-white transition-colors" />
+                            )}
+                            <input type="file" className="hidden" accept="image/*" onChange={handleGroupImageSelect} />
+                        </label>
                         <input 
                             autoFocus
                             type="text" 

@@ -76,7 +76,8 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any
 export const NoteCard: React.FC<NoteCardProps> = ({ 
   note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, 
   currentReaction, onReact, // Destructure new props
-  variant = 'default', status, currentUserId, opponentName = "OPP", opponentAvatar, customColors 
+  variant = 'default', status, currentUserId, opponentName = "OPP", opponentAvatar, customColors,
+  isLastInGroup = true
 }) => {
   if (!note) return null;
 
@@ -214,8 +215,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const paddingClass = 'p-1';
   
   let radiusClass = 'rounded-2xl'; 
-  if (variant === 'sent') radiusClass = 'rounded-2xl rounded-br-none';
-  if (variant === 'received') radiusClass = 'rounded-2xl rounded-bl-none';
+  // Only apply the sharp corner if it is the last message in the group
+  if (variant === 'sent') radiusClass = isLastInGroup ? 'rounded-2xl rounded-br-none' : 'rounded-2xl rounded-br-md';
+  if (variant === 'received') radiusClass = isLastInGroup ? 'rounded-2xl rounded-bl-none' : 'rounded-2xl rounded-bl-md';
   
   const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
   const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');

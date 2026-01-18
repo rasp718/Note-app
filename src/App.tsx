@@ -1101,10 +1101,33 @@ const handleAddReaction = (msgId, emoji) => {
                 ) : (
                     activeMessages.map((msg, index) => {
                         const prevMsg = activeMessages[index - 1];
+                        const nextMsg = activeMessages[index + 1];
+                        
                         const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
                         const isMe = msg.senderId === user?.uid;
                         
+                        // Check if this is the last message in a consecutive group
+                        const isLastInGroup = !nextMsg || nextMsg.senderId !== msg.senderId || !isSameDay(msg.timestamp, nextMsg.timestamp);
+                        
                         const customColors = getBubbleColors(bubbleStyle, isMe, false);
+
+                        // Determine Tail Color
+                        let tailColor = '#ffffff'; // default
+                        if (!isMe) {
+                            tailColor = '#27272a'; // Received default (zinc-800)
+                        } else {
+                            switch(bubbleStyle) {
+                                case 'whatsapp': tailColor = '#005c4b'; break;
+                                case 'telegram': tailColor = '#2b5278'; break;
+                                case 'purple': tailColor = '#6d28d9'; break;
+                                case 'blue_gradient': tailColor = '#2563eb'; break; // End color of gradient
+                                case 'solid_gray': tailColor = '#3f3f46'; break;
+                                case 'minimal_solid': tailColor = '#ffffff'; break;
+                                case 'minimal_glass': tailColor = 'rgba(255,255,255,0.2)'; break;
+                                case 'clear': tailColor = 'transparent'; break;
+                                default: tailColor = '#ffffff';
+                            }
+                        }
 
                         const msgNote = {
                             id: msg.id, text: msg.text, date: normalizeDate(msg.timestamp), 
@@ -1125,21 +1148,21 @@ const handleAddReaction = (msgId, emoji) => {
                                 {!isMe && (
                                         <div className="flex-shrink-0 w-8 h-8 relative z-10 mb-1">
                                             {/* Use helper to fetch specific sender info for Groups */}
-                                            <MessageAvatar userId={msg.senderId} />
+                                            {isLastInGroup ? <MessageAvatar userId={msg.senderId} /> : <div className="w-8 h-8" />}
                                         </div>
                                     )}
                                     
-                                    {/* TAIL SVG - Sent (Right) - Adjust fill based on style */}
-                                    {isMe && !msg.imageUrl && (
+                                    {/* TAIL SVG - Sent (Right) - Only if last in group */}
+                                    {isMe && isLastInGroup && !msg.imageUrl && (
                                         <svg className="absolute bottom-[0px] -right-[6px] z-0 w-3 h-3" viewBox="0 0 20 20">
-                                            <path d="M0 0 Q 0 15 20 20 L 0 20 Z" fill={bubbleStyle === 'whatsapp' ? '#005c4b' : (bubbleStyle === 'minimal_solid' ? '#ffffff' : (bubbleStyle === 'solid_gray' ? '#3f3f46' : 'currentColor'))} />
+                                            <path d="M0 0 Q 0 15 20 20 L 0 20 Z" fill={tailColor} />
                                         </svg>
                                     )}
 
-                                    {/* TAIL SVG - Received (Left) */}
-                                    {!isMe && !msg.imageUrl && (
+                                    {/* TAIL SVG - Received (Left) - Only if last in group */}
+                                    {!isMe && isLastInGroup && !msg.imageUrl && (
                                         <svg className="absolute bottom-[0px] left-[42px] z-0 w-3 h-3 transform scale-x-[-1]" viewBox="0 0 20 20">
-                                            <path d="M0 0 Q 0 15 20 20 L 0 20 Z" fill="#27272a" />
+                                            <path d="M0 0 Q 0 15 20 20 L 0 20 Z" fill={tailColor} />
                                         </svg>
                                     )}
 
@@ -1156,6 +1179,7 @@ const handleAddReaction = (msgId, emoji) => {
                                             onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => handleEditMessage(msg) : undefined}
                                             currentReaction={reactions[msg.id]}
                                             onReact={(emoji) => handleAddReaction(msg.id, emoji)}
+                                            isLastInGroup={isLastInGroup}
                                         />
                                     </div>
                                 </div>
@@ -1680,10 +1704,6 @@ const handleAddReaction = (msgId, emoji) => {
 <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; } 
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Force square corners for tails to connect seamlessly - Updated depth */
-        .message-row-sent > div > div > div { border-bottom-right-radius: 0px !important; }
-        .message-row-received > div > div > div { border-bottom-left-radius: 0px !important; }
       `}</style>
     </div>
   );

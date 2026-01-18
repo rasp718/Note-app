@@ -15,17 +15,16 @@ interface NoteCardProps {
   onEdit?: () => void;
   onUpdate?: (id: string, text: string) => void;
   onToggleExpand?: (id: string) => void;
-  onImageClick?: (url: string) => void; 
-  // NEW PROPS FOR REACTIONS
+  onImageClick?: (url: string) => void;
   currentReaction?: string; 
   onReact?: (emoji: string) => void;
-  // END NEW PROPS
   variant?: 'default' | 'sent' | 'received';
   status?: 'sending' | 'sent' | 'read';
   currentUserId?: string;
   opponentName?: string;
   opponentAvatar?: string;
   customColors?: { bg: string; border: string; text: string; subtext?: string; shadow?: string; font?: string };
+  isLastInGroup?: boolean;
 }
 
 // ============================================================================
@@ -75,7 +74,7 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any
 // ============================================================================
 export const NoteCard: React.FC<NoteCardProps> = ({ 
   note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, 
-  currentReaction, onReact, // Destructure new props
+  currentReaction, onReact, 
   variant = 'default', status, currentUserId, opponentName = "OPP", opponentAvatar, customColors,
   isLastInGroup = true
 }) => {
@@ -126,18 +125,18 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const openMenu = (clientX: number, clientY: number) => { 
       triggerHaptic(); 
       const menuW = 200; 
-      const menuH = 300; // Increased height for emoji bar
+      const menuH = 300; 
       let x = clientX; 
       let y = clientY; 
       
-      if (isNaN(x) || x < 0) x = 10;
-      if (isNaN(y) || y < 0) y = 10;
-
       if (typeof window !== 'undefined') { 
+          // Prevent menu from going off-screen
           if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 20; 
+          if (x < 10) x = 10;
           if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 20; 
+          if (y < 10) y = 10;
       } 
-      setContextMenu({ x: Math.max(10, x), y: Math.max(10, y) }); 
+      setContextMenu({ x, y }); 
   };
 
   const handleContextMenu = (e: any) => { 
@@ -149,7 +148,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const handleDoubleTap = (e: any) => {
       e.preventDefault();
       e.stopPropagation();
-      triggerHaptic([10, 50]); // Distinct double tap vibe
+      triggerHaptic([10, 50]); 
       if (onReact) onReact('❤️');
   };
 
@@ -182,6 +181,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
       } 
       
       if (isLongPress.current) return; 
+      // Only allow swipe delete on 'default' (Feed) notes, not chat messages
       if (variant === 'default' && diffX < 0 && Math.abs(diffX) > Math.abs(diffY)) { setIsSwiping(true); setSwipeOffset(diffX); } 
   };
 
@@ -214,12 +214,16 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const chatBorderClasses = customColors?.border || 'border-none';
   const paddingClass = 'p-1';
   
+  // Radius Logic for Tails
   let radiusClass = 'rounded-2xl'; 
-  // Only apply the sharp corner if it is the last message in the group
-  if (variant === 'sent') radiusClass = isLastInGroup ? 'rounded-2xl rounded-br-none' : 'rounded-2xl rounded-br-md';
-  if (variant === 'received') radiusClass = isLastInGroup ? 'rounded-2xl rounded-bl-none' : 'rounded-2xl rounded-bl-md';
+  if (variant === 'sent') radiusClass = isLastInGroup ? 'rounded-2xl rounded-br-none' : 'rounded-2xl';
+  if (variant === 'received') radiusClass = isLastInGroup ? 'rounded-2xl rounded-bl-none' : 'rounded-2xl';
   
-  const widthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
+  // FIXED: Chat bubbles should be w-fit (shrink to text) but max-w-full (don't overflow container)
+  // Default notes (Feed) should be w-full.
+  const outerWidthClass = variant === 'default' ? 'w-full' : 'w-fit';
+  const innerWidthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
+
   const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 
   const StatusIcon = ({ isOverlay = false }: { isOverlay?: boolean }) => {
@@ -235,10 +239,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   return (
     <>
-      {/* Updated width to w-full so App.tsx can handle the tail positioning */}
-      <div className={`relative ${variant === 'default' ? 'w-fit max-w-[85%]' : 'w-full'} overflow-visible group`} onContextMenu={handleContextMenu} onDoubleClick={handleDoubleTap}>
+      <div 
+        className={`relative ${outerWidthClass} overflow-visible group`} 
+        onContextMenu={handleContextMenu} 
+        onDoubleClick={handleDoubleTap}
+      >
         <div 
-            className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} relative transition-all duration-300 ease-out`} 
+            className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${innerWidthClass} ${shadowClass} relative transition-all duration-300 ease-out`} 
             style={{ transform: `translateX(${swipeOffset}px)`, opacity: isExiting ? 0 : 1 }} 
             onTouchStart={handleTouchStart} 
             onTouchMove={handleTouchMove} 
@@ -246,7 +253,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         >
           
           {audioUrl ? (
-             <div className="flex flex-col gap-1">
+             <div className="flex flex-col gap-1 min-w-[200px]">
                 <AudioPlayer src={audioUrl} barColor={audioBarColor} />
                 <div className="flex justify-end px-2 pb-1"><div className="flex items-center gap-1"><span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>{variant === 'sent' && <StatusIcon />}</div></div>
              </div>
@@ -273,22 +280,27 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           ) : (
              <div className="flex flex-col min-w-[80px]">
                <div className={`block w-full px-2 pb-2 pt-1`}>
-                   {safeText && <span className={`text-base leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>}
-                   <div className="float-right ml-2 mt-2 flex items-center gap-1 align-bottom h-4">
+                   {safeText && (
+                       <span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor}`}>
+                           {safeText}
+                       </span>
+                   )}
+                   {/* Float the time right if space permits, otherwise it wraps naturally */}
+                   <div className="float-right ml-3 mt-1.5 flex items-center gap-1 align-bottom h-4 select-none">
                        {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#da7756'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}
-                       <span className={`text-[10px] font-medium select-none ${subtextColor}`}>{formatTime(note.date)}</span>
+                       <span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>
                        {variant === 'sent' && <div className="ml-0.5"><StatusIcon /></div>}
                    </div>
                </div>
              </div>
           )}
 
-          {/* REACTION BADGE */}
+          {/* REACTION BADGE - Positioned relative to bubble corner */}
           {currentReaction && (
               <div 
                   onClick={(e) => { e.stopPropagation(); if (onReact) onReact(currentReaction); }}
-                  className={`absolute -bottom-2 ${variant === 'sent' ? 'right-0' : 'left-0'} bg-[#1c1c1d] border border-[#3f3f40] text-white text-[12px] rounded-full px-1.5 py-0.5 shadow-sm animate-in zoom-in duration-200 z-10 select-none cursor-pointer flex items-center justify-center hover:scale-110 transition-transform`}
-                  style={{ minWidth: '20px' }}
+                  className={`absolute -bottom-2.5 ${variant === 'sent' ? 'right-0' : 'left-0'} bg-[#1c1c1d] border border-[#3f3f40] text-white text-[12px] rounded-full px-1.5 py-0.5 shadow-sm animate-in zoom-in duration-200 z-10 select-none cursor-pointer flex items-center justify-center hover:scale-110 transition-transform`}
+                  style={{ minWidth: '22px' }}
               >
                   {currentReaction}
               </div>
@@ -299,7 +311,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
       {/* MENU PORTAL */}
       {contextMenu && typeof document !== 'undefined' && document.body && createPortal(
         <div className="fixed inset-0 z-[9999]" onClick={() => setContextMenu(null)} onTouchStart={() => setContextMenu(null)}>
-            {/* BACKDROP ABOVE */}
             <div 
                 className="absolute z-[10000] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" 
                 style={{ 
@@ -311,14 +322,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 onClick={(e) => e.stopPropagation()} 
                 onTouchStart={(e) => e.stopPropagation()}
             > 
-              {/* EMOJI BAR - WHATSAPP STYLE */}
+              {/* EMOJI BAR */}
               {onReact && (
-                  <div className="flex justify-between px-2 py-2 mb-1 border-b border-white/10">
+                  <div className="flex justify-between px-2 py-2 mb-1 border-b border-white/10 gap-1">
                       {['👍', '❤️', '😂', '😮', '😢', '🔥'].map(emoji => (
                           <button 
                               key={emoji}
                               onClick={() => { onReact(emoji); setContextMenu(null); }}
-                              className={`w-8 h-8 flex items-center justify-center text-lg rounded-full transition-all active:scale-90 ${currentReaction === emoji ? 'bg-white/20' : 'hover:bg-white/10'}`}
+                              className={`w-8 h-8 flex-1 flex items-center justify-center text-lg rounded-full transition-all active:scale-90 ${currentReaction === emoji ? 'bg-white/20' : 'hover:bg-white/10'}`}
                           >
                               {emoji}
                           </button>

@@ -1065,7 +1065,7 @@ const handleAddReaction = (msgId, emoji) => {
 <div ref={listRef} onScroll={handleScroll} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
    <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-1 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
-                {activeChatId === 'saved_messages' ? (
+   {activeChatId === 'saved_messages' ? (
                     filteredNotes.map((note, index) => {
                         const prevNote = filteredNotes[index - 1];
                         const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
@@ -1082,18 +1082,21 @@ const handleAddReaction = (msgId, emoji) => {
                                   </div>
                                 )}
                                 <div onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
-                                    <NoteCard 
-                                        note={note} 
-                                        categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
-                                        selectedVoice={selectedVoice} 
-                                        onDelete={handleDeleteNote} 
-                                        onPin={togglePin} 
-                                        onCategoryClick={(cat) => setActiveFilter(cat)} 
-                                        onEdit={() => handleEditClick(note)} 
-                                        onToggleExpand={handleToggleExpand}
-                                        onImageClick={setZoomedImage}
-                                        customColors={noteColors}
-                                    />
+                                    {/* Added max-w-[85%] wrapper to fix Note width issue */}
+                                    <div className="max-w-[85%] w-fit">
+                                        <NoteCard 
+                                            note={note} 
+                                            categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
+                                            selectedVoice={selectedVoice} 
+                                            onDelete={handleDeleteNote} 
+                                            onPin={togglePin} 
+                                            onCategoryClick={(cat) => setActiveFilter(cat)} 
+                                            onEdit={() => handleEditClick(note)} 
+                                            onToggleExpand={handleToggleExpand}
+                                            onImageClick={setZoomedImage}
+                                            customColors={noteColors}
+                                        />
+                                    </div>
                                 </div>
                             </React.Fragment>
                         );
@@ -1152,17 +1155,17 @@ const handleAddReaction = (msgId, emoji) => {
                                         </div>
                                     )}
                                     
-                                    {/* TAIL SVG - Sent (Right) - Only if last in group */}
+                                    {/* TAIL SVG - Sent (Right) - WhatsApp Style Curve */}
                                     {isMe && isLastInGroup && !msg.imageUrl && (
-                                        <svg className="absolute bottom-[0px] -right-[6px] z-0 w-3 h-3" viewBox="0 0 20 20">
-                                            <path d="M0 0 Q 0 15 20 20 L 0 20 Z" fill={tailColor} />
+                                        <svg className="absolute bottom-[0px] -right-[8px] z-0 w-[12px] h-[13px] fill-current" viewBox="0 0 13 13">
+                                            <path d="M0,0 C1.7,6.3 6.3,11.3 13,13 H0 V0 Z" fill={tailColor} />
                                         </svg>
                                     )}
 
-                                    {/* TAIL SVG - Received (Left) - Only if last in group */}
+                                    {/* TAIL SVG - Received (Left) - WhatsApp Style Curve */}
                                     {!isMe && isLastInGroup && !msg.imageUrl && (
-                                        <svg className="absolute bottom-[0px] left-[42px] z-0 w-3 h-3 transform scale-x-[-1]" viewBox="0 0 20 20">
-                                            <path d="M0 0 Q 0 15 20 20 L 0 20 Z" fill={tailColor} />
+                                        <svg className="absolute bottom-[0px] -left-[8px] z-0 w-[12px] h-[13px] fill-current" viewBox="0 0 13 13">
+                                            <path d="M13,0 C11.3,6.3 6.7,11.3 0,13 H13 V0 Z" fill={tailColor} />
                                         </svg>
                                     )}
 

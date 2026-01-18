@@ -300,7 +300,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               <div 
                   onClick={(e) => { e.stopPropagation(); if (onReact) onReact(currentReaction); }}
                   className={`absolute -bottom-2.5 ${variant === 'sent' ? 'right-[8px]' : 'left-[8px]'} bg-[#1c1c1d] border border-[#3f3f40] text-white text-[12px] leading-none rounded-full px-1 py-0.5 shadow-sm animate-in zoom-in duration-200 z-30 select-none cursor-pointer flex items-center justify-center hover:scale-110 transition-transform`}
-                  style={{ minWidth: '18px' }}
+                  style={{ minWidth: '16px' }}
               >
                   {currentReaction}
               </div>

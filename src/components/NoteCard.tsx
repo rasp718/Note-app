@@ -16,73 +16,6 @@ interface NoteCardProps {
   onUpdate?: (id: string, text: string) => void;
   onToggleExpand?: (id: string) => void;
   onImageClick?: (url: string) => void;
-  currentReaction?: string; 
-  onReact?: (emoji: string) => void;
-  variant?: 'default' | 'sent' | 'received';
-  status?: 'sending' | 'sent' | 'read';
-  currentUserId?: string;
-  opponentName?: string;
-  opponentAvatar?: string;
-  customColors?: { bg: string; border: string; text: string; subtext?: string; shadow?: string; font?: string };
-  isLastInGroup?: boolean;
-}
-
-// ============================================================================
-// HELPER COMPONENTS
-// ============================================================================
-const triggerHaptic = (pattern: number | number[] = 15) => { 
-  if (typeof navigator !== 'undefined' && navigator.vibrate) { 
-      try { navigator.vibrate(pattern); } catch (e) {} 
-  } 
-};
-
-const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
-  const [isHovered, setIsHovered] = useState(false);
-  
-  const handleAction = (e: any) => { 
-      e.preventDefault();
-      e.stopPropagation();
-      triggerHaptic(); 
-      onClick(); 
-  };
-
-  return (
-    <button 
-        type="button" 
-        onPointerDown={handleAction}
-        onClick={handleAction} 
-        onMouseEnter={() => setIsHovered(true)} 
-        onMouseLeave={() => setIsHovered(false)} 
-        className="w-full flex items-center gap-3 px-3 py-3 text-sm transition-colors duration-150 cursor-pointer select-none active:bg-white/10" 
-        style={{ backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent' }}
-    >
-      <Icon size={18} style={{ color: isHovered ? accentColor : '#a1a1aa' }} />
-      <span className="font-medium" style={{ color: isHovered ? accentColor : '#f4f4f5' }}>{label}</span>
-    </button>
-  );
-};
-
-const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any) => {
-  const [isHovered, setIsHovered] = useState(false);
-  return (
-    <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? accentColor : (iconColor || '#71717a') }}><Icon size={12} /></button>
-  );
-};
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-interface NoteCardProps {
-  note: Note;
-  categories: CategoryConfig[];
-  selectedVoice: SpeechSynthesisVoice | null;
-  onDelete?: (id: string) => void;
-  onPin?: (id: string) => void;
-  onCategoryClick?: (category: CategoryId) => void;
-  onEdit?: () => void;
-  onUpdate?: (id: string, text: string) => void;
-  onToggleExpand?: (id: string) => void;
-  onImageClick?: (url: string) => void;
   onReply?: (note: Note) => void;
   currentReaction?: string; 
   onReact?: (emoji: string) => void;
@@ -305,8 +238,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   if (variant === 'sent') radiusClass = isLastInGroup ? 'rounded-2xl rounded-br-none' : 'rounded-2xl';
   if (variant === 'received') radiusClass = isLastInGroup ? 'rounded-2xl rounded-bl-none' : 'rounded-2xl';
   
-  // FIXED: Chat bubbles should be w-fit (shrink to text) but max-w-full (don't overflow container)
-  // Default notes (Feed) should be w-full.
   const outerWidthClass = variant === 'default' ? 'w-full' : 'w-fit';
   const innerWidthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
 
@@ -337,7 +268,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             onTouchMove={handleTouchMove} 
             onTouchEnd={handleTouchEnd}
         >
-          
           {/* REPLY BLOCK INSIDE BUBBLE */}
           {replyData && (
               <div className="mx-1 mt-1 mb-1 p-2 rounded-[6px] bg-black/20 flex flex-col gap-0.5 border-l-4 border-purple-500 relative overflow-hidden select-none">
@@ -432,7 +362,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   </div>
               )}
 
-<ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { if(onReply) onReply(note); else handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
+              <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { if(onReply) onReply(note); else handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
               
               {variant === 'default' && (
                 <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />

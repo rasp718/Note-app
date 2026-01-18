@@ -144,8 +144,34 @@ function App() {
   useEffect(() => { localStorage.setItem('vibenotes_reactions', JSON.stringify(reactions)); }, [reactions]);
 
   const [showBlockModal, setShowBlockModal] = useState(false);
-  const [showLeaveGroupModal, setShowLeaveGroupModal] = useState(false); // NEW STATE
+  const [showLeaveGroupModal, setShowLeaveGroupModal] = useState(false); 
   const [mutedChats, setMutedChats] = useState(new Set());
+  
+  // Group Editing State
+  const [isEditingGroupInfo, setIsEditingGroupInfo] = useState(false);
+  const [editGroupName, setEditGroupName] = useState('');
+  const [editGroupDesc, setEditGroupDesc] = useState('');
+
+  // Save Group Profile Changes
+  const handleSaveGroupInfo = async () => {
+    if (!activeChatId || !editGroupName.trim()) return;
+    try {
+        const chatRef = doc(db, "chats", activeChatId);
+        await updateDoc(chatRef, {
+            displayName: editGroupName.trim(),
+            description: editGroupDesc.trim()
+        });
+        setIsEditingGroupInfo(false);
+    } catch (e) { console.error("Error updating group:", e); }
+  };
+
+  const startGroupEdit = () => {
+      if (currentChatObject) {
+          setEditGroupName(currentChatObject.displayName || '');
+          setEditGroupDesc(currentChatObject.description || '');
+          setIsEditingGroupInfo(true);
+      }
+  };
 
   // Handle Leaving Group
   const handleLeaveGroup = async () => {
@@ -1146,10 +1172,25 @@ const handleAddReaction = (msgId, emoji) => {
                 
                 {/* BACK BUTTON */}
                 <div className="absolute top-4 left-4 z-50">
-                    <button onClick={() => setCurrentView('room')} className="w-10 h-10 bg-black/20 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-all">
+                    <button onClick={() => { setIsEditingGroupInfo(false); setCurrentView('room'); }} className="w-10 h-10 bg-black/20 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-all">
                         <ChevronLeft size={24} />
                     </button>
                 </div>
+
+                {/* ADMIN EDIT TOGGLE */}
+                {currentChatObject?.type === 'group' && currentChatObject.createdBy === user.uid && (
+                    <div className="absolute top-4 right-4 z-50">
+                        {isEditingGroupInfo ? (
+                            <button onClick={handleSaveGroupInfo} className="w-10 h-10 bg-[#DA7756] shadow-lg shadow-orange-900/40 rounded-full flex items-center justify-center text-white hover:scale-105 transition-all">
+                                <Check size={20} strokeWidth={3} />
+                            </button>
+                        ) : (
+                            <button onClick={startGroupEdit} className="w-10 h-10 bg-black/20 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-all">
+                                <Edit size={18} />
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* HERO IMAGE SECTION */}
                 <div className="w-full h-[45dvh] relative flex-shrink-0 group/hero">
@@ -1162,10 +1203,10 @@ const handleAddReaction = (msgId, emoji) => {
                                 <Users size={80} className="text-zinc-600" />
                              )}
                              
-                             {/* Admin Edit Overlay */}
+                             {/* Admin Edit Overlay (Always visible during Edit Mode) */}
                              {currentChatObject.createdBy === user.uid && (
-                                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/hero:opacity-100 cursor-pointer transition-opacity">
-                                    <div className="bg-black/50 p-3 rounded-full text-white backdrop-blur-md">
+                                <label className={`absolute inset-0 bg-black/40 flex items-center justify-center cursor-pointer transition-opacity ${isEditingGroupInfo ? 'opacity-100' : 'opacity-0 group-hover/hero:opacity-100'}`}>
+                                    <div className="bg-black/50 p-3 rounded-full text-white backdrop-blur-md border border-white/20">
                                         <Camera size={24} />
                                     </div>
                                     <input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleUpdateGroupPhoto(e.target.files[0]); }} />
@@ -1215,19 +1256,48 @@ const handleAddReaction = (msgId, emoji) => {
 
                     {/* BIO / INFO SECTION */}
                     <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl p-4 space-y-4">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500">
-                                <Info size={18} />
+                        
+                        {/* EDIT MODE: INPUTS */}
+                        {isEditingGroupInfo ? (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold">Group Name</label>
+                                    <input 
+                                        type="text" 
+                                        value={editGroupName} 
+                                        onChange={(e) => setEditGroupName(e.target.value)}
+                                        className="w-full bg-black/40 border-b border-white/20 py-2 text-white font-bold focus:outline-none focus:border-[#DA7756] transition-colors"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold">Description</label>
+                                    <textarea 
+                                        value={editGroupDesc} 
+                                        onChange={(e) => setEditGroupDesc(e.target.value)}
+                                        placeholder="Add a group description..."
+                                        rows={2}
+                                        className="w-full bg-black/40 border-b border-white/20 py-2 text-white text-sm focus:outline-none focus:border-[#DA7756] transition-colors resize-none"
+                                    />
+                                </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">
-                                    {currentChatObject?.type === 'group' ? 'Description' : 'Bio'}
-                                </p>
-                                <p className="text-white text-sm leading-snug truncate">
-                                    {currentChatObject?.type === 'group' ? 'Welcome to the club.' : 'Living in the matrix. 🕶️'}
-                                </p>
+                        ) : (
+                            /* VIEW MODE: TEXT */
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500">
+                                    <Info size={18} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">
+                                        {currentChatObject?.type === 'group' ? 'Description' : 'Bio'}
+                                    </p>
+                                    <p className="text-white text-sm leading-snug whitespace-pre-wrap">
+                                        {currentChatObject?.type === 'group' 
+                                            ? (currentChatObject.description || 'No description yet.') 
+                                            : 'Living in the matrix. 🕶️'}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
+                        )}
                         {currentChatObject?.type !== 'group' && (
                             <>
                             <div className="w-full h-px bg-white/5" />

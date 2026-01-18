@@ -34,49 +34,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// --- NEW CHAT ROW COMPONENT (SQUIRCLES) ---
-const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
-    const otherUser = useUser(chat.otherUserId);
-    const isGroup = chat.type === 'group';
-    const displayName = isGroup ? chat.displayName : (otherUser?.displayName || 'Unknown');
-    const photoURL = isGroup ? chat.photoURL : otherUser?.photoURL;
-    const lastMsg = chat.lastMessageText || '';
-    const timestamp = chat.lastMessageTimestamp ? getDateLabel(chat.lastMessageTimestamp) : '';
-
-    return (
-        <div onClick={onClick} className={`mx-3 px-3 py-4 flex gap-4 rounded-3xl transition-all duration-200 cursor-pointer hover:bg-white/5 group ${active ? 'bg-white/10' : ''}`}>
-            {isEditing && (
-                <div className="flex items-center pr-2" onClick={(e) => { e.stopPropagation(); onSelect(); }}>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${active ? 'bg-[#DA7756] border-[#DA7756]' : 'border-zinc-600'}`}>
-                        {active && <Check size={12} className="text-white" strokeWidth={3} />}
-                    </div>
-                </div>
-            )}
-            {/* SQUIRCLE AVATAR */}
-            <div className="w-16 h-16 flex-shrink-0 relative">
-                <div className="w-full h-full rounded-[18px] bg-zinc-800 border border-white/5 flex items-center justify-center overflow-hidden shadow-lg shadow-black/20">
-                    {photoURL ? (
-                        <img src={photoURL} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="avatar" />
-                    ) : (
-                        <span className="text-zinc-500 font-bold text-xl">{isGroup ? <Users size={28} /> : displayName?.[0]}</span>
-                    )}
-                </div>
-                {!isGroup && otherUser?.isOnline && (
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-black z-10"></div>
-                )}
-            </div>
-            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                <div className="flex justify-between items-baseline">
-                    <h3 className="font-bold text-white text-[17px] tracking-tight">{displayName}</h3>
-                    <span className="text-[11px] text-zinc-500 font-mono">{timestamp}</span>
-                </div>
-                <p className="text-zinc-400 text-[15px] truncate opacity-80 leading-snug">{lastMsg}</p>
-            </div>
-        </div>
-    );
-};
-// ------------------------------------------
-
 // Helper component to resolve avatars in Group Chats
 const MessageAvatar = ({ userId }) => {
     const userData = useUser(userId);

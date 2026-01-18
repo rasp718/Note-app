@@ -53,12 +53,12 @@ const MessageAvatar = ({ userId }) => {
 };
 
 // Helper for Profile Member List
-const GroupMemberRow = ({ userId, isAdmin }) => {
+const GroupMemberRow = ({ userId, isAdmin, isViewerAdmin, onRemove }) => {
     const userData = useUser(userId);
     if (!userId) return null;
 
     return (
-        <div className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors">
+        <div className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors group/member">
             <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-white/5">
                 {userData?.photoURL ? <img src={userData.photoURL} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-zinc-500 text-sm">{userData?.displayName?.[0] || '?'}</div>}
             </div>
@@ -67,6 +67,17 @@ const GroupMemberRow = ({ userId, isAdmin }) => {
                 <div className="text-zinc-500 text-xs truncate">{userData?.handle || (userData?.isOnline ? 'Online' : 'Last seen recently')}</div>
             </div>
             {isAdmin && <span className="text-[#DA7756] text-[10px] font-bold uppercase tracking-wider">Admin</span>}
+            
+            {/* Show Remove Button if Viewer is Admin AND this row is not the Admin */}
+            {isViewerAdmin && !isAdmin && (
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onRemove(userId); }}
+                    className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all opacity-0 group-hover/member:opacity-100"
+                    title="Remove from group"
+                >
+                    <X size={16} />
+                </button>
+            )}
         </div>
     );
 };
@@ -141,16 +152,21 @@ function App() {
     if (!activeChatId || !user) return;
     try {
         const chatRef = doc(db, "chats", activeChatId);
-        // Remove current user from participants array
-        await updateDoc(chatRef, {
-            participants: arrayRemove(user.uid)
-        });
+        await updateDoc(chatRef, { participants: arrayRemove(user.uid) });
         setShowLeaveGroupModal(false);
         setCurrentView('list');
         setActiveChatId(null);
-    } catch (e) {
-        console.error("Error leaving group:", e);
-    }
+    } catch (e) { console.error("Error leaving group:", e); }
+  };
+
+  const handleRemoveMember = async (memberId) => {
+      if (!activeChatId) return;
+      if (confirm("Remove this user from the group?")) {
+          try {
+              const chatRef = doc(db, "chats", activeChatId);
+              await updateDoc(chatRef, { participants: arrayRemove(memberId) });
+          } catch (e) { console.error("Error removing member:", e); }
+      }
   };
   // NEW: Store who we found in the URL
   const [incomingInvite, setIncomingInvite] = useState(null);
@@ -1205,8 +1221,11 @@ const handleAddReaction = (msgId, emoji) => {
                                     key={uid} 
                                     userId={uid} 
                                     isAdmin={currentChatObject.createdBy === uid} 
+                                    isViewerAdmin={currentChatObject.createdBy === user.uid}
+                                    onRemove={handleRemoveMember}
                                  />
                              ))}
+                             {/* Only Admin can add members conceptually, or everyone depending on your preference */}
                              <button className="w-full py-3 text-center text-blue-500 font-bold text-sm hover:bg-white/5 rounded-xl transition-colors">Add Members</button>
                         </div>
                     )}

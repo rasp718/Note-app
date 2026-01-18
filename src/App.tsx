@@ -82,6 +82,48 @@ const GroupMemberRow = ({ userId, isAdmin, isViewerAdmin, onRemove }) => {
     );
 };
 
+// Fixed Chat Row to display Group Photos correctly
+const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
+    const otherUser = useUser(chat.otherUserId);
+    const isGroup = chat.type === 'group';
+    const displayName = isGroup ? chat.displayName : (otherUser?.displayName || 'Unknown');
+    // Prioritize chat.photoURL for groups
+    const photoURL = isGroup ? chat.photoURL : otherUser?.photoURL;
+    const lastMsg = chat.lastMessageText || '';
+    const timestamp = chat.lastMessageTimestamp ? getDateLabel(chat.lastMessageTimestamp) : '';
+
+    return (
+        <div onClick={onClick} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 group ${active ? 'bg-white/10' : ''}`}>
+            {isEditing && (
+                <div className="flex items-center pr-2" onClick={(e) => { e.stopPropagation(); onSelect(); }}>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${active ? 'bg-[#DA7756] border-[#DA7756]' : 'border-zinc-600'}`}>
+                        {active && <Check size={12} className="text-white" strokeWidth={3} />}
+                    </div>
+                </div>
+            )}
+            <div className="w-14 h-14 flex-shrink-0 relative">
+                <div className="w-full h-full rounded-full bg-zinc-800 overflow-hidden border border-white/10 flex items-center justify-center shadow-lg">
+                    {photoURL ? (
+                        <img src={photoURL} className="w-full h-full object-cover" alt="avatar" />
+                    ) : (
+                        <span className="text-zinc-500 font-bold text-lg">{isGroup ? <Users size={24} /> : displayName?.[0]}</span>
+                    )}
+                </div>
+                {!isGroup && otherUser?.isOnline && (
+                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-black"></div>
+                )}
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                <div className="flex justify-between items-baseline">
+                    <h3 className="font-bold text-white text-base truncate">{displayName}</h3>
+                    <span className="text-[11px] text-zinc-500 font-mono">{timestamp}</span>
+                </div>
+                <p className="text-zinc-400 text-sm truncate opacity-70">{lastMsg}</p>
+            </div>
+        </div>
+    );
+};
+
 function App() {
   // ============================================================================
   // SECTION: STATE MANAGEMENT
@@ -749,9 +791,11 @@ const handleAddReaction = (msgId, emoji) => {
 
                         {/* Deduplicate chats: prioritize one with messages/recent timestamp */}
                         {realChats.reduce((acc, chat) => {
-                            const existingIndex = acc.findIndex(c => c.otherUserId === chat.otherUserId);
+                            // Ensure Groups are never deduplicated against each other (as they have undefined otherUserId)
+                            const existingIndex = chat.type === 'group' ? -1 : acc.findIndex(c => c.otherUserId === chat.otherUserId);
+                            
                             if (existingIndex > -1) {
-                                // If duplicate exists, keep the one with the newer timestamp so history isn't lost
+                                // If duplicate exists (only for DMs), keep the one with the newer timestamp
                                 if ((chat.lastMessageTimestamp || 0) > (acc[existingIndex].lastMessageTimestamp || 0)) {
                                     acc[existingIndex] = chat;
                                 }
@@ -759,15 +803,14 @@ const handleAddReaction = (msgId, emoji) => {
                                 acc.push(chat);
                             }
                             return acc;
-                        }, []).sort((a, b) => (b.lastMessageTimestamp || 0) - (a.lastMessageTimestamp || 0)).map((chat, index) => (
-                          <ChatListItem 
+                        }, []).sort((a, b) => (b.lastMessageTimestamp || 0) - (a.lastMessageTimestamp || 0)).map((chat) => (
+                          <ChatRow 
                             key={chat.id} 
                             chat={chat} 
                             active={isEditing ? selectedChatIds.has(chat.id) : false} 
                             isEditing={isEditing}
                             onSelect={() => toggleChatSelection(chat.id)}
                             onClick={() => { setActiveChatId(chat.id); setCurrentView('room'); scrollToBottom('auto'); }}
-                            index={index}
                           />
                         ))}
                      </>

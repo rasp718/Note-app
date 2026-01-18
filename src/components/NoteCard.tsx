@@ -299,7 +299,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           {currentReaction && (
               <div 
                   onClick={(e) => { e.stopPropagation(); if (onReact) onReact(currentReaction); }}
-                  className={`absolute -bottom-2.5 ${variant === 'sent' ? 'right-[2px]' : 'left-[2px]'} bg-[#1c1c1d] border border-[#3f3f40] text-white text-[12px] rounded-full px-1.5 py-0.5 shadow-sm animate-in zoom-in duration-200 z-30 select-none cursor-pointer flex items-center justify-center hover:scale-110 transition-transform`}
+                  className={`absolute -bottom-2.5 ${variant === 'sent' ? 'right-[6px]' : 'left-[6px]'} bg-[#1c1c1d] border border-[#3f3f40] text-white text-[12px] rounded-full px-1.5 py-0.5 shadow-sm animate-in zoom-in duration-200 z-30 select-none cursor-pointer flex items-center justify-center hover:scale-110 transition-transform`}
                   style={{ minWidth: '22px' }}
               >
                   {currentReaction}

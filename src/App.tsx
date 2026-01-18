@@ -221,6 +221,15 @@ function App() {
     } catch (e) { console.error(e); }
   };
 
+  const handleDeleteGroupPhoto = async () => {
+    if (!activeChatId) return;
+    if (confirm("Remove group photo?")) {
+        try {
+            await updateDoc(doc(db, "chats", activeChatId), { photoURL: null });
+        } catch (e) { console.error(e); }
+    }
+  };
+
   const [savedContacts, setSavedContacts] = useState(() => {
     try {
       const saved = localStorage.getItem('vibenotes_contacts');
@@ -1203,14 +1212,28 @@ const handleAddReaction = (msgId, emoji) => {
                                 <Users size={80} className="text-zinc-600" />
                              )}
                              
-                             {/* Admin Edit Overlay (Always visible during Edit Mode) */}
+                             {/* Admin Edit Overlay */}
                              {currentChatObject.createdBy === user.uid && (
-                                <label className={`absolute inset-0 bg-black/40 flex items-center justify-center cursor-pointer transition-opacity ${isEditingGroupInfo ? 'opacity-100' : 'opacity-0 group-hover/hero:opacity-100'}`}>
-                                    <div className="bg-black/50 p-3 rounded-full text-white backdrop-blur-md border border-white/20">
-                                        <Camera size={24} />
-                                    </div>
-                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleUpdateGroupPhoto(e.target.files[0]); }} />
-                                </label>
+                                <>
+                                    {/* Upload Layer */}
+                                    <label className={`absolute inset-0 flex items-center justify-center cursor-pointer transition-all duration-300 ${isEditingGroupInfo ? 'bg-black/60 opacity-100' : 'opacity-0 group-hover/hero:opacity-100 bg-black/30'}`}>
+                                        <div className="bg-black/50 p-3 rounded-full text-white backdrop-blur-md border border-white/20 hover:scale-110 transition-transform">
+                                            <Camera size={24} />
+                                        </div>
+                                        <input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleUpdateGroupPhoto(e.target.files[0]); }} />
+                                    </label>
+
+                                    {/* Delete Button (Only in Edit Mode & if Photo exists) */}
+                                    {isEditingGroupInfo && currentChatObject.photoURL && (
+                                        <button 
+                                            onClick={(e) => { e.preventDefault(); handleDeleteGroupPhoto(); }}
+                                            className="absolute bottom-4 right-4 bg-red-500/80 hover:bg-red-500 p-3 rounded-full text-white backdrop-blur-md shadow-lg z-20 transition-all hover:scale-105"
+                                            title="Remove Photo"
+                                        >
+                                            <Trash2 size={20} />
+                                        </button>
+                                    )}
+                                </>
                              )}
                         </div>
                     ) : otherChatUser?.photoURL ? (

@@ -941,8 +941,12 @@ const handleAddReaction = (msgId, emoji) => {
                         {activeChatId !== 'saved_messages' ? (
                            <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors group">
                                <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 relative group-hover:border-white/30 transition-colors flex items-center justify-center">
-                                  {currentChatObject?.type === 'group' ? (
-                                      <Users size={20} className="text-zinc-400" />
+                               {currentChatObject?.type === 'group' ? (
+                                      currentChatObject.photoURL ? (
+                                          <img src={currentChatObject.photoURL} className="w-full h-full object-cover" />
+                                      ) : (
+                                          <Users size={20} className="text-zinc-400" />
+                                      )
                                   ) : otherChatUser?.photoURL ? (
                                       <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
                                   ) : (
@@ -1187,7 +1191,7 @@ const handleAddReaction = (msgId, emoji) => {
                     
                     {/* HEADER: BACK BUTTON + AVATAR + INFO */}
                     <div className="px-5 pt-6 pb-2">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-5">
                             
                             {/* BACK BUTTON (Left of Picture) */}
                             <button 
@@ -1225,7 +1229,7 @@ const handleAddReaction = (msgId, emoji) => {
                             </div>
 
                             {/* TEXT INFO (RIGHT) */}
-                            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <div className="flex-1 min-w-0 flex flex-col justify-center pt-1 pl-1">
                                 <div className="flex items-center gap-2">
                                     {isEditingGroupInfo ? (
                                         <input 
@@ -1252,7 +1256,7 @@ const handleAddReaction = (msgId, emoji) => {
                                     )}
                                 </div>
 
-                                <p className="text-sm text-zinc-500 font-medium truncate mt-0.5">
+                                <p className="text-sm text-zinc-500 font-normal truncate mt-0.5">
                                     {currentChatObject?.type === 'group' 
                                         ? `${currentChatObject.participants?.length || 0} members` 
                                         : (otherChatUser?.isOnline ? <span className="text-blue-400">Online</span> : 'Last seen recently')}

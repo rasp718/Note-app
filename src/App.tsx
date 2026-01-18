@@ -16,7 +16,7 @@ import {
 
 // IMPORT COMPONENTS
 import { NoteCard } from './components/NoteCard'; 
-import { ChatListItem } from './components/ChatListItem';
+// ChatListItem removed to fix build error
 import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers, useUser, usePresence } from './useFirebaseSync';
 import Auth from './components/Auth';
 // FIREBASE DIRECT INIT FOR INVITES

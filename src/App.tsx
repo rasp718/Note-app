@@ -1235,16 +1235,16 @@ const handleAddReaction = (msgId, emoji) => {
 
       {/* VIEW: PROFILE (User or Group) - MODERN COMPACT STYLE (SCROLLABLE HEADER) */}
       {currentView === 'profile' && (otherChatUser || currentChatObject?.type === 'group') && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
             {/* CLICK OUTSIDE TO CLOSE */}
             <div className="absolute inset-0" onClick={() => { setIsEditingGroupInfo(false); setCurrentView('room'); setIsProfileScrolled(false); }} />
 
             {/* MAIN CARD - Full Screen on Mobile, Centered on Laptop */}
-            <div className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:max-w-[420px] bg-[#1c1c1d] sm:rounded-2xl shadow-2xl overflow-hidden border-x sm:border border-white/10 animate-in slide-in-from-bottom duration-300">
+            <div className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:max-w-[420px] bg-[#1c1c1d] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col border-x sm:border border-white/10 animate-in slide-in-from-bottom duration-300">
                 
                 {/* STICKY COLLAPSED HEADER (Shows on Scroll) */}
-                <div className={`absolute top-0 left-0 right-0 z-50 transition-all duration-300 pointer-events-none ${isProfileScrolled ? 'bg-[#1c1c1d]/95 backdrop-blur-xl border-b border-white/10 py-3' : 'pt-4'}`}>
-                    <div className="flex items-center px-4 gap-3 pointer-events-auto">
+                <div className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${isProfileScrolled ? 'bg-[#1c1c1d]/95 backdrop-blur-xl border-b border-white/10 py-3' : 'pt-4'}`}>
+                    <div className="flex items-center px-4 gap-3">
                         <button 
                             onClick={() => { 
                                 if(isEditingGroupInfo) setIsEditingGroupInfo(false); 
@@ -1273,10 +1273,10 @@ const handleAddReaction = (msgId, emoji) => {
                 {/* SCROLLABLE CONTAINER (Contains Image + Content) */}
                 <div 
                     className="absolute inset-0 overflow-y-auto no-scrollbar"
-                    onScroll={(e) => setIsProfileScrolled(e.currentTarget.scrollTop > 220)}
+                    onScroll={(e) => setIsProfileScrolled(e.currentTarget.scrollTop > 180)}
                 >
                     {/* HEADER IMAGE SECTION (BANNER) */}
-                    <div className="relative h-72 sm:h-64 w-full bg-zinc-800 group/header flex-shrink-0">
+                    <div className="relative h-72 sm:h-64 w-full bg-zinc-800 group/header flex-shrink-0 -mt-[68px]">
                         {/* IMAGE */}
                         {(currentChatObject?.type === 'group' ? currentChatObject.photoURL : otherChatUser?.photoURL) ? (
                             <img 
@@ -1308,7 +1308,6 @@ const handleAddReaction = (msgId, emoji) => {
                                 <div className="w-full">
                                     <div className="flex items-center gap-2 mb-2">
                                         <input 
-                                            // REMOVED AUTO FOCUS TO PREVENT KEYBOARD POPUP
                                             type="text" 
                                             value={editGroupName} 
                                             onChange={(e) => setEditGroupName(e.target.value)}
@@ -1316,6 +1315,13 @@ const handleAddReaction = (msgId, emoji) => {
                                             placeholder="Group Name"
                                         />
                                     </div>
+                                    <textarea 
+                                        value={editGroupDesc} 
+                                        onChange={(e) => setEditGroupDesc(e.target.value)}
+                                        placeholder="Add a description..."
+                                        className="w-full bg-transparent border-none p-0 text-white/80 text-sm focus:outline-none resize-none placeholder:text-zinc-400"
+                                        rows={2}
+                                    />
                                 </div>
                             ) : (
                                 <div className="flex items-end justify-between w-full translate-y-1">
@@ -1368,37 +1374,9 @@ const handleAddReaction = (msgId, emoji) => {
                         {/* REST OF INFO LIST (Bio, Username, Notifications, Members, Block) */}
                         <div className="px-2 pb-6 space-y-1 mt-2">
                             
-                            {/* INFO ITEM: BIO/DESC (EDITABLE IN LIST) */}
-                            <div className={`p-3 rounded-xl flex gap-4 transition-colors ${isEditingGroupInfo ? 'bg-white/5 border border-white/10' : 'hover:bg-white/5'}`}>
-                                <div className={`mt-0.5 flex-shrink-0 ${isEditingGroupInfo ? 'text-[#DA7756]' : 'text-zinc-500'}`}><Info size={20} /></div>
-                                <div className="flex-1 min-w-0 border-b border-white/5 pb-3">
-                                    {isEditingGroupInfo ? (
-                                        <div className="animate-in fade-in duration-200">
-                                            <label className="text-[10px] uppercase font-bold text-[#DA7756] tracking-wider mb-1 block">Edit Description</label>
-                                            <textarea 
-                                                value={editGroupDesc} 
-                                                onChange={(e) => setEditGroupDesc(e.target.value)}
-                                                placeholder="Add a group description..."
-                                                className="w-full bg-transparent border-none p-0 text-white text-sm focus:outline-none resize-none placeholder:text-zinc-600"
-                                                rows={3}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <p className="text-white text-[14px] whitespace-pre-wrap leading-relaxed">
-                                                {currentChatObject?.type === 'group' 
-                                                    ? (currentChatObject.description || 'No description.') 
-                                                    : 'Living in the matrix. 🕶️'}
-                                            </p>
-                                            <p className="text-[12px] text-zinc-500 mt-0.5 uppercase tracking-wide font-bold">{currentChatObject?.type === 'group' ? 'Description' : 'Bio'}</p>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-
                             {/* SAVE BUTTON ROW (Only visible when editing) */}
                             {isEditingGroupInfo && (
-                                <div className="flex gap-2 px-2 pb-2 animate-in slide-in-from-top-2 duration-200">
+                                <div className="flex gap-2 px-2 pb-2 pt-2 border-b border-white/5 animate-in slide-in-from-top-2 duration-200">
                                     <button onClick={() => setIsEditingGroupInfo(false)} className="flex-1 py-3 rounded-xl bg-zinc-800 text-white font-bold text-sm hover:bg-zinc-700 transition-colors">Cancel</button>
                                     <button onClick={handleSaveGroupInfo} className="flex-1 py-3 rounded-xl bg-[#DA7756] text-white font-bold text-sm hover:bg-[#c46243] transition-colors shadow-lg shadow-orange-900/20">Save Changes</button>
                                 </div>

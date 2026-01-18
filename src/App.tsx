@@ -1225,14 +1225,11 @@ const handleAddReaction = (msgId, emoji) => {
                             </>
                         )}
                         
-                        <button onClick={() => setShowBlockModal(true)} className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left text-red-500 active:bg-red-500/10">
-                            {currentChatObject?.type === 'group' ?<button 
+                        <button 
                             onClick={() => currentChatObject?.type === 'group' ? setShowLeaveGroupModal(true) : setShowBlockModal(true)} 
                             className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left text-red-500 active:bg-red-500/10"
                         >
                             {currentChatObject?.type === 'group' ? <ArrowUp className="rotate-90" size={20} /> : <Ban size={20} />}
-                            <span className="font-bold text-sm">{currentChatObject?.type === 'group' ? 'Leave Group' : 'Block User'}</span>
-                        </button> <ArrowUp className="rotate-90" size={20} /> : <Ban size={20} />}
                             <span className="font-bold text-sm">{currentChatObject?.type === 'group' ? 'Leave Group' : 'Block User'}</span>
                         </button>
                     </div>

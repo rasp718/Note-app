@@ -1179,50 +1179,36 @@ const handleAddReaction = (msgId, emoji) => {
             {/* CLICK OUTSIDE TO CLOSE */}
             <div className="absolute inset-0" onClick={() => { setIsEditingGroupInfo(false); setCurrentView('room'); }} />
 
-            {/* MAIN CARD - Centered, Fixed Width */}
-            <div className="relative w-full max-w-[420px] max-h-[90vh] bg-[#1c1c1d] rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-white/10 animate-in zoom-in-95 slide-in-from-bottom-5 duration-300">
+            {/* MAIN CARD - Centered on Laptop/Desktop */}
+            <div className="relative w-full max-w-[420px] bg-[#1c1c1d] rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-white/10 animate-in zoom-in-95 slide-in-from-bottom-5 duration-300">
                 
-                {/* FLOATING CONTROLS */}
-                <div className="absolute top-4 left-4 z-50">
-                    <button 
-                        onClick={() => { setIsEditingGroupInfo(false); setCurrentView('room'); }} 
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-black/20 text-white hover:bg-white/10 backdrop-blur-md transition-all"
-                    >
-                        <ChevronLeft size={24} className="-ml-0.5" />
-                    </button>
-                </div>
-
-                {/* ADMIN EDIT TOGGLE (Top Right) */}
-                {currentChatObject?.type === 'group' && currentChatObject.createdBy === user.uid && (
-                    <div className="absolute top-4 right-4 z-50">
-                        <button 
-                            onClick={isEditingGroupInfo ? handleSaveGroupInfo : startGroupEdit} 
-                            className={`px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md transition-all ${isEditingGroupInfo ? 'bg-[#DA7756] text-white shadow-lg' : 'bg-black/20 text-zinc-300 hover:bg-white/10 hover:text-white'}`}
-                        >
-                            {isEditingGroupInfo ? 'Done' : 'Edit'}
-                        </button>
-                    </div>
-                )}
-
                 {/* SCROLLABLE CONTENT */}
-                <div className="flex-1 overflow-y-auto no-scrollbar bg-[#1c1c1d] pt-14">
+                <div className="flex-1 overflow-y-auto no-scrollbar bg-[#1c1c1d]">
                     
-                    {/* TOP SECTION: AVATAR LEFT, INFO RIGHT */}
-                    <div className="px-5 pb-4">
-                        <div className="flex items-center gap-5">
+                    {/* HEADER: BACK BUTTON + AVATAR + INFO */}
+                    <div className="px-5 pt-6 pb-2">
+                        <div className="flex items-center gap-4">
                             
-                            {/* AVATAR (LEFT) */}
-                            <div className="relative w-20 h-20 flex-shrink-0 group/avatar">
+                            {/* BACK BUTTON (Left of Picture) */}
+                            <button 
+                                onClick={() => { setIsEditingGroupInfo(false); setCurrentView('room'); }} 
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all active:scale-95"
+                            >
+                                <ChevronLeft size={22} className="-ml-0.5" />
+                            </button>
+
+                            {/* AVATAR */}
+                            <div className="relative w-16 h-16 flex-shrink-0 group/avatar">
                                 {currentChatObject?.type === 'group' ? (
                                     <div className="w-full h-full rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center overflow-hidden border-2 border-white/5 shadow-xl">
                                         {currentChatObject.photoURL ? (
                                             <img src={currentChatObject.photoURL} className="w-full h-full object-cover" />
                                         ) : (
-                                            <Users size={32} className="text-zinc-500" />
+                                            <Users size={28} className="text-zinc-500" />
                                         )}
                                         {isEditingGroupInfo && (
                                             <label className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center cursor-pointer hover:bg-black/70 transition-colors">
-                                                <Camera size={18} className="text-white" />
+                                                <Camera size={16} className="text-white" />
                                                 <input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleUpdateGroupPhoto(e.target.files[0]); }} />
                                             </label>
                                         )}
@@ -1239,21 +1225,34 @@ const handleAddReaction = (msgId, emoji) => {
                             </div>
 
                             {/* TEXT INFO (RIGHT) */}
-                            <div className="flex-1 min-w-0">
-                                {isEditingGroupInfo ? (
-                                    <input 
-                                        type="text" 
-                                        value={editGroupName} 
-                                        onChange={(e) => setEditGroupName(e.target.value)}
-                                        className="bg-zinc-900 border border-zinc-700 rounded-lg py-1 px-2 text-white font-bold text-lg w-full focus:outline-none focus:border-[#DA7756] mb-1"
-                                        placeholder="Group Name"
-                                    />
-                                ) : (
-                                    <h2 className="text-xl font-bold text-white leading-tight mb-0.5 truncate">
-                                        {currentChatObject?.type === 'group' ? currentChatObject.displayName : otherChatUser?.displayName}
-                                    </h2>
-                                )}
-                                <p className="text-sm text-zinc-500 font-medium truncate">
+                            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                <div className="flex items-center gap-2">
+                                    {isEditingGroupInfo ? (
+                                        <input 
+                                            type="text" 
+                                            value={editGroupName} 
+                                            onChange={(e) => setEditGroupName(e.target.value)}
+                                            className="bg-zinc-900 border border-zinc-700 rounded-lg py-1 px-2 text-white font-bold text-lg w-full focus:outline-none focus:border-[#DA7756]"
+                                            placeholder="Group Name"
+                                        />
+                                    ) : (
+                                        <h2 className="text-lg font-bold text-white leading-tight truncate">
+                                            {currentChatObject?.type === 'group' ? currentChatObject.displayName : otherChatUser?.displayName}
+                                        </h2>
+                                    )}
+                                    
+                                    {/* SMALL EDIT BUTTON (Next to Name) */}
+                                    {currentChatObject?.type === 'group' && currentChatObject.createdBy === user.uid && !isEditingGroupInfo && (
+                                        <button onClick={startGroupEdit} className="text-zinc-500 hover:text-white transition-colors">
+                                            <PenLine size={14} />
+                                        </button>
+                                    )}
+                                    {isEditingGroupInfo && (
+                                        <button onClick={handleSaveGroupInfo} className="text-[#DA7756] hover:text-white text-xs font-bold uppercase">Save</button>
+                                    )}
+                                </div>
+
+                                <p className="text-sm text-zinc-500 font-medium truncate mt-0.5">
                                     {currentChatObject?.type === 'group' 
                                         ? `${currentChatObject.participants?.length || 0} members` 
                                         : (otherChatUser?.isOnline ? <span className="text-blue-400">Online</span> : 'Last seen recently')}
@@ -1261,24 +1260,24 @@ const handleAddReaction = (msgId, emoji) => {
                             </div>
                         </div>
 
-                        {/* ACTION ROW (TIGHTER) */}
+                        {/* ACTION ROW - REFINED */}
                         {!isEditingGroupInfo && (
-                            <div className="flex items-center justify-between gap-2 mt-5">
-                                <button className="flex-1 h-16 bg-white/5 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-all active:scale-95 group">
-                                    <Phone size={20} className="text-[#DA7756] group-hover:text-white transition-colors"/> 
-                                    <span className="text-[10px] font-bold text-zinc-400 group-hover:text-zinc-300">Call</span>
+                            <div className="flex items-center justify-between gap-3 mt-5">
+                                <button className="flex-1 py-3 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
+                                    <Phone size={20} className="text-[#DA7756]"/> 
+                                    <span className="text-[11px] font-medium text-zinc-400 group-hover:text-zinc-200">Call</span>
                                 </button>
-                                <button onClick={toggleMute} className="flex-1 h-16 bg-white/5 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-all active:scale-95 group">
-                                    {mutedChats.has(activeChatId) ? <BellOff size={20} className="text-red-500" /> : <Bell size={20} className="text-[#DA7756] group-hover:text-white transition-colors" />} 
-                                    <span className={`text-[10px] font-bold ${mutedChats.has(activeChatId) ? 'text-red-500' : 'text-zinc-400 group-hover:text-zinc-300'}`}>{mutedChats.has(activeChatId) ? 'Unmute' : 'Mute'}</span>
+                                <button onClick={toggleMute} className="flex-1 py-3 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
+                                    {mutedChats.has(activeChatId) ? <BellOff size={20} className="text-red-500" /> : <Bell size={20} className="text-[#DA7756]" />} 
+                                    <span className={`text-[11px] font-medium ${mutedChats.has(activeChatId) ? 'text-red-500' : 'text-zinc-400 group-hover:text-zinc-200'}`}>{mutedChats.has(activeChatId) ? 'Unmute' : 'Mute'}</span>
                                 </button>
-                                <button className="flex-1 h-16 bg-white/5 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-all active:scale-95 group">
-                                    <Search size={20} className="text-[#DA7756] group-hover:text-white transition-colors"/> 
-                                    <span className="text-[10px] font-bold text-zinc-400 group-hover:text-zinc-300">Search</span>
+                                <button className="flex-1 py-3 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
+                                    <Search size={20} className="text-[#DA7756]"/> 
+                                    <span className="text-[11px] font-medium text-zinc-400 group-hover:text-zinc-200">Search</span>
                                 </button>
-                                <button onClick={() => currentChatObject?.type === 'group' ? setShowLeaveGroupModal(true) : setShowBlockModal(true)} className="flex-1 h-16 bg-white/5 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-all active:scale-95 group">
-                                    <MoreHorizontal size={20} className="text-[#DA7756] group-hover:text-white transition-colors"/> 
-                                    <span className="text-[10px] font-bold text-zinc-400 group-hover:text-zinc-300">More</span>
+                                <button onClick={() => currentChatObject?.type === 'group' ? setShowLeaveGroupModal(true) : setShowBlockModal(true)} className="flex-1 py-3 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
+                                    <MoreHorizontal size={20} className="text-[#DA7756]"/> 
+                                    <span className="text-[11px] font-medium text-zinc-400 group-hover:text-zinc-200">More</span>
                                 </button>
                             </div>
                         )}

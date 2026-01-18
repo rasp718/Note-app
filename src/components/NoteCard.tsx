@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck } from 'lucide-react';
-import { Note, CategoryConfig, CategoryId } from '../types';
+import { Note, CategoryId, CategoryConfig } from '../types';
+import { getUserColor } from '../utils';
 import { AudioPlayer } from './AudioPlayer';
 import { StreetDiceGame } from './StreetDiceGame';
 
@@ -269,12 +270,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             onTouchEnd={handleTouchEnd}
         >
           {/* REPLY BLOCK INSIDE BUBBLE */}
-          {replyData && (
-              <div className="mx-1 mt-1 mb-1 p-2 rounded-[6px] bg-black/20 flex flex-col gap-0.5 border-l-4 border-purple-500 relative overflow-hidden select-none">
-                  <div className="text-[11px] font-bold text-purple-400 leading-none">{replyData.sender === 'You' ? 'You' : replyData.sender}</div>
-                  <div className="text-[13px] text-white/70 line-clamp-2 leading-tight">{replyData.text}</div>
-              </div>
-          )}
+          {replyData && (() => {
+              const [textColor, borderColor] = getUserColor(replyData.sender).split(' ');
+              return (
+                  <div className={`mx-1 mt-1 mb-1 p-2 rounded-[6px] bg-black/20 flex flex-col gap-0.5 border-l-4 ${borderColor} relative overflow-hidden select-none`}>
+                      <div className={`text-[11px] font-bold ${textColor} leading-none`}>{replyData.sender === 'You' ? 'You' : replyData.sender}</div>
+                      <div className="text-[13px] text-white/70 line-clamp-2 leading-tight">{replyData.text}</div>
+                  </div>
+              );
+          })()}
 
           {audioUrl ? (
              <div className="flex flex-col gap-1 min-w-[200px]">

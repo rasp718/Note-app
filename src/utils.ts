@@ -18,6 +18,26 @@ export const HACKER_CONFIG: CategoryConfig = {
     colorClass: 'bg-green-500' 
 };
 
+// --- HELPER FOR DYNAMIC USER COLORS ---
+export const getUserColor = (name: string) => {
+  const colors = [
+    'text-red-400 border-red-500',
+    'text-orange-400 border-orange-500',
+    'text-amber-400 border-amber-500',
+    'text-green-400 border-green-500',
+    'text-teal-400 border-teal-500',
+    'text-cyan-400 border-cyan-500',
+    'text-blue-400 border-blue-500',
+    'text-indigo-400 border-indigo-500',
+    'text-pink-400 border-pink-500',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
+
 // --- HELPER FOR BUBBLE STYLES ---
 export const getBubbleColors = (style: string, isMe: boolean, isHacker: boolean) => {
     if (isHacker) {

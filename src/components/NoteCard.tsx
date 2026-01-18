@@ -220,9 +220,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   if (variant === 'received') radiusClass = isLastInGroup ? 'rounded-2xl rounded-bl-none' : 'rounded-2xl';
   
   // FIXED: Chat bubbles should be w-fit (shrink to text) but max-w-full (don't overflow container)
-  // Default notes (Feed) should be w-full.
-  const outerWidthClass = variant === 'default' ? 'w-full' : 'w-fit';
-  const innerWidthClass = variant === 'default' ? 'w-full' : 'w-fit max-w-full';
+  // Default notes (Feed) should also be w-fit max-w-[85%] to look like bubbles.
+  const outerWidthClass = 'w-fit max-w-[85%]';
+  const innerWidthClass = 'w-full';
 
   const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 

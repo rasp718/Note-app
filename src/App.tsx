@@ -1155,17 +1155,17 @@ const handleAddReaction = (msgId, emoji) => {
                                         </div>
                                     )}
                                     
-                                    {/* TAIL SVG - Sent (Right) - WhatsApp Style Curve */}
+                                    {/* TAIL SVG - Sent (Right) - EXACT WhatsApp Curve */}
                                     {isMe && isLastInGroup && !msg.imageUrl && (
-                                        <svg className="absolute bottom-[0px] -right-[8px] z-0 w-[12px] h-[13px] fill-current" viewBox="0 0 13 13">
-                                            <path d="M0,0 C1.7,6.3 6.3,11.3 13,13 H0 V0 Z" fill={tailColor} />
+                                        <svg className="absolute bottom-[0px] -right-[6px] z-0 w-[12px] h-[19px] fill-current" viewBox="0 0 12 19">
+                                           <path d="M0,19 L0,0 C0,0 2,13 12,19 H0 Z" fill={tailColor} />
                                         </svg>
                                     )}
 
-                                    {/* TAIL SVG - Received (Left) - WhatsApp Style Curve */}
+                                    {/* TAIL SVG - Received (Left) - EXACT WhatsApp Curve */}
                                     {!isMe && isLastInGroup && !msg.imageUrl && (
-                                        <svg className="absolute bottom-[0px] -left-[8px] z-0 w-[12px] h-[13px] fill-current" viewBox="0 0 13 13">
-                                            <path d="M13,0 C11.3,6.3 6.7,11.3 0,13 H13 V0 Z" fill={tailColor} />
+                                        <svg className="absolute bottom-[0px] -left-[6px] z-0 w-[12px] h-[19px] fill-current" viewBox="0 0 12 19">
+                                            <path d="M12,19 L12,0 C12,0 10,13 0,19 H12 Z" fill={tailColor} />
                                         </svg>
                                     )}
 

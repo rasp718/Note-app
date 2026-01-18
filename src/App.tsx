@@ -1292,7 +1292,7 @@ const handleAddReaction = (msgId, emoji) => {
                         {/* GRADIENT OVERLAY */}
                         <div className="absolute inset-0 bg-gradient-to-t from-[#1c1c1d] via-transparent to-black/30" />
 
-                        {/* PHOTO EDIT BUTTON (If Admin/Group) */}
+                        {/* PHOTO EDIT BUTTON (If Admin/Group) - z-20 */}
                         {isEditingGroupInfo && currentChatObject?.type === 'group' && (
                             <label className="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer z-20">
                                 <div className="bg-black/50 p-3 rounded-full backdrop-blur-md border border-white/20">
@@ -1302,17 +1302,17 @@ const handleAddReaction = (msgId, emoji) => {
                             </label>
                         )}
 
-                        {/* TEXT INFO (Over Picture, Bottom Left, Offset Right & Down) */}
-                        <div className="absolute bottom-3 left-6 right-4 z-10 flex flex-col items-start shadow-sm">
+                        {/* TEXT INFO - z-30 (Must be higher than photo edit button to be clickable) */}
+                        <div className="absolute bottom-3 left-6 right-4 z-30 flex flex-col items-start shadow-sm">
                             {isEditingGroupInfo ? (
-                                <div className="w-full">
+                                <div className="w-full bg-black/20 backdrop-blur-sm p-3 rounded-xl border border-white/10">
                                     <div className="flex items-center gap-2 mb-2">
                                         <input 
                                             // REMOVED AUTO FOCUS
                                             type="text" 
                                             value={editGroupName} 
                                             onChange={(e) => setEditGroupName(e.target.value)}
-                                            className="bg-transparent border-b-2 border-white/30 py-1 text-white font-black text-3xl w-full focus:outline-none focus:border-[#DA7756] placeholder:text-white/30 drop-shadow-md"
+                                            className="bg-transparent border-b-2 border-white/50 py-1 text-white font-black text-3xl w-full focus:outline-none focus:border-[#DA7756] placeholder:text-white/30 drop-shadow-md"
                                             placeholder="Group Name"
                                         />
                                     </div>
@@ -1320,7 +1320,7 @@ const handleAddReaction = (msgId, emoji) => {
                                         value={editGroupDesc} 
                                         onChange={(e) => setEditGroupDesc(e.target.value)}
                                         placeholder="Add a description..."
-                                        className="w-full bg-transparent border-none p-0 text-white/80 text-sm focus:outline-none resize-none placeholder:text-zinc-400"
+                                        className="w-full bg-transparent border-none p-0 text-white/90 text-sm focus:outline-none resize-none placeholder:text-white/40"
                                         rows={2}
                                     />
                                 </div>

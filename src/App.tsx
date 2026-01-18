@@ -1281,21 +1281,17 @@ const handleAddReaction = (msgId, emoji) => {
                     {/* TEXT INFO (Over Picture, Bottom Left, Offset Right & Down) */}
                     <div className="absolute bottom-3 left-6 right-4 z-10 flex flex-col items-start shadow-sm">
                          {isEditingGroupInfo ? (
-                             <div className="w-full space-y-2">
-                                <input 
-                                     type="text" 
-                                     value={editGroupName} 
-                                     onChange={(e) => setEditGroupName(e.target.value)}
-                                     className="bg-black/40 border border-white/20 rounded-lg py-2 px-3 text-white font-black text-2xl w-full focus:outline-none focus:border-[#DA7756] backdrop-blur-md"
-                                     placeholder="Group Name"
-                                />
-                                <textarea 
-                                    value={editGroupDesc} 
-                                    onChange={(e) => setEditGroupDesc(e.target.value)}
-                                    placeholder="Description..."
-                                    className="w-full bg-black/40 border border-white/20 rounded-lg p-2 text-white text-sm focus:outline-none focus:border-[#DA7756] resize-none backdrop-blur-md"
-                                    rows={2}
-                                />
+                             <div className="w-full">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <input 
+                                         autoFocus
+                                         type="text" 
+                                         value={editGroupName} 
+                                         onChange={(e) => setEditGroupName(e.target.value)}
+                                         className="bg-transparent border-b-2 border-white/30 py-1 text-white font-black text-3xl w-full focus:outline-none focus:border-[#DA7756] placeholder:text-white/30 drop-shadow-md"
+                                         placeholder="Group Name"
+                                    />
+                                </div>
                              </div>
                          ) : (
                              <div className="flex items-end justify-between w-full translate-y-1">
@@ -1316,11 +1312,6 @@ const handleAddReaction = (msgId, emoji) => {
                                          <PenLine size={16} />
                                      </button>
                                  )}
-                             </div>
-                         )}
-                         {isEditingGroupInfo && (
-                             <div className="mt-2 w-full flex justify-end">
-                                 <button onClick={handleSaveGroupInfo} className="bg-[#DA7756] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg border border-white/10">Save Changes</button>
                              </div>
                          )}
                     </div>
@@ -1352,7 +1343,42 @@ const handleAddReaction = (msgId, emoji) => {
                     
                     {/* REST OF INFO LIST (Bio, Username, Notifications, Members, Block) */}
                     <div className="px-2 pb-6 space-y-1 mt-2">
-                        {/* OLD DESCRIPTION BAR DELETED HERE */}
+                        
+                        {/* INFO ITEM: BIO/DESC (EDITABLE IN LIST) */}
+                        <div className={`p-3 rounded-xl flex gap-4 transition-colors ${isEditingGroupInfo ? 'bg-white/5 border border-white/10' : 'hover:bg-white/5'}`}>
+                            <div className={`mt-0.5 flex-shrink-0 ${isEditingGroupInfo ? 'text-[#DA7756]' : 'text-zinc-500'}`}><Info size={20} /></div>
+                            <div className="flex-1 min-w-0 border-b border-white/5 pb-3">
+                                {isEditingGroupInfo ? (
+                                    <div className="animate-in fade-in duration-200">
+                                        <label className="text-[10px] uppercase font-bold text-[#DA7756] tracking-wider mb-1 block">Edit Description</label>
+                                        <textarea 
+                                            value={editGroupDesc} 
+                                            onChange={(e) => setEditGroupDesc(e.target.value)}
+                                            placeholder="Add a group description..."
+                                            className="w-full bg-transparent border-none p-0 text-white text-sm focus:outline-none resize-none placeholder:text-zinc-600"
+                                            rows={3}
+                                        />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <p className="text-white text-[14px] whitespace-pre-wrap leading-relaxed">
+                                            {currentChatObject?.type === 'group' 
+                                                ? (currentChatObject.description || 'No description.') 
+                                                : 'Living in the matrix. 🕶️'}
+                                        </p>
+                                        <p className="text-[12px] text-zinc-500 mt-0.5 uppercase tracking-wide font-bold">{currentChatObject?.type === 'group' ? 'Description' : 'Bio'}</p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* SAVE BUTTON ROW (Only visible when editing) */}
+                        {isEditingGroupInfo && (
+                            <div className="flex gap-2 px-2 pb-2 animate-in slide-in-from-top-2 duration-200">
+                                <button onClick={() => setIsEditingGroupInfo(false)} className="flex-1 py-3 rounded-xl bg-zinc-800 text-white font-bold text-sm hover:bg-zinc-700 transition-colors">Cancel</button>
+                                <button onClick={handleSaveGroupInfo} className="flex-1 py-3 rounded-xl bg-[#DA7756] text-white font-bold text-sm hover:bg-[#c46243] transition-colors shadow-lg shadow-orange-900/20">Save Changes</button>
+                            </div>
+                        )}
 
                         {/* INFO ITEM: USERNAME (If User) */}
                         {currentChatObject?.type !== 'group' && (

@@ -233,7 +233,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   return (
     <>
-      {/* Updated width classes to allow App.tsx to control sizing for tails */}
+      {/* Updated width to w-full so App.tsx can handle the tail positioning */}
       <div className={`relative ${variant === 'default' ? 'w-fit max-w-[85%]' : 'w-full'} overflow-visible group`} onContextMenu={handleContextMenu} onDoubleClick={handleDoubleTap}>
         <div 
             className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${widthClass} ${shadowClass} relative transition-all duration-300 ease-out`} 

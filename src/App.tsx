@@ -37,6 +37,8 @@ const db = getFirestore(app);
 // Helper component to resolve avatars in Group Chats
 const MessageAvatar = ({ userId }) => {
     const userData = useUser(userId);
+    if (!userId) return <div className="w-8 h-8 rounded-full bg-zinc-800" />;
+    
     return (
         <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 shadow-md">
             {userData?.photoURL ? (
@@ -53,13 +55,15 @@ const MessageAvatar = ({ userId }) => {
 // Helper for Profile Member List
 const GroupMemberRow = ({ userId, isAdmin }) => {
     const userData = useUser(userId);
+    if (!userId) return null;
+
     return (
         <div className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors">
             <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-white/5">
                 {userData?.photoURL ? <img src={userData.photoURL} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-zinc-500 text-sm">{userData?.displayName?.[0] || '?'}</div>}
             </div>
             <div className="flex-1 min-w-0">
-                <div className="text-white font-bold text-sm truncate">{userData?.displayName || 'Loading...'}</div>
+                <div className="text-white font-bold text-sm truncate">{userData?.displayName || 'User'}</div>
                 <div className="text-zinc-500 text-xs truncate">{userData?.handle || (userData?.isOnline ? 'Online' : 'Last seen recently')}</div>
             </div>
             {isAdmin && <span className="text-[#DA7756] text-[10px] font-bold uppercase tracking-wider">Admin</span>}

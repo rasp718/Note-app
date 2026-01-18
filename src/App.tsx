@@ -1178,15 +1178,15 @@ const handleAddReaction = (msgId, emoji) => {
 
       {/* VIEW: PROFILE (User or Group) - MODERN COMPACT STYLE */}
       {currentView === 'profile' && (otherChatUser || currentChatObject?.type === 'group') && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
             {/* CLICK OUTSIDE TO CLOSE */}
             <div className="absolute inset-0" onClick={() => { setIsEditingGroupInfo(false); setCurrentView('room'); }} />
 
-            {/* MAIN CARD - Centered on Laptop/Desktop */}
-            <div className="relative w-full max-w-[420px] bg-[#1c1c1d] rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-white/10 animate-in zoom-in-95 slide-in-from-bottom-5 duration-300">
+            {/* MAIN CARD - Full Screen on Mobile, Centered on Laptop */}
+            <div className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[85vh] sm:max-w-[420px] bg-[#1c1c1d] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col border-x sm:border border-white/10 animate-in slide-in-from-bottom duration-300">
                 
                 {/* HEADER IMAGE SECTION (BANNER) */}
-                <div className="relative h-64 w-full bg-zinc-800 group/header">
+                <div className="relative h-72 sm:h-64 w-full bg-zinc-800 group/header flex-shrink-0">
                     {/* IMAGE */}
                     {(currentChatObject?.type === 'group' ? currentChatObject.photoURL : otherChatUser?.photoURL) ? (
                         <img 
@@ -1223,30 +1223,40 @@ const handleAddReaction = (msgId, emoji) => {
                     )}
 
                     {/* TEXT INFO (Over Picture, Bottom Left, Offset Right & Down) */}
-                    <div className="absolute bottom-3 left-6 right-4 z-10 flex flex-col items-start shadow-sm">
+                    <div className="absolute bottom-4 left-6 right-4 z-10 flex flex-col items-start shadow-sm">
                          {isEditingGroupInfo ? (
-                             <input 
-                                 type="text" 
-                                 value={editGroupName} 
-                                 onChange={(e) => setEditGroupName(e.target.value)}
-                                 className="bg-black/40 border border-white/20 rounded-lg py-2 px-3 text-white font-black text-2xl w-full focus:outline-none focus:border-[#DA7756] backdrop-blur-md"
-                                 placeholder="Group Name"
-                             />
+                             <div className="w-full space-y-2">
+                                <input 
+                                     type="text" 
+                                     value={editGroupName} 
+                                     onChange={(e) => setEditGroupName(e.target.value)}
+                                     className="bg-black/40 border border-white/20 rounded-lg py-2 px-3 text-white font-black text-2xl w-full focus:outline-none focus:border-[#DA7756] backdrop-blur-md"
+                                     placeholder="Group Name"
+                                />
+                                <textarea 
+                                    value={editGroupDesc} 
+                                    onChange={(e) => setEditGroupDesc(e.target.value)}
+                                    placeholder="Description..."
+                                    className="w-full bg-black/40 border border-white/20 rounded-lg p-2 text-white text-sm focus:outline-none focus:border-[#DA7756] resize-none backdrop-blur-md"
+                                    rows={2}
+                                />
+                             </div>
                          ) : (
                              <div className="flex items-end justify-between w-full translate-y-1">
-                                 <div>
-                                     <h2 className="text-3xl font-black text-white leading-tight tracking-tight drop-shadow-xl shadow-black">
+                                 <div className="flex-1 min-w-0 pr-4">
+                                     <h2 className="text-3xl font-black text-white leading-tight tracking-tight drop-shadow-xl shadow-black truncate">
                                          {currentChatObject?.type === 'group' ? currentChatObject.displayName : otherChatUser?.displayName}
                                      </h2>
-                                     <p className="text-sm text-zinc-200 font-normal mt-1 drop-shadow-md opacity-90">
+                                     {/* GROUP DESCRIPTION OR USER STATUS */}
+                                     <p className="text-sm text-zinc-200 font-normal mt-1 drop-shadow-md opacity-90 line-clamp-2 leading-relaxed">
                                          {currentChatObject?.type === 'group' 
-                                             ? `${currentChatObject.participants?.length || 0} members` 
+                                             ? (currentChatObject.description || '') 
                                              : (otherChatUser?.isOnline ? <span className="text-green-400">Online</span> : 'Last seen recently')}
                                      </p>
                                  </div>
                                  {/* Edit Pencil if admin */}
                                  {currentChatObject?.type === 'group' && currentChatObject.createdBy === user.uid && !isEditingGroupInfo && (
-                                     <button onClick={startGroupEdit} className="mb-1 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors border border-white/5">
+                                     <button onClick={startGroupEdit} className="mb-1 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors border border-white/5 flex-shrink-0">
                                          <PenLine size={16} />
                                      </button>
                                  )}
@@ -1286,30 +1296,7 @@ const handleAddReaction = (msgId, emoji) => {
                     
                     {/* REST OF INFO LIST (Bio, Username, Notifications, Members, Block) */}
                     <div className="px-2 pb-6 space-y-1 mt-2">
-                        {/* INFO ITEM: BIO/DESC */}
-                        <div className="p-3 hover:bg-white/5 rounded-xl flex gap-4 transition-colors">
-                            <div className="text-zinc-500 mt-0.5 flex-shrink-0"><Info size={20} /></div>
-                            <div className="flex-1 min-w-0 border-b border-white/5 pb-3">
-                                {isEditingGroupInfo ? (
-                                    <textarea 
-                                        value={editGroupDesc} 
-                                        onChange={(e) => setEditGroupDesc(e.target.value)}
-                                        placeholder="Description (optional)"
-                                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-white text-sm focus:outline-none focus:border-[#DA7756] resize-none"
-                                        rows={3}
-                                    />
-                                ) : (
-                                    <>
-                                        <p className="text-white text-[14px] whitespace-pre-wrap leading-relaxed">
-                                            {currentChatObject?.type === 'group' 
-                                                ? (currentChatObject.description || 'No description.') 
-                                                : 'Living in the matrix. 🕶️'}
-                                        </p>
-                                        <p className="text-[12px] text-zinc-500 mt-0.5 uppercase tracking-wide font-bold">{currentChatObject?.type === 'group' ? 'Description' : 'Bio'}</p>
-                                    </>
-                                )}
-                            </div>
-                        </div>
+                        {/* OLD DESCRIPTION BAR DELETED HERE */}
 
                         {/* INFO ITEM: USERNAME (If User) */}
                         {currentChatObject?.type !== 'group' && (
@@ -1339,7 +1326,7 @@ const handleAddReaction = (msgId, emoji) => {
                         {/* SECTION: MEMBERS (If Group) */}
                         {currentChatObject?.type === 'group' && !isEditingGroupInfo && (
                             <div className="mt-4 pt-2 border-t border-white/5">
-                                <div className="px-4 py-2 text-[#DA7756] text-[12px] font-bold uppercase tracking-wider">
+                                <div className="px-4 py-2 text-zinc-500 text-[13px] font-medium tracking-wide">
                                     {currentChatObject.participants?.length} Members
                                 </div>
                                 

@@ -1155,17 +1155,17 @@ const handleAddReaction = (msgId, emoji) => {
                                         </div>
                                     )}
                                     
-                                    {/* TAIL SVG - Sent (Right) - Adjusted for Rounded Corner */}
+                                    {/* TAIL SVG - Sent (Right) - Bigger and Moved Up */}
                                     {isMe && isLastInGroup && !msg.imageUrl && (
-                                        <svg className="absolute bottom-[0px] -right-[8px] z-0 w-[16px] h-[13px] fill-current" viewBox="0 0 16 13">
-                                            <path d="M0,0 C2,7 8,13 16,13 H0 V0 Z" fill={tailColor} />
+                                        <svg className="absolute bottom-[1px] -right-[9px] z-0 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
+                                            <path d="M0,0 C2,7.5 9,14 17,14 H0 V0 Z" fill={tailColor} />
                                         </svg>
                                     )}
 
-                                    {/* TAIL SVG - Received (Left) - Adjusted for Rounded Corner */}
+                                    {/* TAIL SVG - Received (Left) - Bigger and Moved Up */}
                                     {!isMe && isLastInGroup && !msg.imageUrl && (
-                                        <svg className="absolute bottom-[0px] -left-[8px] z-0 w-[16px] h-[13px] fill-current" viewBox="0 0 16 13">
-                                            <path d="M16,0 C14,7 8,13 0,13 H16 V0 Z" fill={tailColor} />
+                                        <svg className="absolute bottom-[1px] -left-[9px] z-0 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
+                                            <path d="M17,0 C15,7.5 8,14 0,14 H17 V0 Z" fill={tailColor} />
                                         </svg>
                                     )}
 

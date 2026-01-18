@@ -1320,7 +1320,8 @@ const handleAddReaction = (msgId, emoji) => {
                                         value={editGroupDesc} 
                                         onChange={(e) => setEditGroupDesc(e.target.value)}
                                         placeholder="Add a description..."
-                                        className="w-full bg-transparent border-none p-0 text-white/90 text-sm focus:outline-none resize-none placeholder:text-white/40"
+                                        // Changed to text-base (16px) to prevent iOS auto-zoom resizing
+                                        className="w-full bg-transparent border-none p-0 text-white/90 text-base focus:outline-none resize-none placeholder:text-white/40"
                                         rows={2}
                                     />
                                 </div>

@@ -1260,23 +1260,23 @@ const handleAddReaction = (msgId, emoji) => {
                             </div>
                         </div>
 
-                        {/* ACTION ROW - REFINED */}
+                        {/* ACTION ROW - REFINED (NO ORANGE ACCENTS) */}
                         {!isEditingGroupInfo && (
                             <div className="flex items-center justify-between gap-3 mt-5">
                                 <button className="flex-1 py-3 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
-                                    <Phone size={20} className="text-[#DA7756]"/> 
+                                    <Phone size={20} className="text-white"/> 
                                     <span className="text-[11px] font-medium text-zinc-400 group-hover:text-zinc-200">Call</span>
                                 </button>
                                 <button onClick={toggleMute} className="flex-1 py-3 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
-                                    {mutedChats.has(activeChatId) ? <BellOff size={20} className="text-red-500" /> : <Bell size={20} className="text-[#DA7756]" />} 
+                                    {mutedChats.has(activeChatId) ? <BellOff size={20} className="text-red-500" /> : <Bell size={20} className="text-white" />} 
                                     <span className={`text-[11px] font-medium ${mutedChats.has(activeChatId) ? 'text-red-500' : 'text-zinc-400 group-hover:text-zinc-200'}`}>{mutedChats.has(activeChatId) ? 'Unmute' : 'Mute'}</span>
                                 </button>
                                 <button className="flex-1 py-3 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
-                                    <Search size={20} className="text-[#DA7756]"/> 
+                                    <Search size={20} className="text-white"/> 
                                     <span className="text-[11px] font-medium text-zinc-400 group-hover:text-zinc-200">Search</span>
                                 </button>
                                 <button onClick={() => currentChatObject?.type === 'group' ? setShowLeaveGroupModal(true) : setShowBlockModal(true)} className="flex-1 py-3 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
-                                    <MoreHorizontal size={20} className="text-[#DA7756]"/> 
+                                    <MoreHorizontal size={20} className="text-white"/> 
                                     <span className="text-[11px] font-medium text-zinc-400 group-hover:text-zinc-200">More</span>
                                 </button>
                             </div>

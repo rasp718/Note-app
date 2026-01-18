@@ -1155,16 +1155,16 @@ const handleAddReaction = (msgId, emoji) => {
                                         </div>
                                     )}
                                     
-                                    {/* TAIL SVG - Sent (Right) - Rotated Clockwise 6deg */}
+                                    {/* TAIL SVG - Sent (Right) - Up 1px, Right 1px */}
                                     {isMe && isLastInGroup && !msg.imageUrl && (
-                                        <svg className="absolute bottom-[1px] -right-[9px] rotate-[6deg] z-0 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
+                                        <svg className="absolute bottom-[2px] -right-[10px] rotate-[6deg] z-0 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
                                             <path d="M0,0 C2,7.5 9,14 17,14 H0 V0 Z" fill={tailColor} />
                                         </svg>
                                     )}
 
-                                    {/* TAIL SVG - Received (Left) - Rotated Counter-Clockwise 6deg (Symmetry) */}
+                                    {/* TAIL SVG - Received (Left) - Up 1px, Left 1px */}
                                     {!isMe && isLastInGroup && !msg.imageUrl && (
-                                        <svg className="absolute bottom-[1px] -left-[9px] rotate-[-6deg] z-0 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
+                                        <svg className="absolute bottom-[2px] -left-[10px] rotate-[-6deg] z-0 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
                                             <path d="M17,0 C15,7.5 8,14 0,14 H17 V0 Z" fill={tailColor} />
                                         </svg>
                                     )}

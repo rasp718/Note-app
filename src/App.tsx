@@ -384,6 +384,7 @@ const toggleGroupMember = (uid) => {
   const bottomRef = useRef(null);
   const listRef = useRef(null);
   const canvasRef = useRef(null);
+  const scrollTimeoutRef = useRef(null);
 
   // Helpers
   const [activeFilter, setActiveFilter] = useState('all');
@@ -484,7 +485,13 @@ const toggleGroupMember = (uid) => {
         const { scrollTop, scrollHeight, clientHeight } = listRef.current;
         const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
         setShowScrollButton(!isNearBottom);
-        setShowBackButton(isNearBottom); // Visible only when at the bottom
+        
+        // Back Button Logic: Hide while scrolling, show when stopped
+        setShowBackButton(false);
+        if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = setTimeout(() => {
+            setShowBackButton(true);
+        }, 150);
     }
   };
   
@@ -968,10 +975,10 @@ const handleAddReaction = (msgId, emoji) => {
             {/* FLOATING BACK BUTTON - CENTERED ALIGNMENT WRAPPER */}
             <div className="fixed top-28 left-0 w-full z-50 pointer-events-none">
                 <div className="max-w-2xl mx-auto px-4 relative">
-                    <div className={`absolute left-4 top-0 transition-all duration-300 ${showBackButton ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
+                    <div className={`absolute left-4 top-0 transition-all duration-300 ${showBackButton ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-4 pointer-events-none'}`}>
                         <button 
                         onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
-                        className="w-12 h-12 bg-transparent rounded-full flex items-center justify-center text-white active:scale-90 transition-all hover:bg-white/20"
+                        className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10 text-white shadow-xl shadow-black/50 flex items-center justify-center hover:bg-zinc-700 active:scale-95 transition-all backdrop-blur-md"
                         >
                             <ChevronLeft size={24} />
                         </button>

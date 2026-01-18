@@ -1182,37 +1182,33 @@ const handleAddReaction = (msgId, emoji) => {
             {/* MAIN CARD - Centered, Fixed Width */}
             <div className="relative w-full max-w-[420px] max-h-[90vh] bg-[#1c1c1d] rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-white/10 animate-in zoom-in-95 slide-in-from-bottom-5 duration-300">
                 
-                {/* HEADER: CLOSE & EDIT */}
-                <div className="flex-none h-14 px-4 flex items-center justify-between bg-zinc-900/50 backdrop-blur-md border-b border-white/5 z-20">
+                {/* FLOATING CONTROLS (Replacing Header) */}
+                <div className="absolute top-4 left-4 z-50">
                     <button 
                         onClick={() => { setIsEditingGroupInfo(false); setCurrentView('room'); }} 
-                        className="text-zinc-400 hover:text-white transition-colors"
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-black/20 text-white hover:bg-white/10 backdrop-blur-md transition-all"
                     >
-                        <X size={24} />
+                        <ChevronLeft size={24} className="-ml-0.5" />
                     </button>
-                    
-                    <div className="font-bold text-white text-sm">
-                        {isEditingGroupInfo ? 'Edit Group' : 'Info'}
-                    </div>
+                </div>
 
-                    {/* ADMIN EDIT TOGGLE */}
-                    {currentChatObject?.type === 'group' && currentChatObject.createdBy === user.uid ? (
+                {/* ADMIN EDIT TOGGLE (Top Right) */}
+                {currentChatObject?.type === 'group' && currentChatObject.createdBy === user.uid && (
+                    <div className="absolute top-4 right-4 z-50">
                         <button 
                             onClick={isEditingGroupInfo ? handleSaveGroupInfo : startGroupEdit} 
-                            className={`text-sm font-bold transition-colors ${isEditingGroupInfo ? 'text-[#DA7756]' : 'text-zinc-400 hover:text-white'}`}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md transition-all ${isEditingGroupInfo ? 'bg-[#DA7756] text-white shadow-lg' : 'bg-black/20 text-zinc-300 hover:bg-white/10 hover:text-white'}`}
                         >
                             {isEditingGroupInfo ? 'Done' : 'Edit'}
                         </button>
-                    ) : (
-                        <div className="w-6" /> // Spacer
-                    )}
-                </div>
+                    </div>
+                )}
 
                 {/* SCROLLABLE CONTENT */}
                 <div className="flex-1 overflow-y-auto no-scrollbar bg-[#1c1c1d]">
                     
                     {/* SECTION: PROFILE HEADER (Avatar, Name, Status) */}
-                    <div className="flex flex-col items-center pt-8 pb-6 px-6 bg-[#1c1c1d]">
+                    <div className="flex flex-col items-center pt-10 pb-6 px-6 bg-[#1c1c1d]">
                         
                         {/* AVATAR CIRCLE */}
                         <div className="relative w-28 h-28 rounded-full mb-4 group/avatar">

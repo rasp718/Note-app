@@ -1239,12 +1239,12 @@ const handleAddReaction = (msgId, emoji) => {
             {/* CLICK OUTSIDE TO CLOSE */}
             <div className="absolute inset-0" onClick={() => { setIsEditingGroupInfo(false); setCurrentView('room'); setIsProfileScrolled(false); }} />
 
-            {/* MAIN CARD - Full Screen on Mobile, Centered on Laptop */}
-            <div className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:max-w-[420px] bg-[#1c1c1d] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col border-x sm:border border-white/10 animate-in slide-in-from-bottom duration-300">
+            {/* MAIN CARD - Full Screen on Mobile, Fixed Height on Laptop (Fixes Black Screen) */}
+            <div className="relative w-full h-[100dvh] sm:h-[85vh] sm:max-w-[420px] bg-[#1c1c1d] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col border-x sm:border border-white/10 animate-in slide-in-from-bottom duration-300">
                 
                 {/* STICKY COLLAPSED HEADER (Shows on Scroll) */}
-                <div className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${isProfileScrolled ? 'bg-[#1c1c1d]/95 backdrop-blur-xl border-b border-white/10 py-3' : 'pt-4'}`}>
-                    <div className="flex items-center px-4 gap-3">
+                <div className={`absolute top-0 left-0 right-0 z-50 transition-all duration-300 ${isProfileScrolled ? 'bg-[#1c1c1d]/95 backdrop-blur-xl border-b border-white/10 py-3 pointer-events-auto' : 'pt-4 pointer-events-none'}`}>
+                    <div className="flex items-center px-4 gap-3 pointer-events-auto">
                         <button 
                             onClick={() => { 
                                 if(isEditingGroupInfo) setIsEditingGroupInfo(false); 
@@ -1308,6 +1308,7 @@ const handleAddReaction = (msgId, emoji) => {
                                 <div className="w-full">
                                     <div className="flex items-center gap-2 mb-2">
                                         <input 
+                                            // REMOVED AUTO FOCUS
                                             type="text" 
                                             value={editGroupName} 
                                             onChange={(e) => setEditGroupName(e.target.value)}
@@ -1349,6 +1350,15 @@ const handleAddReaction = (msgId, emoji) => {
 
                     {/* CONTENT BODY */}
                     <div className="bg-[#1c1c1d] pb-24 min-h-[50vh]">
+                        
+                        {/* SAVE BUTTON ROW (Only visible when editing) */}
+                        {isEditingGroupInfo && (
+                            <div className="flex gap-2 px-4 py-4 border-b border-white/5 animate-in slide-in-from-top-2 duration-200 sticky top-0 bg-[#1c1c1d] z-40">
+                                <button onClick={() => setIsEditingGroupInfo(false)} className="flex-1 py-3 rounded-xl bg-zinc-800 text-white font-bold text-sm hover:bg-zinc-700 transition-colors">Cancel</button>
+                                <button onClick={handleSaveGroupInfo} className="flex-1 py-3 rounded-xl bg-[#DA7756] text-white font-bold text-sm hover:bg-[#c46243] transition-colors shadow-lg shadow-orange-900/20">Save Changes</button>
+                            </div>
+                        )}
+
                         {/* Action Row - MONOCHROME - COMPACT */}
                         {!isEditingGroupInfo && (
                             <div className="flex items-center justify-between gap-1 p-3 border-b border-white/5">
@@ -1374,14 +1384,6 @@ const handleAddReaction = (msgId, emoji) => {
                         {/* REST OF INFO LIST (Bio, Username, Notifications, Members, Block) */}
                         <div className="px-2 pb-6 space-y-1 mt-2">
                             
-                            {/* SAVE BUTTON ROW (Only visible when editing) */}
-                            {isEditingGroupInfo && (
-                                <div className="flex gap-2 px-2 pb-2 pt-2 border-b border-white/5 animate-in slide-in-from-top-2 duration-200">
-                                    <button onClick={() => setIsEditingGroupInfo(false)} className="flex-1 py-3 rounded-xl bg-zinc-800 text-white font-bold text-sm hover:bg-zinc-700 transition-colors">Cancel</button>
-                                    <button onClick={handleSaveGroupInfo} className="flex-1 py-3 rounded-xl bg-[#DA7756] text-white font-bold text-sm hover:bg-[#c46243] transition-colors shadow-lg shadow-orange-900/20">Save Changes</button>
-                                </div>
-                            )}
-
                             {/* INFO ITEM: USERNAME (If User) */}
                             {currentChatObject?.type !== 'group' && (
                                 <div className="p-3 hover:bg-white/5 rounded-xl flex gap-4 transition-colors">

@@ -21,7 +21,7 @@ import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, sear
 import Auth from './components/Auth';
 // FIREBASE DIRECT INIT FOR INVITES
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, doc, arrayRemove } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCiosArE3iOxF9iGp8wduA-TlSgy1p3WUo",
@@ -129,7 +129,25 @@ function App() {
   useEffect(() => { localStorage.setItem('vibenotes_reactions', JSON.stringify(reactions)); }, [reactions]);
 
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showLeaveGroupModal, setShowLeaveGroupModal] = useState(false); // NEW STATE
   const [mutedChats, setMutedChats] = useState(new Set());
+
+  // Handle Leaving Group
+  const handleLeaveGroup = async () => {
+    if (!activeChatId || !user) return;
+    try {
+        const chatRef = doc(db, "chats", activeChatId);
+        // Remove current user from participants array
+        await updateDoc(chatRef, {
+            participants: arrayRemove(user.uid)
+        });
+        setShowLeaveGroupModal(false);
+        setCurrentView('list');
+        setActiveChatId(null);
+    } catch (e) {
+        console.error("Error leaving group:", e);
+    }
+  };
   // NEW: Store who we found in the URL
   const [incomingInvite, setIncomingInvite] = useState(null);
   
@@ -1204,7 +1222,13 @@ const handleAddReaction = (msgId, emoji) => {
                         )}
                         
                         <button onClick={() => setShowBlockModal(true)} className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left text-red-500 active:bg-red-500/10">
+                            {currentChatObject?.type === 'group' ?<button 
+                            onClick={() => currentChatObject?.type === 'group' ? setShowLeaveGroupModal(true) : setShowBlockModal(true)} 
+                            className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left text-red-500 active:bg-red-500/10"
+                        >
                             {currentChatObject?.type === 'group' ? <ArrowUp className="rotate-90" size={20} /> : <Ban size={20} />}
+                            <span className="font-bold text-sm">{currentChatObject?.type === 'group' ? 'Leave Group' : 'Block User'}</span>
+                        </button> <ArrowUp className="rotate-90" size={20} /> : <Ban size={20} />}
                             <span className="font-bold text-sm">{currentChatObject?.type === 'group' ? 'Leave Group' : 'Block User'}</span>
                         </button>
                     </div>
@@ -1326,6 +1350,45 @@ const handleAddReaction = (msgId, emoji) => {
                     >
                         Ignore
                     </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* OVERLAY: LEAVE GROUP MODAL */}
+      {showLeaveGroupModal && currentChatObject && (
+        <div className="fixed inset-0 z-[100] bg-black/70 flex flex-col justify-end md:justify-center md:items-center animate-in fade-in duration-200">
+            <div className="absolute inset-0" onClick={() => setShowLeaveGroupModal(false)} />
+            
+            <div className="relative w-full max-w-sm mx-auto p-4 z-10 animate-in slide-in-from-bottom duration-300 md:animate-in md:zoom-in-95 md:duration-200">
+                <div className="bg-[#1c1c1d] rounded-2xl overflow-hidden shadow-2xl shadow-black/50 p-6 flex flex-col items-center gap-4">
+                    
+                    {/* Group Avatar */}
+                    <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center border-2 border-[#1c1c1d] shadow-lg">
+                        <Users size={32} className="text-zinc-500" />
+                    </div>
+
+                    <div className="text-center space-y-2">
+                        <h3 className="text-white font-bold text-lg">{currentChatObject.displayName}</h3>
+                        <p className="text-[15px] text-zinc-400 px-4 leading-relaxed">
+                            Are you sure you want to leave this group?
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 w-full pt-2">
+                        <button 
+                            onClick={() => setShowLeaveGroupModal(false)}
+                            className="w-full py-3 rounded-xl font-bold text-white hover:bg-white/10 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={handleLeaveGroup}
+                            className="w-full py-3 bg-[#ff453a]/10 text-[#ff453a] rounded-xl font-bold hover:bg-[#ff453a]/20 transition-colors"
+                        >
+                            Leave
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

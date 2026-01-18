@@ -324,12 +324,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             > 
               {/* EMOJI BAR */}
               {onReact && (
-                  <div className="flex justify-between px-2 py-2 mb-1 border-b border-white/10 gap-1">
+                  <div className="flex justify-between px-2 py-2 mb-1 border-b border-white/10 gap-1 select-none">
                       {['👍', '❤️', '😂', '😮', '😢', '🔥'].map(emoji => (
                           <button 
                               key={emoji}
-                              onClick={() => { onReact(emoji); setContextMenu(null); }}
-                              className={`w-8 h-8 flex-1 flex items-center justify-center text-lg rounded-full transition-all active:scale-90 ${currentReaction === emoji ? 'bg-white/20' : 'hover:bg-white/10'}`}
+                              type="button"
+                              onPointerDown={(e) => e.preventDefault()}
+                              onClick={() => { triggerHaptic(); onReact(emoji); setContextMenu(null); }}
+                              className={`w-8 h-8 flex-1 flex items-center justify-center text-lg rounded-full transition-all active:scale-90 select-none touch-manipulation ${currentReaction === emoji ? 'bg-white/20' : 'hover:bg-white/10'}`}
                           >
                               {emoji}
                           </button>

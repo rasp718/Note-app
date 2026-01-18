@@ -177,6 +177,7 @@ function App() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showBackButton, setShowBackButton] = useState(true);
+  const [replyingTo, setReplyingTo] = useState(null);
 
   // NEW STATES
   const [reactions, setReactions] = useState(() => {
@@ -519,8 +520,23 @@ const toggleGroupMember = (uid) => {
                 scrollToBottom(); 
             }
         } else {
-            if (editingNote && editingNote.id) { await updateMessage(editingNote.id, transcript.trim()); setEditingNote(null); } 
-            else if (user) { await sendMessage(transcript.trim(), imageUrl, null, user.uid); }
+            if (editingNote && editingNote.id) { 
+                await updateMessage(editingNote.id, transcript.trim()); 
+                setEditingNote(null); 
+            } else if (user) { 
+                let finalMessage = transcript.trim();
+                if (replyingTo) {
+                    const senderName = replyingTo.senderId === user.uid ? 'You' : (otherChatUser?.displayName || 'Unknown');
+                    const replyMetadata = JSON.stringify({
+                        id: replyingTo.id,
+                        text: replyingTo.text,
+                        sender: senderName
+                    });
+                    finalMessage = `${replyMetadata}|||RPLY|||${finalMessage}`;
+                }
+                await sendMessage(finalMessage, imageUrl, null, user.uid);
+                setReplyingTo(null);
+            }
         }
         setTranscript(''); setImageUrl(''); scrollToBottom();
     } catch (e) { console.error(e); }
@@ -1185,6 +1201,7 @@ const handleAddReaction = (msgId, emoji) => {
                                             onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => handleEditMessage(msg) : undefined}
                                             currentReaction={reactions[msg.id]}
                                             onReact={(emoji) => handleAddReaction(msg.id, emoji)}
+                                            onReply={(msg) => { setReplyingTo(msg); setTimeout(() => textareaRef.current?.focus(), 50); }}
                                             isLastInGroup={false}
                                         />
                                     </div>
@@ -1198,6 +1215,25 @@ const handleAddReaction = (msgId, emoji) => {
            </div>
 
            <div className="flex-none w-full p-2 bg-black/80 backdrop-blur-2xl z-50 border-t border-white/5">
+             {/* REPLY PREVIEW BAR */}
+             {replyingTo && (
+                 <div className="max-w-2xl mx-auto mb-2 animate-in slide-in-from-bottom-2 duration-200">
+                     <div className="mx-1 p-2 rounded-xl bg-[#1c1c1d] border-l-4 border-purple-500 relative flex items-center justify-between shadow-lg shadow-black/50">
+                         <div className="flex-1 min-w-0 pr-8">
+                             <div className="text-xs font-bold text-purple-400 mb-0.5">
+                                 {replyingTo.senderId === user?.uid ? 'You' : (otherChatUser?.displayName || 'Unknown')}
+                             </div>
+                             <div className="text-sm text-zinc-300 truncate">
+                                 {replyingTo.text || (replyingTo.imageUrl ? 'Photo' : 'Voice Message')}
+                             </div>
+                         </div>
+                         <button onClick={() => setReplyingTo(null)} className="absolute top-2 right-2 p-1 bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors">
+                             <X size={14} />
+                         </button>
+                     </div>
+                 </div>
+             )}
+
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  
                  {isRecording ? (

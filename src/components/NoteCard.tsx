@@ -72,8 +72,76 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
+interface NoteCardProps {
+  note: Note;
+  categories: CategoryConfig[];
+  selectedVoice: SpeechSynthesisVoice | null;
+  onDelete?: (id: string) => void;
+  onPin?: (id: string) => void;
+  onCategoryClick?: (category: CategoryId) => void;
+  onEdit?: () => void;
+  onUpdate?: (id: string, text: string) => void;
+  onToggleExpand?: (id: string) => void;
+  onImageClick?: (url: string) => void;
+  onReply?: (note: Note) => void;
+  currentReaction?: string; 
+  onReact?: (emoji: string) => void;
+  variant?: 'default' | 'sent' | 'received';
+  status?: 'sending' | 'sent' | 'read';
+  currentUserId?: string;
+  opponentName?: string;
+  opponentAvatar?: string;
+  customColors?: { bg: string; border: string; text: string; subtext?: string; shadow?: string; font?: string };
+  isLastInGroup?: boolean;
+}
+
+// ============================================================================
+// HELPER COMPONENTS
+// ============================================================================
+const triggerHaptic = (pattern: number | number[] = 15) => { 
+  if (typeof navigator !== 'undefined' && navigator.vibrate) { 
+      try { navigator.vibrate(pattern); } catch (e) {} 
+  } 
+};
+
+const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
+  const [isHovered, setIsHovered] = useState(false);
+  
+  const handleAction = (e: any) => { 
+      e.preventDefault();
+      e.stopPropagation();
+      triggerHaptic(); 
+      onClick(); 
+  };
+
+  return (
+    <button 
+        type="button" 
+        onPointerDown={handleAction}
+        onClick={handleAction} 
+        onMouseEnter={() => setIsHovered(true)} 
+        onMouseLeave={() => setIsHovered(false)} 
+        className="w-full flex items-center gap-3 px-3 py-3 text-sm transition-colors duration-150 cursor-pointer select-none active:bg-white/10" 
+        style={{ backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent' }}
+    >
+      <Icon size={18} style={{ color: isHovered ? accentColor : '#a1a1aa' }} />
+      <span className="font-medium" style={{ color: isHovered ? accentColor : '#f4f4f5' }}>{label}</span>
+    </button>
+  );
+};
+
+const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any) => {
+  const [isHovered, setIsHovered] = useState(false);
+  return (
+    <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? accentColor : (iconColor || '#71717a') }}><Icon size={12} /></button>
+  );
+};
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 export const NoteCard: React.FC<NoteCardProps> = ({ 
-  note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, 
+  note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, onReply,
   currentReaction, onReact, 
   variant = 'default', status, currentUserId, opponentName = "OPP", opponentAvatar, customColors,
   isLastInGroup = true
@@ -93,8 +161,26 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const longPressTimer = useRef<any>(null);
   const isLongPress = useRef(false); 
 
-  // --- Data ---
-  const safeText = String(note.text || '');
+  // --- Data & Reply Parsing ---
+  const rawText = String(note.text || '');
+  const REPLY_SEPARATOR = "|||RPLY|||";
+  
+  let replyData = null;
+  let safeText = rawText;
+
+  // Check for reply metadata
+  if (rawText.includes(REPLY_SEPARATOR)) {
+      const parts = rawText.split(REPLY_SEPARATOR);
+      if (parts.length >= 2) {
+          try {
+              replyData = JSON.parse(parts[0]);
+              safeText = parts.slice(1).join(REPLY_SEPARATOR);
+          } catch(e) {
+              console.error("Reply parse error", e);
+          }
+      }
+  }
+
   const audioUrl = (note as any).audioUrl;
   const hasImage = !!note.imageUrl;
   const isDiceGame = safeText.includes('STREET_DICE_GAME');
@@ -252,6 +338,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             onTouchEnd={handleTouchEnd}
         >
           
+          {/* REPLY BLOCK INSIDE BUBBLE */}
+          {replyData && (
+              <div className="mx-1 mt-1 mb-1 p-2 rounded-[6px] bg-black/20 flex flex-col gap-0.5 border-l-4 border-purple-500 relative overflow-hidden select-none">
+                  <div className="text-[11px] font-bold text-purple-400 leading-none">{replyData.sender === 'You' ? 'You' : replyData.sender}</div>
+                  <div className="text-[13px] text-white/70 line-clamp-2 leading-tight">{replyData.text}</div>
+              </div>
+          )}
+
           {audioUrl ? (
              <div className="flex flex-col gap-1 min-w-[200px]">
                 <AudioPlayer src={audioUrl} barColor={audioBarColor} />
@@ -338,7 +432,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   </div>
               )}
 
-              <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
+<ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { if(onReply) onReply(note); else handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
               
               {variant === 'default' && (
                 <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />

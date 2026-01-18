@@ -1179,204 +1179,218 @@ const handleAddReaction = (msgId, emoji) => {
             {/* CENTERED CONTAINER */}
             <div className="w-full max-w-2xl h-full flex flex-col relative bg-black shadow-2xl">
                 
-                {/* BACK BUTTON */}
-                <div className="absolute top-4 left-4 z-50">
-                    <button onClick={() => { setIsEditingGroupInfo(false); setCurrentView('room'); }} className="w-10 h-10 bg-black/20 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-all">
+                {/* NAV HEADER */}
+                <div className="absolute top-0 left-0 w-full z-50 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+                    <button onClick={() => { setIsEditingGroupInfo(false); setCurrentView('room'); }} className="pointer-events-auto w-10 h-10 bg-black/20 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/10 transition-all">
                         <ChevronLeft size={24} />
                     </button>
-                </div>
 
-                {/* ADMIN EDIT TOGGLE */}
-                {currentChatObject?.type === 'group' && currentChatObject.createdBy === user.uid && (
-                    <div className="absolute top-4 right-4 z-50">
-                        {isEditingGroupInfo ? (
-                            <button onClick={handleSaveGroupInfo} className="w-10 h-10 bg-[#DA7756] shadow-lg shadow-orange-900/40 rounded-full flex items-center justify-center text-white hover:scale-105 transition-all">
-                                <Check size={20} strokeWidth={3} />
-                            </button>
-                        ) : (
-                            <button onClick={startGroupEdit} className="w-10 h-10 bg-black/20 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-all">
-                                <Edit size={18} />
-                            </button>
-                        )}
-                    </div>
-                )}
-
-                {/* HERO IMAGE SECTION */}
-                <div className="w-full h-[45dvh] relative flex-shrink-0 group/hero">
-                    {currentChatObject?.type === 'group' ? (
-                        // GROUP AVATAR
-                        <div className="w-full h-full bg-zinc-900 flex items-center justify-center relative">
-                             {currentChatObject.photoURL ? (
-                                <img src={currentChatObject.photoURL} className="w-full h-full object-cover" />
-                             ) : (
-                                <Users size={80} className="text-zinc-600" />
-                             )}
-                             
-                             {/* Admin Edit Overlay */}
-                             {currentChatObject.createdBy === user.uid && (
-                                <>
-                                    {/* Upload Layer */}
-                                    <label className={`absolute inset-0 flex items-center justify-center cursor-pointer transition-all duration-300 ${isEditingGroupInfo ? 'bg-black/60 opacity-100' : 'opacity-0 group-hover/hero:opacity-100 bg-black/30'}`}>
-                                        <div className="bg-black/50 p-3 rounded-full text-white backdrop-blur-md border border-white/20 hover:scale-110 transition-transform">
-                                            <Camera size={24} />
-                                        </div>
-                                        <input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleUpdateGroupPhoto(e.target.files[0]); }} />
-                                    </label>
-
-                                    {/* Delete Button (Only in Edit Mode & if Photo exists) */}
-                                    {isEditingGroupInfo && currentChatObject.photoURL && (
-                                        <button 
-                                            onClick={(e) => { e.preventDefault(); handleDeleteGroupPhoto(); }}
-                                            className="absolute bottom-4 right-4 bg-red-500/80 hover:bg-red-500 p-3 rounded-full text-white backdrop-blur-md shadow-lg z-20 transition-all hover:scale-105"
-                                            title="Remove Photo"
-                                        >
-                                            <Trash2 size={20} />
-                                        </button>
-                                    )}
-                                </>
-                             )}
+                    {/* ADMIN EDIT TOGGLE */}
+                    {currentChatObject?.type === 'group' && currentChatObject.createdBy === user.uid && (
+                        <div className="pointer-events-auto">
+                            {isEditingGroupInfo ? (
+                                <button onClick={handleSaveGroupInfo} className="w-10 h-10 bg-[#DA7756] shadow-lg shadow-orange-900/40 rounded-full flex items-center justify-center text-white hover:scale-105 transition-all">
+                                    <Check size={20} strokeWidth={3} />
+                                </button>
+                            ) : (
+                                <button onClick={startGroupEdit} className="w-10 h-10 bg-black/20 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/10 transition-all">
+                                    <Edit size={18} />
+                                </button>
+                            )}
                         </div>
-                    ) : otherChatUser?.photoURL ? (
-                        // USER PHOTO
-                        <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
-                    ) : (
-                        // USER INITIAL
-                        <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-8xl text-zinc-700">{otherChatUser?.displayName?.[0]}</div>
                     )}
-                    
-                    {/* Gradient Overlay & Info */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent flex flex-col justify-end p-5">
-                        <h1 className="text-3xl font-black text-white tracking-tight mb-0.5">
-                            {currentChatObject?.type === 'group' ? currentChatObject.displayName : otherChatUser?.displayName}
-                        </h1>
-                        <p className={`font-medium text-sm ${otherChatUser?.isOnline && currentChatObject?.type !== 'group' ? 'text-green-500' : 'text-zinc-400'}`}>
-                            {currentChatObject?.type === 'group' 
-                                ? `${currentChatObject.participants?.length || 0} members, 1 online` 
-                                : (otherChatUser?.isOnline ? 'Online now' : 'Last seen recently')}
-                        </p>
-                    </div>
                 </div>
 
-                {/* CONTENT SECTION */}
-                <div className="flex-1 bg-black -mt-6 relative z-10 px-4 pt-2 pb-6 flex flex-col gap-3 overflow-y-auto no-scrollbar rounded-t-[30px]">
+                {/* SCROLLABLE CONTENT WRAPPER */}
+                <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col">
                     
-                    {/* Actions Grid */}
-                    <div className="grid grid-cols-4 gap-2">
-                        <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
-                            <Phone size={20} /> <span className="text-[10px] font-bold uppercase">Call</span>
-                        </button>
-                        <button onClick={toggleMute} className={`h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 ${mutedChats.has(activeChatId) ? 'text-red-500 border-red-500/30' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
-                            {mutedChats.has(activeChatId) ? <BellOff size={20} /> : <Bell size={20} />} 
-                            <span className="text-[10px] font-bold uppercase">{mutedChats.has(activeChatId) ? 'Unmute' : 'Mute'}</span>
-                        </button>
-                        <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
-                            <Search size={20} /> <span className="text-[10px] font-bold uppercase">Search</span>
-                        </button>
-                        <button className="h-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
-                            <MoreHorizontal size={20} /> <span className="text-[10px] font-bold uppercase">More</span>
-                        </button>
+                    {/* HERO IMAGE SECTION */}
+                    <div className="w-full h-[40vh] relative flex-shrink-0 group/hero">
+                        {currentChatObject?.type === 'group' ? (
+                            // GROUP AVATAR
+                            <div className="w-full h-full bg-zinc-900 flex items-center justify-center relative overflow-hidden">
+                                {currentChatObject.photoURL ? (
+                                    <img src={currentChatObject.photoURL} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-b from-zinc-800 to-zinc-900 flex items-center justify-center">
+                                        <Users size={80} className="text-zinc-600" />
+                                    </div>
+                                )}
+                                
+                                {/* Admin Edit Overlay */}
+                                {currentChatObject.createdBy === user.uid && (
+                                    <>
+                                        {/* Upload Layer */}
+                                        <label className={`absolute inset-0 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-300 backdrop-blur-sm z-20 ${isEditingGroupInfo ? 'bg-black/40 opacity-100' : 'opacity-0 group-hover/hero:opacity-100 bg-black/20'}`}>
+                                            <div className="bg-black/50 p-4 rounded-full text-white border border-white/20 hover:scale-110 transition-transform">
+                                                <Camera size={28} />
+                                            </div>
+                                            {isEditingGroupInfo && <span className="text-xs font-bold text-white uppercase tracking-wider drop-shadow-md">Change Photo</span>}
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleUpdateGroupPhoto(e.target.files[0]); }} />
+                                        </label>
+
+                                        {/* Delete Button */}
+                                        {isEditingGroupInfo && currentChatObject.photoURL && (
+                                            <button 
+                                                onClick={(e) => { e.preventDefault(); handleDeleteGroupPhoto(); }}
+                                                className="absolute bottom-6 right-6 bg-red-500/90 hover:bg-red-500 p-2.5 rounded-full text-white backdrop-blur-md shadow-lg z-30 transition-all hover:scale-105"
+                                                title="Remove Photo"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        ) : otherChatUser?.photoURL ? (
+                            // USER PHOTO
+                            <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
+                        ) : (
+                            // USER INITIAL
+                            <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-8xl text-zinc-700">{otherChatUser?.displayName?.[0]}</div>
+                        )}
+                        
+                        {/* Gradient Overlay & Info - HIDES IN EDIT MODE */}
+                        <div className={`absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent flex flex-col justify-end p-6 transition-opacity duration-300 ${isEditingGroupInfo ? 'opacity-0' : 'opacity-100'}`}>
+                            <h1 className="text-4xl font-black text-white tracking-tight mb-1 drop-shadow-lg">
+                                {currentChatObject?.type === 'group' ? currentChatObject.displayName : otherChatUser?.displayName}
+                            </h1>
+                            <p className={`font-medium text-sm flex items-center gap-2 ${otherChatUser?.isOnline && currentChatObject?.type !== 'group' ? 'text-green-500' : 'text-zinc-400'}`}>
+                                {currentChatObject?.type === 'group' 
+                                    ? <><Users size={14}/> {currentChatObject.participants?.length || 0} members</>
+                                    : (otherChatUser?.isOnline ? 'Online now' : 'Last seen recently')}
+                            </p>
+                        </div>
                     </div>
 
-                    {/* BIO / INFO SECTION */}
-                    <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl p-4 space-y-4">
+                    {/* CONTENT SECTION */}
+                    <div className="flex-1 bg-black relative z-10 flex flex-col gap-4 p-4 min-h-[50vh]">
                         
-                        {/* EDIT MODE: INPUTS */}
-                        {isEditingGroupInfo ? (
-                            <div className="space-y-4">
+                        {/* EDIT MODE: NAME INPUT */}
+                        {isEditingGroupInfo && (
+                            <div className="animate-in slide-in-from-top-2 fade-in duration-300">
+                                <label className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold pl-2 mb-1 block">Group Name</label>
+                                <input 
+                                    type="text" 
+                                    value={editGroupName} 
+                                    onChange={(e) => setEditGroupName(e.target.value)}
+                                    className="w-full bg-zinc-900/50 border border-white/10 rounded-2xl px-4 py-3 text-white text-xl font-bold focus:outline-none focus:border-[#DA7756] transition-colors placeholder:text-zinc-600"
+                                    placeholder="Enter group name"
+                                />
+                            </div>
+                        )}
+
+                        {/* Actions Grid */}
+                        {!isEditingGroupInfo && (
+                            <div className="grid grid-cols-4 gap-2 mb-2">
+                                <button className="h-16 bg-zinc-900/40 border border-white/5 rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95 group">
+                                    <Phone size={20} className="group-hover:text-green-500 transition-colors"/> <span className="text-[10px] font-bold uppercase tracking-wide">Call</span>
+                                </button>
+                                <button onClick={toggleMute} className={`h-16 bg-zinc-900/40 border border-white/5 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${mutedChats.has(activeChatId) ? 'text-red-500' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                                    {mutedChats.has(activeChatId) ? <BellOff size={20} /> : <Bell size={20} />} 
+                                    <span className="text-[10px] font-bold uppercase tracking-wide">{mutedChats.has(activeChatId) ? 'Unmute' : 'Mute'}</span>
+                                </button>
+                                <button className="h-16 bg-zinc-900/40 border border-white/5 rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
+                                    <Search size={20} /> <span className="text-[10px] font-bold uppercase tracking-wide">Search</span>
+                                </button>
+                                <button className="h-16 bg-zinc-900/40 border border-white/5 rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all active:scale-95">
+                                    <MoreHorizontal size={20} /> <span className="text-[10px] font-bold uppercase tracking-wide">More</span>
+                                </button>
+                            </div>
+                        )}
+
+                        {/* BIO / DESC SECTION */}
+                        <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-5 space-y-4">
+                            {isEditingGroupInfo ? (
                                 <div>
-                                    <label className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold">Group Name</label>
-                                    <input 
-                                        type="text" 
-                                        value={editGroupName} 
-                                        onChange={(e) => setEditGroupName(e.target.value)}
-                                        className="w-full bg-black/40 border-b border-white/20 py-2 text-white font-bold focus:outline-none focus:border-[#DA7756] transition-colors"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold">Description</label>
+                                    <label className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-2 block">Description</label>
                                     <textarea 
                                         value={editGroupDesc} 
                                         onChange={(e) => setEditGroupDesc(e.target.value)}
-                                        placeholder="Add a group description..."
-                                        rows={2}
-                                        className="w-full bg-black/40 border-b border-white/20 py-2 text-white text-sm focus:outline-none focus:border-[#DA7756] transition-colors resize-none"
+                                        placeholder="What is this group about?"
+                                        rows={4}
+                                        className="w-full bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-[#DA7756] transition-colors resize-none leading-relaxed placeholder:text-zinc-600"
                                     />
                                 </div>
-                            </div>
-                        ) : (
-                            /* VIEW MODE: TEXT */
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500">
-                                    <Info size={18} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">
-                                        {currentChatObject?.type === 'group' ? 'Description' : 'Bio'}
-                                    </p>
-                                    <p className="text-white text-sm leading-snug whitespace-pre-wrap">
-                                        {currentChatObject?.type === 'group' 
-                                            ? (currentChatObject.description || 'No description yet.') 
-                                            : 'Living in the matrix. 🕶️'}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                        {currentChatObject?.type !== 'group' && (
-                            <>
-                            <div className="w-full h-px bg-white/5" />
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500">
-                                    <AtSign size={18} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">Username</p>
-                                    <p className="text-white font-mono text-sm truncate">@{otherChatUser.displayName?.toLowerCase().replace(/\s/g, '') || 'unknown'}</p>
-                                </div>
-                                <button className="text-zinc-500 hover:text-white"><QrCode size={18} /></button>
-                            </div>
-                            </>
-                        )}
-                    </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-1">
+                                            {currentChatObject?.type === 'group' ? 'About' : 'Bio'}
+                                        </p>
+                                        <p className="text-white text-[15px] leading-relaxed whitespace-pre-wrap">
+                                            {currentChatObject?.type === 'group' 
+                                                ? (currentChatObject.description || 'No description yet.') 
+                                                : 'Living in the matrix. 🕶️'}
+                                        </p>
+                                    </div>
 
-                    {/* GROUP MEMBERS LIST */}
-                    {currentChatObject?.type === 'group' && (
-                        <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl overflow-hidden p-2 space-y-1">
-                             <div className="px-2 py-1 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Members ({currentChatObject.participants?.length})</div>
-                             {currentChatObject.participants.map(uid => (
-                                 <GroupMemberRow 
-                                    key={uid} 
-                                    userId={uid} 
-                                    isAdmin={currentChatObject.createdBy === uid} 
-                                    isViewerAdmin={currentChatObject.createdBy === user.uid}
-                                    onRemove={handleRemoveMember}
-                                 />
-                             ))}
-                             {/* Only Admin can add members conceptually, or everyone depending on your preference */}
-                             <button className="w-full py-3 text-center text-blue-500 font-bold text-sm hover:bg-white/5 rounded-xl transition-colors">Add Members</button>
+                                    {currentChatObject?.type !== 'group' && (
+                                        <>
+                                            <div className="h-px bg-white/5 w-full" />
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-bold mb-0.5">Username</p>
+                                                    <p className="text-white font-mono text-sm">@{otherChatUser.displayName?.toLowerCase().replace(/\s/g, '') || 'unknown'}</p>
+                                                </div>
+                                                <button className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors">
+                                                    <QrCode size={16} />
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                    )}
 
-                    {/* ACTION LIST */}
-                    <div className="bg-zinc-900/30 border border-zinc-800 rounded-3xl overflow-hidden mt-auto mb-2">
-                        {currentChatObject?.type !== 'group' && (
-                            <>
-                            <button onClick={handleAddToContacts} className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left active:bg-white/10 group">
-                                <UserPlus size={20} className="text-[#DA7756] group-hover:text-white transition-colors" />
-                                <span className="font-bold text-sm text-[#DA7756] group-hover:text-white transition-colors">
-                                    {savedContacts.find(c => c.uid === otherChatUser.uid) ? 'Contact Saved' : 'Add to Contacts'}
-                                </span>
-                            </button>
-                            <div className="w-full h-px bg-white/5" />
-                            </>
+                        {/* GROUP MEMBERS LIST */}
+                        {currentChatObject?.type === 'group' && !isEditingGroupInfo && (
+                            <div className="bg-zinc-900/40 border border-white/5 rounded-3xl overflow-hidden flex flex-col">
+                                <div className="px-5 py-3 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                                    <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Members</span>
+                                    <span className="text-[11px] font-bold text-zinc-600 bg-white/5 px-2 py-0.5 rounded-full">{currentChatObject.participants?.length}</span>
+                                </div>
+                                <div className="flex flex-col p-1">
+                                    {currentChatObject.participants.map(uid => (
+                                        <GroupMemberRow 
+                                            key={uid} 
+                                            userId={uid} 
+                                            isAdmin={currentChatObject.createdBy === uid} 
+                                            isViewerAdmin={currentChatObject.createdBy === user.uid}
+                                            onRemove={handleRemoveMember}
+                                        />
+                                    ))}
+                                    <button className="w-full py-3 mt-1 text-center text-[#DA7756] font-bold text-xs hover:bg-white/5 rounded-xl transition-colors uppercase tracking-wider flex items-center justify-center gap-2">
+                                        <UserPlus size={14} /> Add Members
+                                    </button>
+                                </div>
+                            </div>
                         )}
-                        
-                        <button 
-                            onClick={() => currentChatObject?.type === 'group' ? setShowLeaveGroupModal(true) : setShowBlockModal(true)} 
-                            className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left text-red-500 active:bg-red-500/10"
-                        >
-                            {currentChatObject?.type === 'group' ? <ArrowUp className="rotate-90" size={20} /> : <Ban size={20} />}
-                            <span className="font-bold text-sm">{currentChatObject?.type === 'group' ? 'Leave Group' : 'Block User'}</span>
-                        </button>
+
+                        {/* DANGER ZONE */}
+                        {!isEditingGroupInfo && (
+                            <div className="bg-zinc-900/40 border border-white/5 rounded-3xl overflow-hidden mb-8">
+                                {currentChatObject?.type !== 'group' && (
+                                    <>
+                                        <button onClick={handleAddToContacts} className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left active:bg-white/10 group">
+                                            <UserPlus size={20} className="text-[#DA7756] group-hover:text-white transition-colors" />
+                                            <span className="font-bold text-sm text-[#DA7756] group-hover:text-white transition-colors">
+                                                {savedContacts.find(c => c.uid === otherChatUser.uid) ? 'Contact Saved' : 'Add to Contacts'}
+                                            </span>
+                                        </button>
+                                        <div className="w-full h-px bg-white/5" />
+                                    </>
+                                )}
+                                
+                                <button 
+                                    onClick={() => currentChatObject?.type === 'group' ? setShowLeaveGroupModal(true) : setShowBlockModal(true)} 
+                                    className="w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left text-red-500 active:bg-red-500/10"
+                                >
+                                    {currentChatObject?.type === 'group' ? <ArrowUp className="rotate-90" size={20} /> : <Ban size={20} />}
+                                    <span className="font-bold text-sm">{currentChatObject?.type === 'group' ? 'Leave Group' : 'Block User'}</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

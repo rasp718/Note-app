@@ -1339,29 +1339,29 @@ const handleLogout = async () => {
                     <div className="w-full relative flex items-center justify-center">
                         
                         {activeChatId !== 'saved_messages' ? (
-                           <div onClick={() => setCurrentView('profile')} className={`flex items-center justify-center cursor-pointer hover:bg-white/5 p-2 rounded-xl transition-all duration-300 group ${isChatScrolled ? 'flex-row gap-3 h-14' : 'flex-col gap-2 h-auto'}`}>
-                               {/* HEADER IMAGE: Shrinks from 80px (w-20) to 40px (w-10) */}
-                               <div className={`${isChatScrolled ? 'w-10 h-10 rounded-xl shadow-lg shadow-black/60' : 'w-20 h-20 rounded-2xl shadow-2xl shadow-black/60'} flex-shrink-0 bg-zinc-800 overflow-hidden border border-white/5 relative group-hover:border-white/20 transition-all duration-300 flex items-center justify-center`}>
+                           <div onClick={() => setCurrentView('profile')} className="flex items-center justify-center cursor-pointer hover:bg-white/5 p-2 rounded-xl transition-all duration-300 group flex-row gap-3 h-auto">
+                               {/* HEADER IMAGE: Fixed Compact Size */}
+                               <div className="w-10 h-10 rounded-xl shadow-lg shadow-black/60 flex-shrink-0 bg-zinc-800 overflow-hidden border border-white/5 relative group-hover:border-white/20 transition-all duration-300 flex items-center justify-center">
                                {currentChatObject?.type === 'group' ? (
                                       currentChatObject.photoURL ? (
                                           <img src={currentChatObject.photoURL} className="w-full h-full object-cover" />
                                       ) : (
-                                          <Users size={isChatScrolled ? 18 : 32} className="text-zinc-400 transition-all duration-300" />
+                                          <Users size={18} className="text-zinc-400 transition-all duration-300" />
                                       )
                                   ) : otherChatUser?.photoURL ? (
                                       <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
                                   ) : (
-                                      <div className={`w-full h-full flex items-center justify-center font-black text-zinc-500 transition-all duration-300 ${isChatScrolled ? 'text-lg' : 'text-3xl'}`}>{otherChatUser?.displayName?.[0] || '?'}</div>
+                                      <div className="w-full h-full flex items-center justify-center font-black text-zinc-500 transition-all duration-300 text-lg">{otherChatUser?.displayName?.[0] || '?'}</div>
                                   )}
                                </div>
                                
-                               <div className={`flex flex-col ${isChatScrolled ? 'items-start text-left' : 'items-center text-center'} justify-center transition-all duration-300 min-w-0`}>
-                                   {/* TEXT: Scales down and aligns */}
-                                   <div className={`transition-all duration-300`}>
-                                        <h3 className={`text-white leading-none truncate tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] transition-all duration-300 ${isChatScrolled ? 'font-bold text-lg' : 'font-black text-2xl'}`}>
+                               <div className="flex flex-col items-start text-left justify-center transition-all duration-300 min-w-0">
+                                   {/* TEXT: Fixed Compact Size */}
+                                   <div className="transition-all duration-300">
+                                        <h3 className="text-white leading-none truncate tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] font-bold text-lg">
                                             {currentChatObject?.type === 'group' ? currentChatObject.displayName : (otherChatUser?.displayName || 'Unknown')}
                                         </h3>
-                                        <div className={`flex items-center gap-1.5 transition-all duration-300 ${isChatScrolled ? 'opacity-60 scale-90 origin-left justify-start' : 'mt-1.5 justify-center'}`}>
+                                        <div className="flex items-center gap-1.5 transition-all duration-300 opacity-80 scale-95 origin-left justify-start">
                                             {otherChatUser?.isOnline && currentChatObject?.type !== 'group' && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}
                                             <p className={`text-xs font-mono uppercase tracking-widest truncate drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-400'}`}>
                                                 {currentChatObject?.type === 'group' ? `${currentChatObject.participants?.length || 0} members` : (otherChatUser?.isOnline ? 'Online' : 'Last seen recently')}

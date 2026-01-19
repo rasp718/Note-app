@@ -17,12 +17,7 @@ export const HACKER_CONFIG: CategoryConfig = {
     colorClass: 'bg-green-500' 
 };
 
-// --- HELPER FOR DYNAMIC USER COLORS ---
-export const getUserColor = (name: string) => {
-  const colors = [
-    'text-red-400 border-red-500',
-    'text-orange-400 border-orange-500',
-    'text-amber-4// --- ALL REPLY THEMES ---
+// --- ALL REPLY THEMES ---
 // We type this as Record<string, string[]> to satisfy TypeScript indexing
 export const REPLY_THEMES: Record<string, string[]> = {
   original: [ // "Standard/Default"
@@ -64,19 +59,6 @@ export const getUserColor = (name: string, themeKey: string = 'retro') => {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   return palette[Math.abs(hash) % palette.length];
-};00 border-amber-500',
-    'text-green-400 border-green-500',
-    'text-teal-400 border-teal-500',
-    'text-cyan-400 border-cyan-500',
-    'text-blue-400 border-blue-500',
-    'text-indigo-400 border-indigo-500',
-    'text-pink-400 border-pink-500',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
 };
 
 // --- HELPER FOR BUBBLE STYLES ---

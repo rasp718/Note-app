@@ -547,6 +547,25 @@ const toggleGroupMember = (uid) => {
   const listRef = useRef(null);
   const canvasRef = useRef(null);
   const scrollTimeoutRef = useRef(null);
+  
+  // SCROLL REFS
+  const bubbleListRef = useRef(null);
+  const replyListRef = useRef(null);
+  const bgListRef = useRef(null);
+
+  // SCROLL HANDLERS
+  const handleWheelScroll = (e) => {
+    if (e.deltaY !== 0) {
+       e.currentTarget.scrollLeft += e.deltaY;
+    }
+  };
+
+  const scrollContainer = (ref, direction) => {
+    if (ref.current) {
+        const amount = direction === 'left' ? -200 : 200;
+        ref.current.scrollBy({ left: amount, behavior: 'smooth' });
+    }
+  };
 
   // Helpers
   const [activeFilter, setActiveFilter] = useState('all');
@@ -1175,8 +1194,8 @@ const handleLogout = async () => {
                             <div className="space-y-3">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
                                 <div className="relative group/scroll">
-                                    <div className="absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-black/80 to-transparent z-10 pointer-events-none flex items-center justify-start"><ChevronLeft size={16} className="text-white drop-shadow-md" /></div>
-                                    <div className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
+                                    <button onClick={() => scrollContainer(bubbleListRef, 'left')} className="absolute left-0 top-0 bottom-2 w-10 bg-gradient-to-r from-black/80 to-transparent z-20 flex items-center justify-start pl-1 cursor-pointer hover:bg-black/10 transition-colors"><ChevronLeft size={20} className="text-white drop-shadow-md" /></button>
+                                    <div ref={bubbleListRef} onWheel={handleWheelScroll} className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
                                         {[
                                             { id: 'minimal_solid', label: 'Minimal', bg: 'bg-white', text: 'text-black', border: 'border-white' },
                                             { id: 'midnight', label: 'Midnight', bg: 'bg-[#172554]', text: 'text-white', border: 'border-blue-900' },
@@ -1197,7 +1216,7 @@ const handleLogout = async () => {
                                             </button>
                                         ))}
                                     </div>
-                                    <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-black/80 to-transparent z-10 pointer-events-none flex items-center justify-end"><ChevronLeft size={16} className="text-white drop-shadow-md rotate-180" /></div>
+                                    <button onClick={() => scrollContainer(bubbleListRef, 'right')} className="absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-black/80 to-transparent z-20 flex items-center justify-end pr-1 cursor-pointer hover:bg-black/10 transition-colors"><ChevronLeft size={20} className="text-white drop-shadow-md rotate-180" /></button>
                                 </div>
                             </div>
 
@@ -1205,8 +1224,8 @@ const handleLogout = async () => {
                             <div className="space-y-3 pt-2 border-t border-white/5">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><MessageSquareDashed size={14}/> Reply Colors</label>
                                 <div className="relative group/scroll">
-                                    <div className="absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-black/80 to-transparent z-10 pointer-events-none flex items-center justify-start"><ChevronLeft size={16} className="text-white drop-shadow-md" /></div>
-                                    <div className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
+                                    <button onClick={() => scrollContainer(replyListRef, 'left')} className="absolute left-0 top-0 bottom-2 w-10 bg-gradient-to-r from-black/80 to-transparent z-20 flex items-center justify-start pl-1 cursor-pointer hover:bg-black/10 transition-colors"><ChevronLeft size={20} className="text-white drop-shadow-md" /></button>
+                                    <div ref={replyListRef} onWheel={handleWheelScroll} className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
                                         {[
                                             { id: 'original', color: 'bg-blue-500', text: 'text-blue-500' },
                                             { id: 'retro', color: 'bg-orange-500', text: 'text-orange-500' },
@@ -1227,7 +1246,7 @@ const handleLogout = async () => {
                                             </button>
                                         ))}
                                     </div>
-                                    <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-black/80 to-transparent z-10 pointer-events-none flex items-center justify-end"><ChevronLeft size={16} className="text-white drop-shadow-md rotate-180" /></div>
+                                    <button onClick={() => scrollContainer(replyListRef, 'right')} className="absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-black/80 to-transparent z-20 flex items-center justify-end pr-1 cursor-pointer hover:bg-black/10 transition-colors"><ChevronLeft size={20} className="text-white drop-shadow-md rotate-180" /></button>
                                 </div>
                             </div>
                             
@@ -1246,8 +1265,8 @@ const handleLogout = async () => {
                         <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 space-y-4 shadow-2xl relative">
                              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
                              <div className="relative group/scroll">
-                                <div className="absolute left-0 top-0 bottom-2 w-10 bg-gradient-to-r from-zinc-900 to-transparent z-10 pointer-events-none flex items-center justify-start pl-1"><ChevronLeft size={20} className="text-white drop-shadow-lg" /></div>
-                                <div className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
+                                <button onClick={() => scrollContainer(bgListRef, 'left')} className="absolute left-0 top-0 bottom-2 w-10 bg-gradient-to-r from-zinc-900 to-transparent z-20 flex items-center justify-start pl-1 cursor-pointer hover:bg-black/10 transition-colors"><ChevronLeft size={20} className="text-white drop-shadow-lg" /></button>
+                                <div ref={bgListRef} onWheel={handleWheelScroll} className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
                                     {Array.from({ length: 33 }, (_, i) => i + 1).map((num) => (
                                         <button 
                                             key={num} 
@@ -1258,7 +1277,7 @@ const handleLogout = async () => {
                                         </button>
                                     ))}
                                 </div>
-                                <div className="absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-zinc-900 to-transparent z-10 pointer-events-none flex items-center justify-end pr-1"><ChevronLeft size={20} className="text-white drop-shadow-lg rotate-180" /></div>
+                                <button onClick={() => scrollContainer(bgListRef, 'right')} className="absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-zinc-900 to-transparent z-20 flex items-center justify-end pr-1 cursor-pointer hover:bg-black/10 transition-colors"><ChevronLeft size={20} className="text-white drop-shadow-lg rotate-180" /></button>
                              </div>
                         </div>
 

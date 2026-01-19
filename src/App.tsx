@@ -100,7 +100,7 @@ const GroupMemberRow = ({ userId, isAdmin, isViewerAdmin, onRemove, onMute, isMu
 const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact, onReply, onDelete, onEdit, setZoomedImage, bubbleStyle, isHackerMode, replyTheme }) => {
     const senderData = useUser(msg.senderId);
     const isMe = msg.senderId === user?.uid;
-    const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
+    // REMOVED showHeader to prevent duplicate dates
     const isLastInGroup = !nextMsg || nextMsg.senderId !== msg.senderId || !isSameDay(msg.timestamp, nextMsg.timestamp);
     
     // Resolve Display Name
@@ -141,13 +141,7 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
 
     return (
         <React.Fragment key={msg.id}>
-            {showHeader && (
-                <div className="flex justify-center my-4 w-full select-none">
-                    <span className="text-white/90 text-[11px] font-bold uppercase tracking-widest drop-shadow-md shadow-black">
-                        {getDateLabel(msg.timestamp)}
-                    </span>
-                </div>
-            )}
+            {/* Header removed from here to fix duplicates */}
             <div 
                 style={{ zIndex: 1000 }}
                 className={`flex w-full mb-1 items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
@@ -177,8 +171,8 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                         </svg>
                     )}
 
-{/* Force fully rounded corners (Squircle) using CSS override to guarantee the look */}
-<div className={isMe ? "[&>div]:!rounded-br-2xl" : "[&>div]:!rounded-bl-2xl"}>
+                    {/* Force fully rounded corners (Squircle) using CSS override to guarantee the look */}
+                    <div className={isMe ? "[&>div]:!rounded-br-2xl" : "[&>div]:!rounded-bl-2xl"}>
                         <NoteCard 
                             note={msgNote} categories={[]} selectedVoice={null} 
                             variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
@@ -924,7 +918,6 @@ const handleLogout = async () => {
   }).sort((a, b) => { if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1; return a.date - b.date; });
 
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
-  // Helper to group items by date for sticky headers
   const groupItemsByDate = (items) => {
     const groups = [];
     items.forEach((item) => {
@@ -1370,7 +1363,7 @@ const handleLogout = async () => {
                         </div>
                     ))
                 ) : (
-                    groupItemsByDate(activeMessages).map((group) => (
+                    groupItemsByDate([...activeMessages].sort((a, b) => normalizeDate(a.timestamp) - normalizeDate(b.timestamp))).map((group) => (
                         <div key={group.date} className="relative w-full">
                             {/* STICKY DATE HEADER */}
                             <div className="sticky top-20 z-30 flex justify-center py-4 pointer-events-none">

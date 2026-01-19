@@ -1174,42 +1174,50 @@ const handleLogout = async () => {
                             {/* BUBBLE STYLES - SIDE SCROLL */}
                             <div className="space-y-3">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
-                                <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar snap-x">
-                                    {[
-                                        { id: 'minimal_solid', label: 'Minimal', bg: 'bg-white', text: 'text-black', border: 'border-white' },
-                                        { id: 'midnight', label: 'Midnight', bg: 'bg-[#172554]', text: 'text-white', border: 'border-blue-900' },
-                                        { id: 'slate', label: 'Slate', bg: 'bg-[#475569]', text: 'text-white', border: 'border-slate-600' },
-                                        { id: 'solid_gray', label: 'Solid Gray', bg: 'bg-zinc-700', text: 'text-white', border: 'border-zinc-400' },
-                                        { id: 'whatsapp', label: 'Forest', bg: 'bg-[#005c4b]', text: 'text-white', border: 'border-[#25D366]' },
-                                        { id: 'telegram', label: 'Ocean', bg: 'bg-[#2b5278]', text: 'text-white', border: 'border-[#2AABEE]' },
-                                        { id: 'purple', label: 'Royal', bg: 'bg-[#6d28d9]', text: 'text-white', border: 'border-purple-500' },
-                                        { id: 'blue_gradient', label: 'Blue', bg: 'bg-gradient-to-br from-blue-500 to-blue-600', text: 'text-white', border: 'border-blue-500' },
-                                    ].map((style) => (
-                                        <button 
-                                            key={style.id} 
-                                            onClick={() => changeBubbleStyle(style.id)} 
-                                            className={`flex-shrink-0 w-28 h-16 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden snap-center ${bubbleStyle === style.id ? `${style.border} ring-1 ring-white/50 scale-95` : 'border-white/5 hover:border-white/20'}`} 
-                                        >
-                                            <div className={`absolute inset-0 ${style.bg}`} />
-                                            <span className={`relative z-10 text-xs font-bold uppercase tracking-wider ${style.text}`}>{style.label}</span>
-                                        </button>
-                                    ))}
+                                <div className="relative group/scroll">
+                                    <div className="absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-black/80 to-transparent z-10 pointer-events-none flex items-center justify-start"><ChevronLeft size={16} className="text-white drop-shadow-md" /></div>
+                                    <div className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
+                                        {[
+                                            { id: 'minimal_solid', label: 'Minimal', bg: 'bg-white', text: 'text-black', border: 'border-white' },
+                                            { id: 'midnight', label: 'Midnight', bg: 'bg-[#172554]', text: 'text-white', border: 'border-blue-900' },
+                                            { id: 'slate', label: 'Slate', bg: 'bg-[#475569]', text: 'text-white', border: 'border-slate-600' },
+                                            { id: 'solid_gray', label: 'Solid Gray', bg: 'bg-zinc-700', text: 'text-white', border: 'border-zinc-400' },
+                                            { id: 'whatsapp', label: 'Forest', bg: 'bg-[#005c4b]', text: 'text-white', border: 'border-[#25D366]' },
+                                            { id: 'telegram', label: 'Ocean', bg: 'bg-[#2b5278]', text: 'text-white', border: 'border-[#2AABEE]' },
+                                            { id: 'purple', label: 'Royal', bg: 'bg-[#6d28d9]', text: 'text-white', border: 'border-purple-500' },
+                                            { id: 'blue_gradient', label: 'Blue', bg: 'bg-gradient-to-br from-blue-500 to-blue-600', text: 'text-white', border: 'border-blue-500' },
+                                        ].map((style) => (
+                                            <button 
+                                                key={style.id} 
+                                                onClick={() => changeBubbleStyle(style.id)} 
+                                                className={`flex-shrink-0 w-28 h-16 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden snap-center ${bubbleStyle === style.id ? `${style.border} ring-1 ring-white/50 scale-95` : 'border-white/5 hover:border-white/20'}`} 
+                                            >
+                                                <div className={`absolute inset-0 ${style.bg}`} />
+                                                <span className={`relative z-10 text-xs font-bold uppercase tracking-wider ${style.text}`}>{style.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-black/80 to-transparent z-10 pointer-events-none flex items-center justify-end"><ChevronLeft size={16} className="text-white drop-shadow-md rotate-180" /></div>
                                 </div>
                             </div>
 
                             {/* REPLY THEME SELECTOR - SIDE SCROLL */}
                             <div className="space-y-3 pt-2 border-t border-white/5">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><MessageSquareDashed size={14}/> Reply Colors</label>
-                                <div className="flex overflow-x-auto gap-2 pb-2 no-scrollbar snap-x">
-                                    {['original', 'retro', 'pastel', 'tactical', 'highvis', 'synthwave', 'terminal'].map((t) => (
-                                        <button 
-                                            key={t} 
-                                            onClick={() => changeReplyTheme(t)} 
-                                            className={`flex-shrink-0 w-24 py-3 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all snap-center ${replyTheme === t ? 'bg-white text-black border-white scale-95' : 'bg-black/20 text-zinc-500 border-white/10 hover:border-white/30'}`}
-                                        >
-                                            {t}
-                                        </button>
-                                    ))}
+                                <div className="relative group/scroll">
+                                    <div className="absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-black/80 to-transparent z-10 pointer-events-none flex items-center justify-start"><ChevronLeft size={16} className="text-white drop-shadow-md" /></div>
+                                    <div className="flex overflow-x-auto gap-2 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
+                                        {['original', 'retro', 'pastel', 'tactical', 'highvis', 'synthwave', 'terminal'].map((t) => (
+                                            <button 
+                                                key={t} 
+                                                onClick={() => changeReplyTheme(t)} 
+                                                className={`flex-shrink-0 w-24 py-3 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all snap-center ${replyTheme === t ? 'bg-white text-black border-white scale-95' : 'bg-black/20 text-zinc-500 border-white/10 hover:border-white/30'}`}
+                                            >
+                                                {t}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-black/80 to-transparent z-10 pointer-events-none flex items-center justify-end"><ChevronLeft size={16} className="text-white drop-shadow-md rotate-180" /></div>
                                 </div>
                             </div>
                             
@@ -1224,12 +1232,24 @@ const handleLogout = async () => {
                              <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Opacity</label><span className="text-zinc-500 text-xs font-mono">{Math.round(bgOpacity * 100)}%</span></div><input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
                         </div>
 
-                        {/* BACKGROUND GRID */}
-                        <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-4">
+                        {/* BACKGROUND GRID - SOLID BACKGROUND TO SEE THUMBNAILS */}
+                        <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 space-y-4 shadow-2xl relative">
                              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
-                             <div className="grid grid-cols-4 gap-3">
-                                  {Array.from({ length: 33 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => setBgIndex(num)} className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-white scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}><img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} /></button>))}
-                              </div>
+                             <div className="relative group/scroll">
+                                <div className="absolute left-0 top-0 bottom-2 w-10 bg-gradient-to-r from-zinc-900 to-transparent z-10 pointer-events-none flex items-center justify-start pl-1"><ChevronLeft size={20} className="text-white drop-shadow-lg" /></div>
+                                <div className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
+                                    {Array.from({ length: 33 }, (_, i) => i + 1).map((num) => (
+                                        <button 
+                                            key={num} 
+                                            onClick={() => setBgIndex(num)} 
+                                            className={`flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-2 transition-all relative group snap-center ${bgIndex === num ? 'border-white scale-95 opacity-100 ring-2 ring-white/20' : 'border-transparent opacity-100 hover:opacity-90 hover:border-white/20'}`}
+                                        >
+                                            <img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} />
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-zinc-900 to-transparent z-10 pointer-events-none flex items-center justify-end pr-1"><ChevronLeft size={20} className="text-white drop-shadow-lg rotate-180" /></div>
+                             </div>
                         </div>
 
                         {/* LOGOUT BUTTON */}

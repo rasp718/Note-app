@@ -239,9 +239,12 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
                 )}
                 
                 {/* Red Notification Badge */}
-                {(chat.unreadCount > 0) && (
-                    <div className="absolute -top-2 -right-2 min-w-[22px] h-[22px] bg-[#ff3b30] rounded-full border-[3px] border-black z-20 flex items-center justify-center px-1 shadow-sm">
-                        <span className="text-[11px] font-bold text-white leading-none font-sans">{chat.unreadCount}</span>
+                {/* Checks for unreadCount OR falls back to a 'mock' count for demo if the ID is 'saved_messages' */}
+                {(chat.unreadCount > 0 || (chat.id === 'saved_messages' && !active)) && (
+                    <div className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-[#ff3b30] rounded-full border-[2px] border-[#09090b] z-20 flex items-center justify-center shadow-sm animate-in zoom-in duration-300">
+                        <span className="text-[10px] font-bold text-white leading-none font-sans translate-y-[0.5px]">
+                            {chat.unreadCount || 1}
+                        </span>
                     </div>
                 )}
             </div>
@@ -1593,7 +1596,7 @@ const handleLogout = async () => {
                                 onFocus={() => scrollToBottom('auto')} 
                                 placeholder={editingNote ? "Edit message..." : "Message"} 
                                 rows={1} 
-                                className={`flex-1 bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-[16px] resize-none max-h-32 py-1 leading-relaxed ${isHackerMode ? 'font-mono' : ''}`} 
+                                className={`flex-1 bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-[16px] resize-none max-h-24 py-1 leading-relaxed no-scrollbar ${isHackerMode ? 'font-mono' : ''}`} 
                                 style={isHackerMode ? { color: HACKER_GREEN } : undefined} 
                             />
                             {editingNote && (

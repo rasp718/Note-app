@@ -139,14 +139,22 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; window.speechSynthesis.speak(utterance); } };
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
   const handleCopyImage = async () => { 
-      if (!note.imageUrl) return;
-      try {
-          const response = await fetch(note.imageUrl);
-          const blob = await response.blob();
-          await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-          setContextMenu(null);
-      } catch (e) { console.error(e); setContextMenu(null); }
-  };
+    if (!note.imageUrl) return;
+    try {
+        // Attempt to fetch with CORS mode
+        const response = await fetch(note.imageUrl, { mode: 'cors' });
+        if (!response.ok) throw new Error("Network response was not ok");
+        const blob = await response.blob();
+        await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+        setContextMenu(null);
+        // Optional: Haptic success
+        triggerHaptic(50);
+    } catch (e) { 
+        console.error(e); 
+        alert("Could not copy image. Browser security prevented access to this file.");
+        setContextMenu(null); 
+    }
+};
   
   const openMenu = (clientX: number, clientY: number) => { 
       triggerHaptic(); 
@@ -275,7 +283,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           ) : hasImage ? (
             <div className="relative">
                 <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="rounded-xl overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative">
-                    <img src={note.imageUrl} alt="Attachment" className="w-full h-auto md:max-h-96 object-contain" />
+                <img src={note.imageUrl} alt="Attachment" crossOrigin="anonymous" className="w-full h-auto md:max-h-96 object-contain" />
                     <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1.5 shadow-sm">
                         <span className="text-[10px] font-medium text-white/90">{formatTime(note.date)}</span>
                         {variant === 'sent' && <StatusIcon isOverlay={true} />}

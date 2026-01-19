@@ -237,6 +237,13 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
                 {!isGroup && otherUser?.isOnline && (
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-black z-10"></div>
                 )}
+                
+                {/* Red Notification Badge */}
+                {(chat.unreadCount > 0) && (
+                    <div className="absolute -top-2 -right-2 min-w-[22px] h-[22px] bg-[#ff3b30] rounded-full border-[3px] border-black z-20 flex items-center justify-center px-1 shadow-sm">
+                        <span className="text-[11px] font-bold text-white leading-none font-sans">{chat.unreadCount}</span>
+                    </div>
+                )}
             </div>
             <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
             <div className="flex justify-between items-baseline">
@@ -853,7 +860,29 @@ const handleLogout = async () => {
     setIsUploadingImage(true); try { const url = await compressImage(file); setImageUrl(url); } catch (e) { console.error(e); } finally { setIsUploadingImage(false); }
   };
   const handlePaste = async (e) => {
-    const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = items[i].getAsFile(); if (file) await handleImageUpload(file); break; } }
+    // 1. Handle File/Blob Paste
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+            e.preventDefault(); // Stop text from appearing
+            const file = items[i].getAsFile();
+            if (file) await handleImageUpload(file);
+            return;
+        }
+    }
+    
+    // 2. Handle "Crazy" Base64 Text Paste (Backup)
+    // If the clipboard contains a raw image string instead of a file
+    const textData = e.clipboardData.getData('text');
+    if (textData.startsWith('data:image')) {
+        e.preventDefault();
+        try {
+            const res = await fetch(textData);
+            const blob = await res.blob();
+            const file = new File([blob], "pasted_image.png", { type: blob.type });
+            await handleImageUpload(file);
+        } catch(err) { console.error("Base64 paste failed", err); }
+    }
   };
 
   const startRecording = async () => {

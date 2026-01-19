@@ -1284,7 +1284,16 @@ const handleLogout = async () => {
                                             {currentChatObject?.type === 'group' ? currentChatObject.displayName : (otherChatUser?.displayName || 'Unknown')}
                                         </h3>
                                         {/* Subtext moves next to title when scrolled, or stays below when big */}
-                                        <div className={`flex items-ce
+                                        <div className={`flex items-center gap-1.5 transition-all duration-300 ${isChatScrolled ? 'opacity-60 scale-90 origin-left' : 'mt-1.5'}`}>
+                                            {otherChatUser?.isOnline && currentChatObject?.type !== 'group' && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}
+                                            <p className={`text-xs font-mono uppercase tracking-widest truncate ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>
+                                                {currentChatObject?.type === 'group' ? `${currentChatObject.participants?.length || 0} members` : (otherChatUser?.isOnline ? 'Online' : 'Last seen recently')}
+                                            </p>
+                                        </div>
+                                   </div>
+                               </div>
+                           </div>
+                        ) : (
                            <div onClick={handleSecretTrigger} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer select-none">
                                 <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden">
                                      {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}

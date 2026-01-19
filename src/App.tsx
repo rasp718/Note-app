@@ -1348,7 +1348,12 @@ const handleLogout = async () => {
                             </div>
                             
                             {group.items.map((note, index) => {
-                                const noteColors = getBubbleColors(bubbleStyle, true, isHackerMode);
+                                let noteColors = getBubbleColors(bubbleStyle, true, isHackerMode);
+
+                                // Manual overrides to match MessageItem logic
+                                if (bubbleStyle === 'midnight') noteColors = { bg: 'bg-[#172554]', text: 'text-zinc-100' };
+                                if (bubbleStyle === 'slate') noteColors = { bg: 'bg-[#475569]', text: 'text-white' };
+
                                 return (
                                     <div key={note.id} onDoubleClick={() => handleToggleExpand(note.id)} className={`mb-1 select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
                                         <div className="max-w-[85%] w-fit">

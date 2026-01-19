@@ -240,7 +240,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           )}
 
 {variant === 'received' && opponentName && opponentName !== 'OPP' && (
-              <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>~ {opponentName}</div>
+              <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}
 
           {replyData && (() => {

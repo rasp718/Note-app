@@ -144,7 +144,8 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
             {/* Header removed from here to fix duplicates */}
             <div 
                 style={{ zIndex: 1 }}
-                className={`flex w-full mb-1 items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
+                // mb-1 is default tight spacing, mb-6 adds room for the reaction badge so it doesn't get covered
+                className={`flex w-full ${reactions[msg.id] ? 'mb-6' : 'mb-1'} items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
             >
                 {!isMe && (
                     <div className="flex-shrink-0 w-8 h-8 relative z-10 mb-1">

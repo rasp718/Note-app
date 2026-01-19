@@ -21,13 +21,13 @@ export const HACKER_CONFIG: CategoryConfig = {
 export const getUserColor = (name: string) => {
     const colors = [
       'text-[#da7756] border-[#da7756]',   // Claude Orange
-      'text-lime-400 border-lime-500',     // Acid Green
-      'text-cyan-300 border-cyan-400',     // Cyber Blue
-      'text-yellow-300 border-yellow-400', // Arcade Yellow
-      'text-red-500 border-red-600',       // Bright Red
-      'text-purple-500 border-purple-600', // Electric Purple
-      'text-teal-300 border-teal-400',     // Mint Teal
-      'text-blue-400 border-blue-500',     // Azure Blue
+      'text-lime-600 border-lime-700',     // Olive Green
+      'text-indigo-400 border-indigo-600', // Muted Indigo
+      'text-yellow-600 border-yellow-700', // Mustard
+      'text-red-600 border-red-700',       // Brick Red
+      'text-zinc-400 border-zinc-500',     // Steel
+      'text-teal-600 border-teal-700',     // Deep Teal
+      'text-green-600 border-green-700',   // Forest
     ];
     let hash = 0;
     for (let i = 0; i < name.length; i++) {

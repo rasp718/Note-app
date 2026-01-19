@@ -27,6 +27,7 @@ interface NoteCardProps {
   opponentAvatar?: string;
   customColors?: { bg: string; border: string; text: string; subtext?: string; shadow?: string; font?: string };
   isLastInGroup?: boolean;
+  replyTheme?: string;
 }
 
 // ... (Helper functions like triggerHaptic, ContextMenuItem, InlineActionButton) ...
@@ -73,7 +74,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, onReply,
   currentReaction, onReact, 
   variant = 'default', status, currentUserId, opponentName = "OPP", opponentAvatar, customColors,
-  isLastInGroup = true
+  isLastInGroup = true, replyTheme = 'retro'
 }) => {
   if (!note) return null;
 
@@ -242,8 +243,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName).split(' ')[0]}`}>~ {opponentName}</div>
           )}
 
-          {replyData && (() => {
-              const [textColor, borderColor] = getUserColor(replyData.sender).split(' ');
+{replyData && (() => {
+              const [textColor, borderColor] = getUserColor(replyData.sender, replyTheme).split(' ');
               return (
                   <div className={`mx-1 mt-1 mb-2 p-2 rounded-[8px] bg-black/20 flex flex-col gap-0.5 border-l-4 ${borderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}>
                       <div className={`text-[12px] font-bold ${textColor} leading-snug mb-0.5`}>{replyData.sender}</div>

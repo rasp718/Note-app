@@ -162,7 +162,7 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                     </div>
                 )}
                 
-                <div className="relative z-10 max-w-[85%]">
+                <div className="relative z-10 max-w-[85%] w-fit">
                     {/* TAIL SVG - Sent (Right) */}
                     {isMe && isLastInGroup && !msg.imageUrl && (
                         <svg className="absolute bottom-[3px] -right-[12px] rotate-[8deg] z-20 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">

@@ -1171,33 +1171,41 @@ const handleLogout = async () => {
                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6">
                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
                             
-                            {/* ALIGNMENT */}
-                            <div className="space-y-3"><label className="text-white text-sm font-medium">Message Alignment</label><div className="flex gap-2 p-1.5 bg-black/40 rounded-xl border border-zinc-800"><button onClick={() => setAlignment('left')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'left' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignLeft size={18}/></button><button onClick={() => setAlignment('center')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'center' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignCenter size={18}/></button><button onClick={() => setAlignment('right')} className={`flex-1 h-9 rounded-lg flex items-center justify-center transition-all ${alignment === 'right' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><AlignRight size={18}/></button></div></div>
-                            
-                            {/* BUBBLE STYLES */}
+                            {/* BUBBLE STYLES - SIDE SCROLL */}
                             <div className="space-y-3">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                <button onClick={() => changeBubbleStyle('minimal_solid')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'minimal_solid' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Minimal Solid"><div className="absolute inset-0 bg-white" /><span className="relative z-10 text-xs font-bold text-black uppercase tracking-wider">Minimal</span></button>
-                                    <button onClick={() => changeBubbleStyle('midnight')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'midnight' ? 'border-blue-900 ring-1 ring-blue-900/50' : 'border-white/5 hover:border-blue-900/50'}`} title="Midnight"><div className="absolute inset-0 bg-[#172554]" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Midnight</span></button>
-                                    <button onClick={() => changeBubbleStyle('slate')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'slate' ? 'border-slate-600 ring-1 ring-slate-600/50' : 'border-white/5 hover:border-slate-600/50'}`} title="Slate"><div className="absolute inset-0 bg-[#475569]" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Slate</span></button>
-                                    <button onClick={() => changeBubbleStyle('solid_gray')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'solid_gray' ? 'border-zinc-400 ring-1 ring-zinc-400/50' : 'border-white/5 hover:border-zinc-400/50'}`} title="Solid Gray"><div className="absolute inset-0 bg-zinc-700" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Solid Gray</span></button>
-                                    <button onClick={() => changeBubbleStyle('whatsapp')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'whatsapp' ? 'border-[#25D366] ring-1 ring-[#25D366]/50' : 'border-white/5 hover:border-[#25D366]/50'}`} title="Forest Style"><div className="absolute inset-0 bg-[#005c4b]" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Forest</span></button>
-                                    <button onClick={() => changeBubbleStyle('telegram')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'telegram' ? 'border-[#2AABEE] ring-1 ring-[#2AABEE]/50' : 'border-white/5 hover:border-[#2AABEE]/50'}`} title="Ocean Style"><div className="absolute inset-0 bg-[#2b5278]" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Ocean</span></button>
-                                    <button onClick={() => changeBubbleStyle('purple')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'purple' ? 'border-purple-500 ring-1 ring-purple-500/50' : 'border-white/5 hover:border-purple-500/50'}`} title="Royal Style"><div className="absolute inset-0 bg-[#6d28d9]" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Royal</span></button>
-                                    <button onClick={() => changeBubbleStyle('blue_gradient')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'blue_gradient' ? 'border-blue-500 ring-1 ring-blue-500/50' : 'border-white/5 hover:border-blue-500/50'}`} title="Blue Gradient"><div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Blue</span></button>
+                                <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar snap-x">
+                                    {[
+                                        { id: 'minimal_solid', label: 'Minimal', bg: 'bg-white', text: 'text-black', border: 'border-white' },
+                                        { id: 'midnight', label: 'Midnight', bg: 'bg-[#172554]', text: 'text-white', border: 'border-blue-900' },
+                                        { id: 'slate', label: 'Slate', bg: 'bg-[#475569]', text: 'text-white', border: 'border-slate-600' },
+                                        { id: 'solid_gray', label: 'Solid Gray', bg: 'bg-zinc-700', text: 'text-white', border: 'border-zinc-400' },
+                                        { id: 'whatsapp', label: 'Forest', bg: 'bg-[#005c4b]', text: 'text-white', border: 'border-[#25D366]' },
+                                        { id: 'telegram', label: 'Ocean', bg: 'bg-[#2b5278]', text: 'text-white', border: 'border-[#2AABEE]' },
+                                        { id: 'purple', label: 'Royal', bg: 'bg-[#6d28d9]', text: 'text-white', border: 'border-purple-500' },
+                                        { id: 'blue_gradient', label: 'Blue', bg: 'bg-gradient-to-br from-blue-500 to-blue-600', text: 'text-white', border: 'border-blue-500' },
+                                    ].map((style) => (
+                                        <button 
+                                            key={style.id} 
+                                            onClick={() => changeBubbleStyle(style.id)} 
+                                            className={`flex-shrink-0 w-28 h-16 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden snap-center ${bubbleStyle === style.id ? `${style.border} ring-1 ring-white/50 scale-95` : 'border-white/5 hover:border-white/20'}`} 
+                                        >
+                                            <div className={`absolute inset-0 ${style.bg}`} />
+                                            <span className={`relative z-10 text-xs font-bold uppercase tracking-wider ${style.text}`}>{style.label}</span>
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
-                            {/* REPLY THEME SELECTOR */}
+                            {/* REPLY THEME SELECTOR - SIDE SCROLL */}
                             <div className="space-y-3 pt-2 border-t border-white/5">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><MessageSquareDashed size={14}/> Reply Colors</label>
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="flex overflow-x-auto gap-2 pb-2 no-scrollbar snap-x">
                                     {['original', 'retro', 'pastel', 'tactical', 'highvis', 'synthwave', 'terminal'].map((t) => (
                                         <button 
                                             key={t} 
                                             onClick={() => changeReplyTheme(t)} 
-                                            className={`py-2 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all ${replyTheme === t ? 'bg-white text-black border-white' : 'bg-black/20 text-zinc-500 border-white/10 hover:border-white/30'}`}
+                                            className={`flex-shrink-0 w-24 py-3 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all snap-center ${replyTheme === t ? 'bg-white text-black border-white scale-95' : 'bg-black/20 text-zinc-500 border-white/10 hover:border-white/30'}`}
                                         >
                                             {t}
                                         </button>

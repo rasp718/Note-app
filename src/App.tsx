@@ -177,24 +177,21 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                         </svg>
                     )}
 
-                    {/* Force fully rounded corners (Squircle) even with tail */}
-                    <div className={isMe ? "[&>div]:!rounded-br-2xl" : "[&>div]:!rounded-bl-2xl"}>
-                        <NoteCard 
-                            note={msgNote} categories={[]} selectedVoice={null} 
-                            variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
-                            currentUserId={user?.uid}
-                            onUpdate={(id, text) => {}} 
-                            opponentName={isGroup ? displayName : undefined} 
-                            opponentAvatar={photoURL}
-                            onImageClick={setZoomedImage}
-                            onDelete={isMe ? onDelete : undefined}
-                            onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => onEdit(msg) : undefined}
-                            currentReaction={reactions[msg.id]}
-                            onReact={(emoji) => onReact(msg.id, emoji)}
-                            onReply={(targetMsg) => onReply({ ...targetMsg, displayName })}
-                            isLastInGroup={isLastInGroup}
-                        />
-                    </div>
+<NoteCard 
+                        note={msgNote} categories={[]} selectedVoice={null} 
+                        variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
+                        currentUserId={user?.uid}
+                        onUpdate={(id, text) => {}} 
+                        opponentName={isGroup ? displayName : undefined} 
+                        opponentAvatar={photoURL}
+                        onImageClick={setZoomedImage}
+                        onDelete={isMe ? onDelete : undefined}
+                        onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => onEdit(msg) : undefined}
+                        currentReaction={reactions[msg.id]}
+                        onReact={(emoji) => onReact(msg.id, emoji)}
+                        onReply={(targetMsg) => onReply({ ...targetMsg, displayName })}
+                        isLastInGroup={false} // Force rounded corners (Squircle)
+                    />
                 </div>
             </div>
         </React.Fragment>

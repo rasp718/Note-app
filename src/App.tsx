@@ -647,7 +647,8 @@ const toggleGroupMember = (uid) => {
         const { scrollTop, scrollHeight, clientHeight } = listRef.current;
         const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
         setShowScrollButton(!isNearBottom);
-        setIsChatScrolled(scrollTop > 20);
+        // Collapsed if NOT near bottom (viewing history)
+        setIsChatScrolled(!isNearBottom);
         
         // Back Button Logic: Hide while scrolling, show when stopped
         setShowBackButton(false);

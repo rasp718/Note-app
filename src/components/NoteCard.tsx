@@ -273,9 +273,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           {replyData && (() => {
               const [textColor, borderColor] = getUserColor(replyData.sender).split(' ');
               return (
-                  <div className={`mx-1 mt-1 mb-1 p-2 rounded-[6px] bg-black/20 flex flex-col gap-0.5 border-l-4 ${borderColor} relative overflow-hidden select-none`}>
-                      <div className={`text-[11px] font-bold ${textColor} leading-none`}>{replyData.sender === 'You' ? 'You' : replyData.sender}</div>
-                      <div className="text-[13px] text-white/70 line-clamp-2 leading-tight">{replyData.text}</div>
+                  <div className={`mx-1 mt-1 mb-2 p-2 rounded-[8px] bg-black/20 flex flex-col gap-0.5 border-l-4 ${borderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}>
+                      <div className={`text-[12px] font-bold ${textColor} leading-snug mb-0.5`}>{replyData.sender}</div>
+                      <div className="text-[13px] text-zinc-300 line-clamp-3 leading-tight">{replyData.text}</div>
                   </div>
               );
           })()}

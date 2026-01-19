@@ -526,7 +526,8 @@ const toggleGroupMember = (uid) => {
             } else if (user) { 
                 let finalMessage = transcript.trim();
                 if (replyingTo) {
-                    const senderName = replyingTo.senderId === user.uid ? 'You' : (otherChatUser?.displayName || 'Unknown');
+                    // Use the name we captured when the reply was initiated
+                    const senderName = replyingTo.displayName || (replyingTo.senderId === user.uid ? 'You' : 'Unknown');
                     
                     // Flatten reply structure: Quote only the content, not the metadata
                     let quoteText = replyingTo.text || '';
@@ -1209,7 +1210,14 @@ const handleAddReaction = (msgId, emoji) => {
                                             onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => handleEditMessage(msg) : undefined}
                                             currentReaction={reactions[msg.id]}
                                             onReact={(emoji) => handleAddReaction(msg.id, emoji)}
-                                            onReply={(msg) => { setReplyingTo(msg); setTimeout(() => textareaRef.current?.focus(), 50); }}
+                                            onReply={(targetMsg) => { 
+                                                // Determine the name of the person being replied to
+                                                const isTargetMe = targetMsg.senderId === user?.uid;
+                                                const displayName = isTargetMe ? 'You' : (otherChatUser?.displayName || 'Unknown');
+                                                
+                                                setReplyingTo({ ...targetMsg, displayName }); 
+                                                setTimeout(() => textareaRef.current?.focus(), 50); 
+                                            }}
                                             isLastInGroup={false}
                                         />
                                     </div>
@@ -1225,7 +1233,7 @@ const handleAddReaction = (msgId, emoji) => {
            <div className="flex-none w-full p-2 bg-black/80 backdrop-blur-2xl z-50 border-t border-white/5">
              {/* REPLY PREVIEW BAR */}
              {replyingTo && (() => {
-                 const senderName = replyingTo.senderId === user?.uid ? 'You' : (otherChatUser?.displayName || 'Unknown');
+                 const senderName = replyingTo.displayName || (replyingTo.senderId === user?.uid ? 'You' : 'Unknown');
                  const [textColor, borderColor] = getUserColor(senderName).split(' ');
                  
                  // Clean text for preview

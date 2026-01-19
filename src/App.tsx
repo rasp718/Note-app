@@ -109,29 +109,14 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
 
     let customColors = getBubbleColors(bubbleStyle, isMe, false);
 
-    // --- CUSTOM THEME OVERRIDES ---
-    // This logic ensures received bubbles match the sender's chosen style
-    if (!isMe) {
-        if (bubbleStyle === 'minimal_glass') {
-            // For sender: default minimal_glass.
-            // For receiver: Darker Frosted Glass with a tint.
-            customColors = { bg: 'bg-zinc-800/70 backdrop-blur-xl border border-white/15', text: 'text-zinc-100' }; // Darker Tinted Glass
-        } else if (bubbleStyle === 'clear') {
-            // For sender: default clear.
-            // For receiver: Transparent with a subtle darker border.
-            customColors = { bg: 'bg-transparent border border-zinc-700', text: 'text-zinc-100' }; // Transparent, but slightly darker border
-        } else if (bubbleStyle === 'soft_glass') {
-             // If sender chose soft_glass, receiver gets a darker version of it.
-            customColors = { bg: 'bg-white/15 backdrop-blur-lg border border-white/20', text: 'text-white' };
-        }
+    // Map New Solid Colors (Manual Overrides for items not in utils.ts)
+    if (isMe) {
+        if (bubbleStyle === 'midnight') customColors = { bg: 'bg-[#172554]', text: 'text-zinc-100' };
+        if (bubbleStyle === 'slate') customColors = { bg: 'bg-[#475569]', text: 'text-white' };
     }
-    // --- END CUSTOM THEME OVERRIDES ---
     
-    // Determine Tail Color logic
-    let tailColor = '#ffffff';
-    // Glass/Clear types shouldn't use SVG tails to avoid "double layer" artifacts
-    const isGlassy = ['minimal_glass', 'clear'].includes(bubbleStyle);
-    
+    // Determine Tail Color logic (Solid Only)
+    let tailColor = '#ffffff'; 
     if (!isMe) {
         tailColor = '#27272a'; 
     } else {
@@ -142,6 +127,8 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
             case 'blue_gradient': tailColor = '#2563eb'; break;
             case 'solid_gray': tailColor = '#3f3f46'; break;
             case 'minimal_solid': tailColor = '#ffffff'; break;
+            case 'midnight': tailColor = '#172554'; break; // New
+            case 'slate': tailColor = '#475569'; break;    // New
             default: tailColor = '#ffffff';
         }
     }
@@ -176,38 +163,35 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                 )}
                 
                 <div className="relative z-10 max-w-[85%]">
-                    {/* TAIL SVG - Sent (Right) - HIDDEN IF GLASSY */}
-                    {isMe && isLastInGroup && !msg.imageUrl && !isGlassy && (
+                    {/* TAIL SVG - Sent (Right) */}
+                    {isMe && isLastInGroup && !msg.imageUrl && (
                         <svg className="absolute bottom-[3px] -right-[12px] rotate-[8deg] z-20 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
                             <path d="M0,0 C2,7.5 9,14 17,14 H0 V0 Z" fill={tailColor} />
                         </svg>
                     )}
 
-                    {/* TAIL SVG - Received (Left) - HIDDEN IF GLASSY */}
-                    {!isMe && isLastInGroup && !msg.imageUrl && !isGlassy && (
+                    {/* TAIL SVG - Received (Left) */}
+                    {!isMe && isLastInGroup && !msg.imageUrl && (
                         <svg className="absolute bottom-[3px] -left-[12px] rotate-[-8deg] z-20 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
                             <path d="M17,0 C15,7.5 8,14 0,14 H17 V0 Z" fill={tailColor} />
                         </svg>
                     )}
 
-                    {/* NoteCard: If glassy & last, we force the corner to be sharp using !rounded-br-none */}
-                    <div className={isGlassy && isLastInGroup && !msg.imageUrl ? (isMe ? '[&>div]:!rounded-br-none' : '[&>div]:!rounded-bl-none') : ''}>
-                        <NoteCard 
-                            note={msgNote} categories={[]} selectedVoice={null} 
-                            variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
-                            currentUserId={user?.uid}
-                            onUpdate={(id, text) => {}} 
-                            opponentName={isGroup ? displayName : undefined} 
-                            opponentAvatar={photoURL}
-                            onImageClick={setZoomedImage}
-                            onDelete={isMe ? onDelete : undefined}
-                            onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => onEdit(msg) : undefined}
-                            currentReaction={reactions[msg.id]}
-                            onReact={(emoji) => onReact(msg.id, emoji)}
-                            onReply={(targetMsg) => onReply({ ...targetMsg, displayName })}
-                            isLastInGroup={isLastInGroup} // FIXED: Passed true prop
-                        />
-                    </div>
+                    <NoteCard 
+                        note={msgNote} categories={[]} selectedVoice={null} 
+                        variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
+                        currentUserId={user?.uid}
+                        onUpdate={(id, text) => {}} 
+                        opponentName={isGroup ? displayName : undefined} 
+                        opponentAvatar={photoURL}
+                        onImageClick={setZoomedImage}
+                        onDelete={isMe ? onDelete : undefined}
+                        onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => onEdit(msg) : undefined}
+                        currentReaction={reactions[msg.id]}
+                        onReact={(emoji) => onReact(msg.id, emoji)}
+                        onReply={(targetMsg) => onReply({ ...targetMsg, displayName })}
+                        isLastInGroup={isLastInGroup} // FIXED: Passed true prop
+                    />
                 </div>
             </div>
         </React.Fragment>
@@ -1134,9 +1118,9 @@ const handleLogout = async () => {
                             <div className="space-y-3">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <button onClick={() => changeBubbleStyle('minimal_solid')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'minimal_solid' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Minimal Solid"><div className="absolute inset-0 bg-white" /><span className="relative z-10 text-xs font-bold text-black uppercase tracking-wider">Minimal</span></button>
-                                    <button onClick={() => changeBubbleStyle('minimal_glass')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'minimal_glass' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Minimal Glass"><div className="absolute inset-0 bg-white/20 backdrop-blur-md" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Glass</span></button>
-                                    <button onClick={() => changeBubbleStyle('clear')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'clear' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Clear White"><div className="absolute inset-0 bg-white/5 border border-white/20" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Clear</span></button>
+                                <button onClick={() => changeBubbleStyle('minimal_solid')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'minimal_solid' ? 'border-white ring-1 ring-white/50' : 'border-white/5 hover:border-white/20'}`} title="Minimal Solid"><div className="absolute inset-0 bg-white" /><span className="relative z-10 text-xs font-bold text-black uppercase tracking-wider">Minimal</span></button>
+                                    <button onClick={() => changeBubbleStyle('midnight')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'midnight' ? 'border-blue-900 ring-1 ring-blue-900/50' : 'border-white/5 hover:border-blue-900/50'}`} title="Midnight"><div className="absolute inset-0 bg-[#172554]" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Midnight</span></button>
+                                    <button onClick={() => changeBubbleStyle('slate')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'slate' ? 'border-slate-600 ring-1 ring-slate-600/50' : 'border-white/5 hover:border-slate-600/50'}`} title="Slate"><div className="absolute inset-0 bg-[#475569]" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Slate</span></button>
                                     <button onClick={() => changeBubbleStyle('solid_gray')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'solid_gray' ? 'border-zinc-400 ring-1 ring-zinc-400/50' : 'border-white/5 hover:border-zinc-400/50'}`} title="Solid Gray"><div className="absolute inset-0 bg-zinc-700" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Solid Gray</span></button>
                                     <button onClick={() => changeBubbleStyle('whatsapp')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'whatsapp' ? 'border-[#25D366] ring-1 ring-[#25D366]/50' : 'border-white/5 hover:border-[#25D366]/50'}`} title="Forest Style"><div className="absolute inset-0 bg-[#005c4b]" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Forest</span></button>
                                     <button onClick={() => changeBubbleStyle('telegram')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'telegram' ? 'border-[#2AABEE] ring-1 ring-[#2AABEE]/50' : 'border-white/5 hover:border-[#2AABEE]/50'}`} title="Ocean Style"><div className="absolute inset-0 bg-[#2b5278]" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Ocean</span></button>

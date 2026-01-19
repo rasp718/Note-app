@@ -312,6 +312,7 @@ function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isChatScrolled, setIsChatScrolled] = useState(false);
   const [showBackButton, setShowBackButton] = useState(true);
   const [replyingTo, setReplyingTo] = useState(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
@@ -646,6 +647,7 @@ const toggleGroupMember = (uid) => {
         const { scrollTop, scrollHeight, clientHeight } = listRef.current;
         const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
         setShowScrollButton(!isNearBottom);
+        setIsChatScrolled(scrollTop > 20);
         
         // Back Button Logic: Hide while scrolling, show when stopped
         setShowBackButton(false);
@@ -1259,27 +1261,27 @@ const handleLogout = async () => {
                         {/* REMOVED TOP BACK BUTTON FROM HERE */}
                         
                         {activeChatId !== 'saved_messages' ? (
-                           <div onClick={() => setCurrentView('profile')} className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-2 -ml-2 rounded-xl transition-colors group">
-                               {/* BIGGER SQUIRCLE HEADER IMAGE (1.5x larger: w-16/h-16) */}
-                               <div className="w-16 h-16 rounded-2xl bg-zinc-800 overflow-hidden border border-white/5 relative group-hover:border-white/20 transition-colors flex items-center justify-center shadow-2xl">
+                           <div onClick={() => setCurrentView('profile')} className={`flex items-center flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-2 -ml-2 rounded-xl transition-all duration-300 group ${isChatScrolled ? 'gap-3' : 'gap-4'}`}>
+                               {/* BIGGER SQUIRCLE HEADER IMAGE (Collapses on scroll) */}
+                               <div className={`${isChatScrolled ? 'w-10 h-10 rounded-xl shadow-sm' : 'w-16 h-16 rounded-2xl shadow-2xl'} bg-zinc-800 overflow-hidden border border-white/5 relative group-hover:border-white/20 transition-all duration-300 flex items-center justify-center`}>
                                {currentChatObject?.type === 'group' ? (
                                       currentChatObject.photoURL ? (
                                           <img src={currentChatObject.photoURL} className="w-full h-full object-cover" />
                                       ) : (
-                                          <Users size={28} className="text-zinc-400" />
+                                          <Users size={isChatScrolled ? 18 : 28} className="text-zinc-400 transition-all duration-300" />
                                       )
                                   ) : otherChatUser?.photoURL ? (
                                       <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
                                   ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-2xl font-black text-zinc-500">{otherChatUser?.displayName?.[0] || '?'}</div>
+                                      <div className={`w-full h-full flex items-center justify-center font-black text-zinc-500 transition-all duration-300 ${isChatScrolled ? 'text-lg' : 'text-2xl'}`}>{otherChatUser?.displayName?.[0] || '?'}</div>
                                   )}
                                </div>
                                <div className="flex-1 min-w-0">
-                                   {/* COOLER TEXT STYLE: Larger, Black font weight, tighter tracking */}
-                                   <h3 className="font-black text-white text-2xl leading-none truncate tracking-tighter drop-shadow-md">
+                                   {/* COOLER TEXT STYLE: Collapses on scroll */}
+                                   <h3 className={`text-white leading-none truncate tracking-tighter drop-shadow-md transition-all duration-300 ${isChatScrolled ? 'font-bold text-lg' : 'font-black text-2xl'}`}>
                                        {currentChatObject?.type === 'group' ? currentChatObject.displayName : (otherChatUser?.displayName || 'Unknown')}
                                    </h3>
-                                   <div className="flex items-center gap-1.5 mt-1.5">
+                                   <div className={`flex items-center gap-1.5 transition-all duration-300 origin-left ${isChatScrolled ? 'mt-0 scale-90 opacity-80' : 'mt-1.5'}`}>
                                        {otherChatUser?.isOnline && currentChatObject?.type !== 'group' && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}
                                        <p className={`text-xs font-mono uppercase tracking-widest truncate ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>
                                            {currentChatObject?.type === 'group' ? `${currentChatObject.participants?.length || 0} members` : (otherChatUser?.isOnline ? 'Online' : 'Last seen recently')}

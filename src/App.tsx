@@ -1319,25 +1319,21 @@ const handleLogout = async () => {
       {/* VIEW: ROOM */}
       {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
-            {/* FLOATING BACK BUTTON - CENTERED ALIGNMENT WRAPPER */}
-            <div className="fixed top-28 left-0 w-full z-50 pointer-events-none">
-                <div className="max-w-2xl mx-auto px-4 relative">
-                    <div className={`absolute left-4 top-0 transition-all duration-300 ${showBackButton ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-4 pointer-events-none'}`}>
-                        <button 
-                        onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
-                        className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10 text-white shadow-xl shadow-black/50 flex items-center justify-center hover:bg-zinc-700 active:scale-95 transition-all backdrop-blur-md"
-                        >
-                            <ChevronLeft size={24} />
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             {/* Header and other room view code remains unchanged */}
             <div className="fixed top-0 left-0 right-0 z-40">
                 <header className="max-w-2xl mx-auto flex items-center justify-center px-4 py-3 relative z-50">
                     <div className="w-full relative flex items-center justify-center">
-                        
+                        {/* BACK BUTTON - ABSOLUTE LEFT */}
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center z-50">
+                            <button 
+                                onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
+                                className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-90"
+                            >
+                                <ChevronLeft size={26} strokeWidth={2.5} />
+                            </button>
+                        </div>
+
                         {activeChatId !== 'saved_messages' ? (
                            <div onClick={() => setCurrentView('profile')} className="flex items-center justify-center cursor-pointer hover:bg-white/5 p-2 rounded-xl transition-all duration-300 group flex-row gap-3 h-auto">
                                {/* HEADER IMAGE: Fixed Compact Size */}

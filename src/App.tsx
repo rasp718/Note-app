@@ -190,7 +190,7 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                         currentReaction={reactions[msg.id]}
                         onReact={(emoji) => onReact(msg.id, emoji)}
                         onReply={(targetMsg) => onReply({ ...targetMsg, displayName })}
-                        isLastInGroup={isLastInGroup} // FIXED: Passed true prop
+                        isLastInGroup={isLastInGroup}
                     />
                 </div>
             </div>

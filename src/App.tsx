@@ -554,16 +554,33 @@ const toggleGroupMember = (uid) => {
   const bgListRef = useRef(null);
 
   // SCROLL HANDLERS
-  const lockScroll = () => { if (listRef.current) listRef.current.style.overflowY = 'hidden'; };
-  const unlockScroll = () => { if (listRef.current) listRef.current.style.overflowY = 'auto'; };
+  // Use native listeners to forcefully prevent parent scrolling
+  useEffect(() => {
+    if (activeTab !== 'settings') return;
 
-  const handleWheelScroll = (e) => {
-    if (e.deltaY !== 0) {
-       e.currentTarget.scrollLeft += e.deltaY;
-       // Stop the event from bubbling up to the main container
-       e.stopPropagation();
-    }
-  };
+    const handleHorizontalWheel = (e) => {
+        if (e.deltaY !== 0) {
+            e.preventDefault(); // This stops the main menu from scrolling
+            e.currentTarget.scrollLeft += e.deltaY;
+        }
+    };
+
+    // Small timeout to ensure DOM is rendered after tab switch
+    const timeoutId = setTimeout(() => {
+        const refs = [bubbleListRef.current, replyListRef.current, bgListRef.current];
+        refs.forEach(el => {
+            if (el) el.addEventListener('wheel', handleHorizontalWheel, { passive: false });
+        });
+    }, 50);
+
+    return () => {
+        clearTimeout(timeoutId);
+        const refs = [bubbleListRef.current, replyListRef.current, bgListRef.current];
+        refs.forEach(el => {
+            if (el) el.removeEventListener('wheel', handleHorizontalWheel);
+        });
+    };
+  }, [activeTab]);
 
   const scrollContainer = (ref, direction) => {
     if (ref.current) {
@@ -1200,7 +1217,7 @@ const handleLogout = async () => {
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
                                 <div className="relative group/scroll">
                                     <button onClick={() => scrollContainer(bubbleListRef, 'left')} className="absolute left-0 top-0 bottom-2 w-10 bg-gradient-to-r from-black/80 to-transparent z-20 flex items-center justify-start pl-1 cursor-pointer hover:bg-black/10 transition-colors"><ChevronLeft size={20} className="text-white drop-shadow-md" /></button>
-                                    <div ref={bubbleListRef} onMouseEnter={lockScroll} onMouseLeave={unlockScroll} onWheel={handleWheelScroll} className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
+                                    <div ref={bubbleListRef} className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
                                         {[
                                             { id: 'minimal_solid', label: 'Minimal', bg: 'bg-white', text: 'text-black', border: 'border-white' },
                                             { id: 'midnight', label: 'Midnight', bg: 'bg-[#172554]', text: 'text-white', border: 'border-blue-900' },
@@ -1230,7 +1247,7 @@ const handleLogout = async () => {
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><MessageSquareDashed size={14}/> Reply Colors</label>
                                 <div className="relative group/scroll">
                                     <button onClick={() => scrollContainer(replyListRef, 'left')} className="absolute left-0 top-0 bottom-2 w-10 bg-gradient-to-r from-black/80 to-transparent z-20 flex items-center justify-start pl-1 cursor-pointer hover:bg-black/10 transition-colors"><ChevronLeft size={20} className="text-white drop-shadow-md" /></button>
-                                    <div ref={replyListRef} onMouseEnter={lockScroll} onMouseLeave={unlockScroll} onWheel={handleWheelScroll} className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
+                                    <div ref={replyListRef} className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
                                         {[
                                             { id: 'original', color: 'bg-blue-500', text: 'text-blue-500' },
                                             { id: 'retro', color: 'bg-orange-500', text: 'text-orange-500' },
@@ -1271,7 +1288,7 @@ const handleLogout = async () => {
                              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
                              <div className="relative group/scroll">
                                 <button onClick={() => scrollContainer(bgListRef, 'left')} className="absolute left-0 top-0 bottom-2 w-10 bg-gradient-to-r from-zinc-900 to-transparent z-20 flex items-center justify-start pl-1 cursor-pointer hover:bg-black/10 transition-colors"><ChevronLeft size={20} className="text-white drop-shadow-lg" /></button>
-                                <div ref={bgListRef} onMouseEnter={lockScroll} onMouseLeave={unlockScroll} onWheel={handleWheelScroll} className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
+                                <div ref={bgListRef} className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
                                     {Array.from({ length: 33 }, (_, i) => i + 1).map((num) => (
                                         <button 
                                             key={num} 

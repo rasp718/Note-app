@@ -248,7 +248,7 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
                     <h3 className="font-bold text-white text-base truncate tracking-tight">{displayName}</h3>
                     <span className="text-[11px] text-zinc-500 font-mono">{timestamp}</span>
                 </div>
-                <p className="text-zinc-200 text-sm truncate">{lastMsg}</p>
+                <p className="text-zinc-400 text-sm truncate">{lastMsg}</p>
             </div>
         </div>
     );
@@ -700,7 +700,14 @@ const toggleGroupMember = (uid) => {
             }
         } else {
             if (editingNote && editingNote.id) { 
-                await updateMessage(editingNote.id, transcript.trim()); 
+                let textToSave = transcript.trim();
+                
+                // If we hid reply code earlier, put it back now
+                if (editingNote.replyMetadata) {
+                    textToSave = `${editingNote.replyMetadata}|||RPLY|||${textToSave}`;
+                }
+
+                await updateMessage(editingNote.id, textToSave); 
                 setEditingNote(null); 
             } else if (user) { 
                 let finalMessage = transcript.trim();
@@ -851,7 +858,23 @@ const handleLogout = async () => {
   const formatDuration = (sec) => { const m = Math.floor(sec / 60); const s = sec % 60; return `${m}:${s.toString().padStart(2, '0')}`; };
 
   const handleDeleteMessage = async (id) => { await deleteMessage(id); };
-  const handleEditMessage = (msg) => { setEditingNote({ ...msg, category: 'default' }); setTranscript(msg.text); setTimeout(() => textareaRef.current?.focus(), 100); };
+  
+  const handleEditMessage = (msg) => { 
+      let cleanText = msg.text;
+      let hiddenMeta = null;
+
+      // Check if this is a reply and separate the hidden code
+      if (cleanText.includes("|||RPLY|||")) {
+          const parts = cleanText.split("|||RPLY|||");
+          hiddenMeta = parts[0]; // Save the JSON
+          cleanText = parts.slice(1).join("|||RPLY|||"); // Only show user text
+      }
+
+      // Store the hidden metadata in editingNote so we can save it later
+      setEditingNote({ ...msg, category: 'default', replyMetadata: hiddenMeta }); 
+      setTranscript(cleanText); 
+      setTimeout(() => textareaRef.current?.focus(), 100); 
+  };
 
   const handleSearchContacts = async (e) => {
       e.preventDefault(); if (!contactSearchQuery.trim()) return; setIsSearchingContacts(true);

@@ -1238,12 +1238,6 @@ const handleAddReaction = (msgId, emoji) => {
                      </div>
                  );
              })()}
-                         <button onClick={() => setReplyingTo(null)} className="absolute top-2 right-2 p-1 bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors">
-                             <X size={14} />
-                         </button>
-                     </div>
-                 </div>
-             )}
 
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  

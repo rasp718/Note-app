@@ -1,4 +1,3 @@
-// src/utils.ts
 import { CategoryConfig } from './types';
 
 export const TRANSLATIONS = { 

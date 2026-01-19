@@ -527,9 +527,17 @@ const toggleGroupMember = (uid) => {
                 let finalMessage = transcript.trim();
                 if (replyingTo) {
                     const senderName = replyingTo.senderId === user.uid ? 'You' : (otherChatUser?.displayName || 'Unknown');
+                    
+                    // Flatten reply structure: Quote only the content, not the metadata
+                    let quoteText = replyingTo.text || '';
+                    if (quoteText.includes("|||RPLY|||")) {
+                        const parts = quoteText.split("|||RPLY|||");
+                        quoteText = parts.slice(1).join("|||RPLY|||");
+                    }
+
                     const replyMetadata = JSON.stringify({
                         id: replyingTo.id,
-                        text: replyingTo.text,
+                        text: quoteText,
                         sender: senderName
                     });
                     finalMessage = `${replyMetadata}|||RPLY|||${finalMessage}`;
@@ -1220,6 +1228,13 @@ const handleAddReaction = (msgId, emoji) => {
                  const senderName = replyingTo.senderId === user?.uid ? 'You' : (otherChatUser?.displayName || 'Unknown');
                  const [textColor, borderColor] = getUserColor(senderName).split(' ');
                  
+                 // Clean text for preview
+                 let previewText = replyingTo.text || '';
+                 if (previewText.includes("|||RPLY|||")) {
+                     const parts = previewText.split("|||RPLY|||");
+                     previewText = parts.slice(1).join("|||RPLY|||");
+                 }
+                 
                  return (
                      <div className="max-w-2xl mx-auto mb-2 animate-in slide-in-from-bottom-2 duration-200">
                          <div className={`mx-1 p-2 rounded-xl bg-[#1c1c1d] border-l-4 ${borderColor} relative flex items-center justify-between shadow-lg shadow-black/50`}>
@@ -1228,7 +1243,7 @@ const handleAddReaction = (msgId, emoji) => {
                                      {senderName}
                                  </div>
                                  <div className="text-sm text-zinc-300 truncate">
-                                     {replyingTo.text || (replyingTo.imageUrl ? 'Photo' : 'Voice Message')}
+                                     {previewText || (replyingTo.imageUrl ? 'Photo' : 'Voice Message')}
                                  </div>
                              </div>
                              <button onClick={() => setReplyingTo(null)} className="absolute top-2 right-2 p-1 bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors">

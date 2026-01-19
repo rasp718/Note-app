@@ -207,7 +207,17 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
     const isGroup = chat.type === 'group';
     const displayName = isGroup ? chat.displayName : (otherUser?.displayName || 'Unknown');
     const photoURL = isGroup ? chat.photoURL : otherUser?.photoURL;
-    const lastMsg = chat.lastMessageText || '';
+    
+    // FIX: Parse raw text to hide JSON reply metadata
+    let lastMsg = chat.lastMessageText || '';
+    if (lastMsg.includes("|||RPLY|||")) {
+        // Take the part AFTER the separator
+        lastMsg = lastMsg.split("|||RPLY|||")[1] || 'Reply'; 
+    }
+    if (lastMsg.includes("STREET_DICE_GAME")) {
+        lastMsg = "🎲 Dice Game";
+    }
+
     const timestamp = chat.lastMessageTimestamp ? getDateLabel(chat.lastMessageTimestamp) : '';
 
     return (

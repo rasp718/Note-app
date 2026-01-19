@@ -1253,6 +1253,7 @@ const handleLogout = async () => {
 
             {/* Header and other room view code remains unchanged */}
             <div className="fixed top-0 left-0 right-0 z-40">
+                <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-black/90 to-transparent pointer-events-none" />
                 <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative z-50">
                     <div className="flex items-center gap-1 w-full">
                         {/* REMOVED TOP BACK BUTTON FROM HERE */}

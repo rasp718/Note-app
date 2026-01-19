@@ -143,7 +143,7 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
         <React.Fragment key={msg.id}>
             {/* Header removed from here to fix duplicates */}
             <div 
-                style={{ zIndex: 1000 }}
+                style={{ zIndex: 1 }}
                 className={`flex w-full mb-1 items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
             >
                 {!isMe && (

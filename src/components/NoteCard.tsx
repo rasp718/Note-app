@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck } from 'lucide-react';
+import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck, Copy } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig } from '../types';
 import { getUserColor } from '../utils';
 import { AudioPlayer } from './AudioPlayer';
@@ -57,8 +57,8 @@ const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
         className="w-full flex items-center gap-3 px-3 py-3 text-sm transition-colors duration-150 cursor-pointer select-none active:bg-white/10" 
         style={{ backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent' }}
     >
-      <Icon size={18} style={{ color: isHovered ? accentColor : '#a1a1aa' }} />
-      <span className="font-medium" style={{ color: isHovered ? accentColor : '#f4f4f5' }}>{label}</span>
+      <Icon size={18} style={{ color: isHovered ? '#ffffff' : '#a1a1aa' }} />
+      <span className="font-medium" style={{ color: isHovered ? '#ffffff' : '#f4f4f5' }}>{label}</span>
     </button>
   );
 };
@@ -138,6 +138,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; window.speechSynthesis.speak(utterance); } };
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
+  const handleCopyImage = async () => { 
+      if (!note.imageUrl) return;
+      try {
+          const response = await fetch(note.imageUrl);
+          const blob = await response.blob();
+          await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+          setContextMenu(null);
+      } catch (e) { console.error(e); setContextMenu(null); }
+  };
   
   const openMenu = (clientX: number, clientY: number) => { 
       triggerHaptic(); 
@@ -278,7 +287,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                <div className={`block w-full px-2 pb-2 pt-1`}>
                    {safeText && (<span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>)}
                    <div className="float-right ml-3 mt-1.5 flex items-center gap-1 align-bottom h-4 select-none">
-                       {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#da7756'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}
+                   {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#ffffff'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}
                        <span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>
                        {variant === 'sent' && <div className="ml-0.5"><StatusIcon /></div>}
                    </div>
@@ -304,6 +313,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   </div>
               )}
               <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { if(onReply) onReply(note); else handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
+              {hasImage && <ContextMenuItem icon={Copy} label="Copy Image" onClick={handleCopyImage} accentColor={'#da7756'} />}
               {variant === 'default' && (<ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />)} 
               {onEdit && (<ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} />)} 
               {(variant === 'default' || variant === 'sent') && (<> <div className="h-px bg-white/10 mx-3 my-1" /> <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> </>)} 

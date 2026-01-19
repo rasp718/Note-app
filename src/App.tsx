@@ -177,21 +177,24 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                         </svg>
                     )}
 
-<NoteCard 
-                        note={msgNote} categories={[]} selectedVoice={null} 
-                        variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
-                        currentUserId={user?.uid}
-                        onUpdate={(id, text) => {}} 
-                        opponentName={isGroup ? displayName : undefined} 
-                        opponentAvatar={photoURL}
-                        onImageClick={setZoomedImage}
-                        onDelete={isMe ? onDelete : undefined}
-                        onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => onEdit(msg) : undefined}
-                        currentReaction={reactions[msg.id]}
-                        onReact={(emoji) => onReact(msg.id, emoji)}
-                        onReply={(targetMsg) => onReply({ ...targetMsg, displayName })}
-                        isLastInGroup={false} // Force rounded corners (Squircle)
-                    />
+{/* Force fully rounded corners (Squircle) using CSS override to guarantee the look */}
+<div className={isMe ? "[&>div]:!rounded-br-2xl" : "[&>div]:!rounded-bl-2xl"}>
+                        <NoteCard 
+                            note={msgNote} categories={[]} selectedVoice={null} 
+                            variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
+                            currentUserId={user?.uid}
+                            onUpdate={(id, text) => {}} 
+                            opponentName={isGroup ? displayName : undefined} 
+                            opponentAvatar={photoURL}
+                            onImageClick={setZoomedImage}
+                            onDelete={isMe ? onDelete : undefined}
+                            onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => onEdit(msg) : undefined}
+                            currentReaction={reactions[msg.id]}
+                            onReact={(emoji) => onReact(msg.id, emoji)}
+                            onReply={(targetMsg) => onReply({ ...targetMsg, displayName })}
+                            isLastInGroup={false}
+                        />
+                    </div>
                 </div>
             </div>
         </React.Fragment>
@@ -1315,24 +1318,7 @@ const handleLogout = async () => {
              {/* REPLY PREVIEW BAR */}
              {replyingTo && (() => {
                  const senderName = replyingTo.displayName || (replyingTo.senderId === user?.uid ? 'You' : 'Unknown');
-                 
-                 // CUSTOM PASTEL PALETTE (Fixed Sequence)
-                 const getPastelColor = (name) => {
-                    const colors = [
-                        { text: 'text-[#DA7756]', border: 'border-[#DA7756]' }, // 1. Claude Orange
-                        { text: 'text-[#93C5FD]', border: 'border-[#93C5FD]' }, // 2. Pastel Blue
-                        { text: 'text-[#FDE047]', border: 'border-[#FDE047]' }, // 3. Pastel Yellow
-                        { text: 'text-[#86EFAC]', border: 'border-[#86EFAC]' }, // 4. Pastel Green
-                        { text: 'text-[#D8B4FE]', border: 'border-[#D8B4FE]' }, // 5. Pastel Purple
-                        { text: 'text-[#F472B6]', border: 'border-[#F472B6]' }, // 6. Pastel Pink
-                        { text: 'text-[#CBD5E1]', border: 'border-[#CBD5E1]' }, // 7. Slate
-                    ];
-                    let hash = 0;
-                    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-                    return colors[Math.abs(hash) % colors.length];
-                 };
-
-                 const { text: textColor, border: borderColor } = getPastelColor(senderName);
+                 const [textColor, borderColor] = getUserColor(senderName).split(' ');
                  
                  // Clean text for preview
                  let previewText = replyingTo.text || '';

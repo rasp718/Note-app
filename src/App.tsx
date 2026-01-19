@@ -372,28 +372,6 @@ const handleToggleMemberMute = async (memberId) => {
         }
     } catch (e) { console.error("Error toggling mute:", e); }
 };
-
-const handleAddMemberToGroup = async (contactId) => {
-    if (!activeChatId) return;
-    try {
-        const chatRef = doc(db, "chats", activeChatId);
-        await updateDoc(chatRef, { participants: arrayUnion(contactId) });
-        setIsAddMemberModalOpen(false);
-    } catch (e) { console.error("Error adding member:", e); }
-};
-
-const handleToggleMemberMute = async (memberId) => {
-    if (!activeChatId) return;
-    try {
-        const chatRef = doc(db, "chats", activeChatId);
-        const isMuted = currentChatObject.mutedParticipants?.includes(memberId);
-        if (isMuted) {
-            await updateDoc(chatRef, { mutedParticipants: arrayRemove(memberId) });
-        } else {
-            await updateDoc(chatRef, { mutedParticipants: arrayUnion(memberId) });
-        }
-    } catch (e) { console.error("Error toggling mute:", e); }
-};
   // NEW: Store who we found in the URL
   const [incomingInvite, setIncomingInvite] = useState(null);
   

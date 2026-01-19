@@ -1201,19 +1201,29 @@ const handleLogout = async () => {
                                 </div>
                             </div>
 
-                            {/* REPLY THEME SELECTOR - SIDE SCROLL */}
+                            {/* REPLY THEME SELECTOR - VISUAL PREVIEW SCROLL */}
                             <div className="space-y-3 pt-2 border-t border-white/5">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><MessageSquareDashed size={14}/> Reply Colors</label>
                                 <div className="relative group/scroll">
                                     <div className="absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-black/80 to-transparent z-10 pointer-events-none flex items-center justify-start"><ChevronLeft size={16} className="text-white drop-shadow-md" /></div>
-                                    <div className="flex overflow-x-auto gap-2 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
-                                        {['original', 'retro', 'pastel', 'tactical', 'highvis', 'synthwave', 'terminal'].map((t) => (
+                                    <div className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
+                                        {[
+                                            { id: 'original', color: 'bg-blue-500', text: 'text-blue-500' },
+                                            { id: 'retro', color: 'bg-orange-500', text: 'text-orange-500' },
+                                            { id: 'pastel', color: 'bg-pink-400', text: 'text-pink-400' },
+                                            { id: 'tactical', color: 'bg-emerald-700', text: 'text-emerald-700' },
+                                            { id: 'highvis', color: 'bg-yellow-400', text: 'text-yellow-400' },
+                                            { id: 'synthwave', color: 'bg-fuchsia-500', text: 'text-fuchsia-500' },
+                                            { id: 'terminal', color: 'bg-green-500', text: 'text-green-500' }
+                                        ].map((theme) => (
                                             <button 
-                                                key={t} 
-                                                onClick={() => changeReplyTheme(t)} 
-                                                className={`flex-shrink-0 w-24 py-3 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all snap-center ${replyTheme === t ? 'bg-white text-black border-white scale-95' : 'bg-black/20 text-zinc-500 border-white/10 hover:border-white/30'}`}
+                                                key={theme.id} 
+                                                onClick={() => changeReplyTheme(theme.id)} 
+                                                className={`flex-shrink-0 w-32 h-14 rounded-lg border transition-all snap-center flex flex-col justify-center px-3 relative overflow-hidden bg-zinc-900 shadow-md ${replyTheme === theme.id ? 'border-white ring-1 ring-white/50 scale-95' : 'border-zinc-700 hover:border-zinc-500'}`}
                                             >
-                                                {t}
+                                                <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${theme.color}`} />
+                                                <span className={`text-xs font-bold uppercase tracking-wider ml-2 ${theme.text}`}>{theme.id}</span>
+                                                <span className="text-[10px] text-zinc-500 ml-2 truncate">Preview Message</span>
                                             </button>
                                         ))}
                                     </div>

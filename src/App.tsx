@@ -1260,7 +1260,7 @@ const handleLogout = async () => {
                 </div>
            </div>
 
-<div ref={listRef} onScroll={handleScroll} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
+           <div ref={listRef} onScroll={handleScroll} onClick={() => editingNote && handleCancelEdit()} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
    <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-1 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
    {activeChatId === 'saved_messages' ? (
@@ -1406,6 +1406,11 @@ const handleLogout = async () => {
                                 className={`flex-1 bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-[16px] resize-none max-h-32 py-1 leading-relaxed ${isHackerMode ? 'font-mono' : ''}`} 
                                 style={isHackerMode ? { color: HACKER_GREEN } : undefined} 
                             />
+                            {editingNote && (
+                                <button onClick={handleCancelEdit} className="text-zinc-500 hover:text-white transition-colors pb-1.5 active:scale-95 flex-shrink-0">
+                                     <X size={22} strokeWidth={1.5} />
+                                </button>
+                            )}
                             {activeChatId !== 'saved_messages' && !editingNote && (
                                 <button onClick={handleRollDice} className="text-zinc-500 hover:text-white transition-colors pb-1.5 active:scale-95 flex-shrink-0" title="Roll Dice">
                                      <Dices size={22} strokeWidth={1.5} />
@@ -1414,16 +1419,7 @@ const handleLogout = async () => {
                         </div>
                         
                         {/* RIGHT SIDE: BIGGER BUTTON */}
-                        <div className="pb-0 animate-in fade-in zoom-in duration-200 flex gap-2">
-                             {editingNote && (
-                                <button 
-                                    onClick={handleCancelEdit} 
-                                    className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 active:scale-95"
-                                >
-                                    <X size={24} />
-                                </button>
-                             )}
-
+                        <div className="pb-0 animate-in fade-in zoom-in duration-200">
                              {(transcript.trim() || imageUrl || editingNote) ? (
                                 <button onClick={handleMainAction} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg active:scale-95 bg-[#DA7756] text-white hover:bg-[#c46243]">
                                     {editingNote ? <Check size={20} strokeWidth={3} /> : <ArrowUp size={24} strokeWidth={3} />}

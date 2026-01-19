@@ -21,6 +21,7 @@ import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, sear
 import Auth from './components/Auth';
 // FIREBASE DIRECT INIT FOR INVITES
 import { initializeApp } from "firebase/app";
+import { getAuth, signOut } from "firebase/auth";
 import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, doc, arrayRemove } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -33,6 +34,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 // Helper component to resolve avatars in Group Chats
 const MessageAvatar = ({ userId }) => {
@@ -701,11 +703,20 @@ const handleAddReaction = (msgId, emoji) => {
     setActiveReactionId(null);
 };
 
-  const handleProfileSave = () => {
-      setIsEditingProfile(false); setShowAvatarSelector(false);
-      localStorage.setItem('vibenotes_profile_name', profileName); localStorage.setItem('vibenotes_profile_handle', profileHandle); localStorage.setItem('vibenotes_profile_bio', profileBio);
-      if (profilePic) localStorage.setItem('vibenotes_profile_pic', profilePic); if (user) syncUserProfile(user); 
-  };
+const handleProfileSave = () => {
+    setIsEditingProfile(false); setShowAvatarSelector(false);
+    localStorage.setItem('vibenotes_profile_name', profileName); localStorage.setItem('vibenotes_profile_handle', profileHandle); localStorage.setItem('vibenotes_profile_bio', profileBio);
+    if (profilePic) localStorage.setItem('vibenotes_profile_pic', profilePic); if (user) syncUserProfile(user); 
+};
+
+const handleLogout = async () => {
+    try {
+        await signOut(auth);
+        window.location.reload(); // Reload to clear any local state/cache
+    } catch (error) {
+        console.error("Error signing out: ", error);
+    }
+};
 
   const handleAvatarUpload = async (file) => { try { const url = await compressImage(file); setProfilePic(url); setShowAvatarSelector(false); } catch(e) { console.error(e); } };
   const handleSelectPreset = (num) => { setProfilePic(`/robot${num}.jpeg?v=1`); setShowAvatarSelector(false); };
@@ -1081,6 +1092,11 @@ const handleAddReaction = (msgId, emoji) => {
                                   {Array.from({ length: 33 }, (_, i) => i + 1).map((num) => (<button key={num} onClick={() => setBgIndex(num)} className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative group ${bgIndex === num ? 'border-white scale-95 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-white/20'}`}><img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} /></button>))}
                               </div>
                         </div>
+
+                        {/* LOGOUT BUTTON */}
+                        <button onClick={handleLogout} className="w-full py-4 bg-white/5 border border-white/5 rounded-3xl text-red-500 font-bold text-center hover:bg-red-500/10 transition-colors shadow-lg">
+                            Log Out
+                        </button>
                      </div>
                    )}
                </div>

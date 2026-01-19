@@ -243,11 +243,11 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
                 )}
             </div>
             <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                <div className="flex justify-between items-baseline">
+            <div className="flex justify-between items-baseline">
                     <h3 className="font-bold text-white text-base truncate tracking-tight">{displayName}</h3>
                     <span className="text-[11px] text-zinc-500 font-mono">{timestamp}</span>
                 </div>
-                <p className="text-zinc-400 text-sm truncate opacity-70">{lastMsg}</p>
+                <p className="text-zinc-200 text-sm truncate">{lastMsg}</p>
             </div>
         </div>
     );
@@ -993,9 +993,9 @@ const handleLogout = async () => {
                                     <span className="font-bold text-white text-base tracking-tight">Notes</span>
                                     <span className="text-[10px] text-zinc-500 font-mono">{notes.length > 0 ? getDateLabel(notes[0].date) : ''}</span>
                                 </div>
-                                <div className="text-zinc-400 text-sm truncate pr-4 flex items-center gap-1">
+                                <div className="text-zinc-200 text-sm truncate pr-4 flex items-center gap-1">
                                    <span className="text-[10px] font-bold uppercase tracking-wider px-1 rounded bg-white/10" style={{ color: accentColor }}>You</span>
-                                   <span className="opacity-70 truncate">{notes.length > 0 ? notes[0].text : 'No notes yet'}</span>
+                                   <span className="truncate">{notes.length > 0 ? notes[0].text : 'No notes yet'}</span>
                                 </div>
                             </div>
                         </div>

@@ -29,7 +29,7 @@ interface NoteCardProps {
   isLastInGroup?: boolean;
 }
 
-// ... (Helper functions like triggerHaptic, ContextMenuItem, InlineActionButton remain the same as your code) ...
+// ... (Helper functions like triggerHaptic, ContextMenuItem, InlineActionButton) ...
 const triggerHaptic = (pattern: number | number[] = 15) => { 
   if (typeof navigator !== 'undefined' && navigator.vibrate) { 
       try { navigator.vibrate(pattern); } catch (e) {} 
@@ -121,12 +121,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const categoryConfig = categories.find(c => c.id === note.category);
   const categoryEmoji = categoryConfig ? categoryConfig.emoji : null;
 
-  // --- NEW: Resolve Category Emoji ---
-  // Matches the note.category to the ID in the categories array to find the emoji
-  const categoryConfig = categories.find(c => c.id === note.category);
-  const categoryEmoji = categoryConfig ? categoryConfig.emoji : null;
-
-  // --- Handlers (Existing) ---
+  // --- Handlers ---
   const handleGameUpdate = (newJson: string) => {
       if (onUpdate && note.id) {
           const newText = `🎲 STREET_DICE_GAME|||${newJson}`;
@@ -145,8 +140,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   
   const openMenu = (clientX: number, clientY: number) => { 
       triggerHaptic(); 
-      const menuW = 200; menuH = 300; 
-      let x = clientX; let y = clientY; 
+      const menuW = 200; 
+      const menuH = 300; 
+      let x = clientX; 
+      let y = clientY; 
       if (typeof window !== 'undefined') { 
           if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 20; 
           if (x < 10) x = 10;
@@ -165,7 +162,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   const formatTime = (timestamp: any) => { try { const t = Number(timestamp); if (isNaN(t) || t === 0) return ''; return new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } };
 
-  // --- Touch Logic (Existing) ---
+  // --- Touch Logic ---
   const handleTouchStart = (e: any) => { 
       if (e.targetTouches.length !== 1) return; 
       touchStartX.current = e.targetTouches[0].clientX; touchStartY.current = e.targetTouches[0].clientY; touchStartTime.current = Date.now(); setIsSwiping(false); isLongPress.current = false; 
@@ -234,14 +231,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             onTouchMove={handleTouchMove} 
             onTouchEnd={handleTouchEnd}
         >
-          {/* CATEGORY BADGE (Feed Only) */}
-          {variant === 'default' && categoryEmoji && (
-             <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#1c1c1d] border border-white/10 flex items-center justify-center text-[12px] shadow-md z-20 select-none animate-in zoom-in duration-200">
-                {categoryEmoji}
-             </div>
-          )}
-          {/* --- NEW: CATEGORY BADGE (TOP RIGHT) --- */}
-          {/* Only shows if variant is default (Feed) and a category emoji exists */}
+          {/* CATEGORY BADGE (Feed Only) - Top Right */}
           {variant === 'default' && categoryEmoji && (
              <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#1c1c1d] border border-white/10 flex items-center justify-center text-[12px] shadow-md z-20 select-none animate-in zoom-in duration-200">
                 {categoryEmoji}

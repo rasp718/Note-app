@@ -243,7 +243,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName).split(' ')[0]}`}>~ {opponentName}</div>
           )}
 
-{replyData && (() => {
+          {replyData && (() => {
+              // FORCE REPLY THEME HERE
               const [textColor, borderColor] = getUserColor(replyData.sender, replyTheme).split(' ');
               return (
                   <div className={`mx-1 mt-1 mb-2 p-2 rounded-[8px] bg-black/20 flex flex-col gap-0.5 border-l-4 ${borderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}>

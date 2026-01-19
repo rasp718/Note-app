@@ -19,22 +19,65 @@ export const HACKER_CONFIG: CategoryConfig = {
 
 // --- HELPER FOR DYNAMIC USER COLORS ---
 export const getUserColor = (name: string) => {
-    const colors = [
-      'text-[#da7756] border-[#da7756]',   // Claude Orange
-      'text-lime-600 border-lime-700',     // Olive Green
-      'text-indigo-400 border-indigo-600', // Muted Indigo
-      'text-yellow-600 border-yellow-700', // Mustard
-      'text-red-600 border-red-700',       // Brick Red
-      'text-zinc-400 border-zinc-500',     // Steel
-      'text-teal-600 border-teal-700',     // Deep Teal
-      'text-green-600 border-green-700',   // Forest
-    ];
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
-  };
+  const colors = [
+    'text-red-400 border-red-500',
+    'text-orange-400 border-orange-500',
+    'text-amber-4// --- ALL REPLY THEMES ---
+// We type this as Record<string, string[]> to satisfy TypeScript indexing
+export const REPLY_THEMES: Record<string, string[]> = {
+  original: [ // "Standard/Default"
+    'text-red-400 border-red-500', 'text-orange-400 border-orange-500', 'text-amber-400 border-amber-500',
+    'text-green-400 border-green-500', 'text-teal-400 border-teal-500', 'text-cyan-400 border-cyan-500',
+    'text-blue-400 border-blue-500', 'text-indigo-400 border-indigo-500', 'text-pink-400 border-pink-500'
+  ],
+  retro: [ // "Retro Arcade"
+    'text-[#da7756] border-[#da7756]', 'text-lime-400 border-lime-500', 'text-cyan-300 border-cyan-400',
+    'text-yellow-300 border-yellow-400', 'text-red-500 border-red-600', 'text-purple-500 border-purple-600',
+    'text-teal-300 border-teal-400', 'text-blue-400 border-blue-500'
+  ],
+  pastel: [ // "Soft/Girly"
+    'text-[#da7756] border-[#da7756]', 'text-rose-300 border-rose-400', 'text-amber-200 border-amber-400',
+    'text-emerald-300 border-emerald-400', 'text-sky-300 border-sky-400', 'text-violet-300 border-violet-400'
+  ],
+  tactical: [ // "Muted/Military"
+    'text-[#da7756] border-[#da7756]', 'text-lime-600 border-lime-700', 'text-indigo-400 border-indigo-600',
+    'text-yellow-600 border-yellow-700', 'text-red-600 border-red-700', 'text-zinc-400 border-zinc-500'
+  ],
+  highvis: [ // "Safety/Industrial"
+    'text-[#da7756] border-[#da7756]', 'text-orange-500 border-orange-600', 'text-yellow-400 border-yellow-500',
+    'text-lime-400 border-lime-500', 'text-white border-zinc-400', 'text-blue-500 border-blue-600'
+  ],
+  synthwave: [ // "Miami Night"
+    'text-[#da7756] border-[#da7756]', 'text-fuchsia-400 border-fuchsia-500', 'text-cyan-400 border-cyan-500',
+    'text-violet-400 border-violet-500', 'text-pink-500 border-pink-600', 'text-indigo-400 border-indigo-500'
+  ],
+  terminal: [ // "Hacker/Matrix"
+    'text-green-500 border-green-600', 'text-emerald-400 border-emerald-500', 'text-teal-500 border-teal-600',
+    'text-amber-500 border-amber-600', 'text-lime-500 border-lime-600', 'text-[#4ade80] border-[#4ade80]'
+  ]
+};
+
+export const getUserColor = (name: string, themeKey: string = 'retro') => {
+  const palette = REPLY_THEMES[themeKey] || REPLY_THEMES['retro'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return palette[Math.abs(hash) % palette.length];
+};00 border-amber-500',
+    'text-green-400 border-green-500',
+    'text-teal-400 border-teal-500',
+    'text-cyan-400 border-cyan-500',
+    'text-blue-400 border-blue-500',
+    'text-indigo-400 border-indigo-500',
+    'text-pink-400 border-pink-500',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
 
 // --- HELPER FOR BUBBLE STYLES ---
 export const getBubbleColors = (style: string, isMe: boolean, isHacker: boolean) => {

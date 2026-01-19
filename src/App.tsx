@@ -288,6 +288,17 @@ function App() {
   const [bubbleStyle, setBubbleStyle] = useState('minimal_solid');
   const [redModeIntensity, setRedModeIntensity] = useState(0);
   const [isAutoRedMode, setIsAutoRedMode] = useState(false);
+  const [replyTheme, setReplyTheme] = useState<string>('retro');
+
+  useEffect(() => { 
+      const savedTheme = localStorage.getItem('vibenotes_reply_theme');
+      if (savedTheme) setReplyTheme(savedTheme);
+  }, []);
+
+  const changeReplyTheme = (theme: string) => {
+      setReplyTheme(theme);
+      localStorage.setItem('vibenotes_reply_theme', theme);
+  };
 
   // Inputs & Media
   const [contactSearchQuery, setContactSearchQuery] = useState('');
@@ -1143,7 +1154,21 @@ const handleLogout = async () => {
                                 </div>
                             </div>
 
-                            {/* REPLY THEME SELECTOR - REMOVED */}
+                            {/* REPLY THEME SELECTOR */}
+                            <div className="space-y-3 pt-2 border-t border-white/5">
+                                <label className="text-white text-sm font-medium flex items-center gap-2"><MessageSquareDashed size={14}/> Reply Colors</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {['original', 'retro', 'pastel', 'tactical', 'highvis', 'synthwave', 'terminal'].map((t) => (
+                                        <button 
+                                            key={t} 
+                                            onClick={() => changeReplyTheme(t)} 
+                                            className={`py-2 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all ${replyTheme === t ? 'bg-white text-black border-white' : 'bg-black/20 text-zinc-500 border-white/10 hover:border-white/30'}`}
+                                        >
+                                            {t}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                             
                             {/* RED MODE */}
                             <div className="space-y-4 pt-2 border-t border-white/5">
@@ -1337,7 +1362,7 @@ const handleLogout = async () => {
              {/* REPLY PREVIEW BAR */}
              {replyingTo && (() => {
                  const senderName = replyingTo.displayName || (replyingTo.senderId === user?.uid ? 'You' : 'Unknown');
-                 const [textColor, borderColor] = getUserColor(senderName).split(' ');
+                 const [textColor, borderColor] = getUserColor(senderName, replyTheme).split(' ');
                  
                  // Clean text for preview
                  let previewText = replyingTo.text || '';

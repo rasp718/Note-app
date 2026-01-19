@@ -1261,9 +1261,9 @@ const handleLogout = async () => {
                         {/* REMOVED TOP BACK BUTTON FROM HERE */}
                         
                         {activeChatId !== 'saved_messages' ? (
-                           <div onClick={() => setCurrentView('profile')} className={`flex items-center flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-2 -ml-2 rounded-xl transition-all duration-300 group ${isChatScrolled ? 'gap-3' : 'gap-4'}`}>
-                               {/* BIGGER SQUIRCLE HEADER IMAGE (Collapses on scroll) */}
-                               <div className={`${isChatScrolled ? 'w-10 h-10 rounded-xl shadow-sm' : 'w-16 h-16 rounded-2xl shadow-2xl'} bg-zinc-800 overflow-hidden border border-white/5 relative group-hover:border-white/20 transition-all duration-300 flex items-center justify-center`}>
+                           <div onClick={() => setCurrentView('profile')} className={`flex items-center flex-1 min-w-0 cursor-pointer hover:bg-white/5 p-2 -ml-2 rounded-xl transition-all duration-300 group ${isChatScrolled ? 'gap-3 h-14' : 'gap-4 h-auto'}`}>
+                               {/* HEADER IMAGE: Shrinks from 64px (w-16) to 40px (w-10) */}
+                               <div className={`${isChatScrolled ? 'w-10 h-10 rounded-xl shadow-sm' : 'w-16 h-16 rounded-2xl shadow-2xl'} flex-shrink-0 bg-zinc-800 overflow-hidden border border-white/5 relative group-hover:border-white/20 transition-all duration-300 flex items-center justify-center`}>
                                {currentChatObject?.type === 'group' ? (
                                       currentChatObject.photoURL ? (
                                           <img src={currentChatObject.photoURL} className="w-full h-full object-cover" />
@@ -1276,20 +1276,15 @@ const handleLogout = async () => {
                                       <div className={`w-full h-full flex items-center justify-center font-black text-zinc-500 transition-all duration-300 ${isChatScrolled ? 'text-lg' : 'text-2xl'}`}>{otherChatUser?.displayName?.[0] || '?'}</div>
                                   )}
                                </div>
-                               <div className="flex-1 min-w-0">
-                                   {/* COOLER TEXT STYLE: Collapses on scroll */}
-                                   <h3 className={`text-white leading-none truncate tracking-tighter drop-shadow-md transition-all duration-300 ${isChatScrolled ? 'font-bold text-lg' : 'font-black text-2xl'}`}>
-                                       {currentChatObject?.type === 'group' ? currentChatObject.displayName : (otherChatUser?.displayName || 'Unknown')}
-                                   </h3>
-                                   <div className={`flex items-center gap-1.5 transition-all duration-300 origin-left ${isChatScrolled ? 'mt-0 scale-90 opacity-80' : 'mt-1.5'}`}>
-                                       {otherChatUser?.isOnline && currentChatObject?.type !== 'group' && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}
-                                       <p className={`text-xs font-mono uppercase tracking-widest truncate ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>
-                                           {currentChatObject?.type === 'group' ? `${currentChatObject.participants?.length || 0} members` : (otherChatUser?.isOnline ? 'Online' : 'Last seen recently')}
-                                       </p>
-                                   </div>
-                               </div>
-                           </div>
-                        ) : (
+                               
+                               <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                   {/* TEXT: Scales down and aligns */}
+                                   <div className={`transition-all duration-300 ${isChatScrolled ? 'flex items-baseline gap-2' : ''}`}>
+                                        <h3 className={`text-white leading-none truncate tracking-tighter drop-shadow-md transition-all duration-300 ${isChatScrolled ? 'font-bold text-lg' : 'font-black text-2xl'}`}>
+                                            {currentChatObject?.type === 'group' ? currentChatObject.displayName : (otherChatUser?.displayName || 'Unknown')}
+                                        </h3>
+                                        {/* Subtext moves next to title when scrolled, or stays below when big */}
+                                        <div className={`flex items-ce
                            <div onClick={handleSecretTrigger} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer select-none">
                                 <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden">
                                      {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}

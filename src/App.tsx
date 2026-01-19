@@ -645,6 +645,15 @@ const toggleGroupMember = (uid) => {
     try { await sendMessage(diceMsg, null, null, user.uid); scrollToBottom(); if (navigator.vibrate) navigator.vibrate(50); } catch (e) { console.error(e); }
   };
 
+  const handleCancelEdit = () => {
+    setEditingNote(null);
+    setTranscript('');
+    setImageUrl('');
+    if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto'; // Reset height
+    }
+  };
+
   const handleMainAction = async () => {
     if (!transcript.trim() && !imageUrl) return;
     if (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages') return; 
@@ -1405,7 +1414,16 @@ const handleLogout = async () => {
                         </div>
                         
                         {/* RIGHT SIDE: BIGGER BUTTON */}
-                        <div className="pb-0 animate-in fade-in zoom-in duration-200">
+                        <div className="pb-0 animate-in fade-in zoom-in duration-200 flex gap-2">
+                             {editingNote && (
+                                <button 
+                                    onClick={handleCancelEdit} 
+                                    className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 active:scale-95"
+                                >
+                                    <X size={24} />
+                                </button>
+                             )}
+
                              {(transcript.trim() || imageUrl || editingNote) ? (
                                 <button onClick={handleMainAction} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg active:scale-95 bg-[#DA7756] text-white hover:bg-[#c46243]">
                                     {editingNote ? <Check size={20} strokeWidth={3} /> : <ArrowUp size={24} strokeWidth={3} />}

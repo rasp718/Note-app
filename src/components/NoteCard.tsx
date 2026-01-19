@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig } from '../types';
-import { getUserColor } from '../utils'; // Import the color helper
+import { getUserColor } from '../utils';
 import { AudioPlayer } from './AudioPlayer';
 import { StreetDiceGame } from './StreetDiceGame';
 
@@ -29,9 +29,7 @@ interface NoteCardProps {
   isLastInGroup?: boolean;
 }
 
-// ============================================================================
-// HELPER COMPONENTS
-// ============================================================================
+// ... (Helper functions like triggerHaptic, ContextMenuItem, InlineActionButton remain the same as your code) ...
 const triggerHaptic = (pattern: number | number[] = 15) => { 
   if (typeof navigator !== 'undefined' && navigator.vibrate) { 
       try { navigator.vibrate(pattern); } catch (e) {} 
@@ -71,9 +69,6 @@ const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any
   );
 };
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
 export const NoteCard: React.FC<NoteCardProps> = ({ 
   note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, onReply,
   currentReaction, onReact, 
@@ -95,23 +90,20 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const longPressTimer = useRef<any>(null);
   const isLongPress = useRef(false); 
 
-  // --- Data & Reply Parsing ---
+  // --- Data Parsing ---
   const rawText = String(note.text || '');
   const REPLY_SEPARATOR = "|||RPLY|||";
   
   let replyData = null;
   let safeText = rawText;
 
-  // Check for reply metadata
   if (rawText.includes(REPLY_SEPARATOR)) {
       const parts = rawText.split(REPLY_SEPARATOR);
       if (parts.length >= 2) {
           try {
               replyData = JSON.parse(parts[0]);
               safeText = parts.slice(1).join(REPLY_SEPARATOR);
-          } catch(e) {
-              console.error("Reply parse error", e);
-          }
+          } catch(e) { console.error("Reply parse error", e); }
       }
   }
 
@@ -125,7 +117,16 @@ export const NoteCard: React.FC<NoteCardProps> = ({
       if (parts.length > 1) gameData = parts[1];
   }
 
-  // --- Handlers ---
+  // --- Resolve Category Emoji ---
+  const categoryConfig = categories.find(c => c.id === note.category);
+  const categoryEmoji = categoryConfig ? categoryConfig.emoji : null;
+
+  // --- NEW: Resolve Category Emoji ---
+  // Matches the note.category to the ID in the categories array to find the emoji
+  const categoryConfig = categories.find(c => c.id === note.category);
+  const categoryEmoji = categoryConfig ? categoryConfig.emoji : null;
+
+  // --- Handlers (Existing) ---
   const handleGameUpdate = (newJson: string) => {
       if (onUpdate && note.id) {
           const newText = `🎲 STREET_DICE_GAME|||${newJson}`;
@@ -144,13 +145,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   
   const openMenu = (clientX: number, clientY: number) => { 
       triggerHaptic(); 
-      const menuW = 200; 
-      const menuH = 300; 
-      let x = clientX; 
-      let y = clientY; 
-      
+      const menuW = 200; menuH = 300; 
+      let x = clientX; let y = clientY; 
       if (typeof window !== 'undefined') { 
-          // Prevent menu from going off-screen
           if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 20; 
           if (x < 10) x = 10;
           if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 20; 
@@ -159,74 +156,43 @@ export const NoteCard: React.FC<NoteCardProps> = ({
       setContextMenu({ x, y }); 
   };
 
-  const handleContextMenu = (e: any) => { 
-      e.preventDefault(); 
-      e.stopPropagation(); 
-      openMenu(e.clientX, e.clientY); 
-  };
+  const handleContextMenu = (e: any) => { e.preventDefault(); e.stopPropagation(); openMenu(e.clientX, e.clientY); };
 
   const handleDoubleTap = (e: any) => {
-      e.preventDefault();
-      e.stopPropagation();
-      triggerHaptic([10, 50]); 
+      e.preventDefault(); e.stopPropagation(); triggerHaptic([10, 50]); 
       if (onReact) onReact('❤️');
   };
 
   const formatTime = (timestamp: any) => { try { const t = Number(timestamp); if (isNaN(t) || t === 0) return ''; return new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } };
 
-  // --- Touch Logic ---
+  // --- Touch Logic (Existing) ---
   const handleTouchStart = (e: any) => { 
       if (e.targetTouches.length !== 1) return; 
-      touchStartX.current = e.targetTouches[0].clientX; 
-      touchStartY.current = e.targetTouches[0].clientY; 
-      touchStartTime.current = Date.now(); 
-      setIsSwiping(false); 
-      isLongPress.current = false; 
-      
-      longPressTimer.current = setTimeout(() => { 
-          if (touchStartX.current && touchStartY.current) { 
-              isLongPress.current = true; 
-              openMenu(touchStartX.current, touchStartY.current); 
-          } 
-      }, 500); 
+      touchStartX.current = e.targetTouches[0].clientX; touchStartY.current = e.targetTouches[0].clientY; touchStartTime.current = Date.now(); setIsSwiping(false); isLongPress.current = false; 
+      longPressTimer.current = setTimeout(() => { if (touchStartX.current && touchStartY.current) { isLongPress.current = true; openMenu(touchStartX.current, touchStartY.current); } }, 500); 
   };
 
   const handleTouchMove = (e: any) => { 
       if (!touchStartX.current || !touchStartY.current || isExiting) return; 
-      const diffX = e.targetTouches[0].clientX - touchStartX.current; 
-      const diffY = e.targetTouches[0].clientY - touchStartY.current; 
-      
-      if (Math.abs(diffX) > 15 || Math.abs(diffY) > 15) { 
-          if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } 
-      } 
-      
+      const diffX = e.targetTouches[0].clientX - touchStartX.current; const diffY = e.targetTouches[0].clientY - touchStartY.current; 
+      if (Math.abs(diffX) > 15 || Math.abs(diffY) > 15) { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } } 
       if (isLongPress.current) return; 
-      // Only allow swipe delete on 'default' (Feed) notes, not chat messages
       if (variant === 'default' && diffX < 0 && Math.abs(diffX) > Math.abs(diffY)) { setIsSwiping(true); setSwipeOffset(diffX); } 
   };
 
   const handleTouchEnd = (e: any) => { 
       if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } 
       if (isLongPress.current) { touchStartX.current = null; touchStartY.current = null; return; } 
-      
       if (variant === 'default' && onDelete && note.id) {
           const touchDuration = Date.now() - touchStartTime.current;
           const isFling = touchDuration < 300 && swipeOffset < -50; 
           const isDrag = swipeOffset < -150; 
-          if (isFling || isDrag) { 
-              triggerHaptic(); 
-              setIsExiting(true); 
-              setSwipeOffset(-window.innerWidth); 
-              setTimeout(() => { onDelete(note.id); }, 200); 
-          } else { setSwipeOffset(0); }
+          if (isFling || isDrag) { triggerHaptic(); setIsExiting(true); setSwipeOffset(-window.innerWidth); setTimeout(() => { onDelete(note.id); }, 200); } else { setSwipeOffset(0); }
       } else { setSwipeOffset(0); }
-      
-      setIsSwiping(false); 
-      touchStartX.current = null; 
-      touchStartY.current = null; 
+      setIsSwiping(false); touchStartX.current = null; touchStartY.current = null; 
   };
 
-  // --- Render Props ---
+  // --- Styles ---
   const bgColor = customColors?.bg || 'bg-zinc-900';
   const textColor = customColors?.text || 'text-zinc-300';
   const subtextColor = customColors?.subtext || 'text-zinc-400 opacity-60'; 
@@ -234,7 +200,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const chatBorderClasses = customColors?.border || 'border-none';
   const paddingClass = 'p-1';
   
-  // Radius Logic for Tails
   let radiusClass = 'rounded-2xl'; 
   if (variant === 'sent') radiusClass = isLastInGroup ? 'rounded-2xl rounded-br-none' : 'rounded-2xl';
   if (variant === 'received') radiusClass = isLastInGroup ? 'rounded-2xl rounded-bl-none' : 'rounded-2xl';
@@ -269,14 +234,24 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             onTouchMove={handleTouchMove} 
             onTouchEnd={handleTouchEnd}
         >
-          {/* SENDER NAME (GROUP CHAT STYLE) */}
-          {variant === 'received' && opponentName && opponentName !== 'OPP' && (
-              <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName).split(' ')[0]}`}>
-                  ~ {opponentName}
-              </div>
+          {/* CATEGORY BADGE (Feed Only) */}
+          {variant === 'default' && categoryEmoji && (
+             <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#1c1c1d] border border-white/10 flex items-center justify-center text-[12px] shadow-md z-20 select-none animate-in zoom-in duration-200">
+                {categoryEmoji}
+             </div>
+          )}
+          {/* --- NEW: CATEGORY BADGE (TOP RIGHT) --- */}
+          {/* Only shows if variant is default (Feed) and a category emoji exists */}
+          {variant === 'default' && categoryEmoji && (
+             <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#1c1c1d] border border-white/10 flex items-center justify-center text-[12px] shadow-md z-20 select-none animate-in zoom-in duration-200">
+                {categoryEmoji}
+             </div>
           )}
 
-          {/* REPLY BLOCK INSIDE BUBBLE */}
+          {variant === 'received' && opponentName && opponentName !== 'OPP' && (
+              <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName).split(' ')[0]}`}>~ {opponentName}</div>
+          )}
+
           {replyData && (() => {
               const [textColor, borderColor] = getUserColor(replyData.sender).split(' ');
               return (
@@ -294,13 +269,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
              </div>
           ) : isDiceGame ? (
              <div className="flex flex-col">
-                 <StreetDiceGame 
-                    dataStr={gameData} 
-                    onSave={handleGameUpdate} 
-                    myId={currentUserId || 'unknown'}
-                    oppName={opponentName}
-                    oppAvatar={opponentAvatar}
-                 />
+                 <StreetDiceGame dataStr={gameData} onSave={handleGameUpdate} myId={currentUserId || 'unknown'} oppName={opponentName} oppAvatar={opponentAvatar} />
              </div>
           ) : hasImage ? (
             <div className="relative">
@@ -315,12 +284,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           ) : (
              <div className="flex flex-col min-w-[80px]">
                <div className={`block w-full px-2 pb-2 pt-1`}>
-                   {safeText && (
-                       <span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor}`}>
-                           {safeText}
-                       </span>
-                   )}
-                   {/* Float the time right if space permits, otherwise it wraps naturally */}
+                   {safeText && (<span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>)}
                    <div className="float-right ml-3 mt-1.5 flex items-center gap-1 align-bottom h-4 select-none">
                        {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#da7756'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}
                        <span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>
@@ -330,14 +294,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
              </div>
           )}
 
-          {/* REACTION BADGE - Positioned relative to bubble corner */}
           {currentReaction && (
-              <div 
-                  onClick={(e) => { e.stopPropagation(); if (onReact) onReact(currentReaction); }}
-                  className={`absolute -bottom-2.5 ${variant === 'sent' ? 'right-[8px]' : 'left-[8px]'} bg-[#1c1c1d] border border-[#3f3f40] text-white text-[12px] leading-none rounded-full w-[20px] h-[20px] shadow-sm animate-in zoom-in duration-200 z-30 select-none cursor-pointer flex items-center justify-center hover:scale-110 transition-transform`}
-              >
-                  {currentReaction}
-              </div>
+              <div onClick={(e) => { e.stopPropagation(); if (onReact) onReact(currentReaction); }} className={`absolute -bottom-2.5 ${variant === 'sent' ? 'right-[8px]' : 'left-[8px]'} bg-[#1c1c1d] border border-[#3f3f40] text-white text-[12px] leading-none rounded-full w-[20px] h-[20px] shadow-sm animate-in zoom-in duration-200 z-30 select-none cursor-pointer flex items-center justify-center hover:scale-110 transition-transform`}>{currentReaction}</div>
           )}
         </div>
       </div>
@@ -345,53 +303,20 @@ export const NoteCard: React.FC<NoteCardProps> = ({
       {/* MENU PORTAL */}
       {contextMenu && typeof document !== 'undefined' && document.body && createPortal(
         <div className="fixed inset-0 z-[9999]" onClick={() => setContextMenu(null)} onTouchStart={() => setContextMenu(null)}>
-            <div 
-                className="absolute z-[10000] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" 
-                style={{ 
-                    top: contextMenu.y, 
-                    left: contextMenu.x, 
-                    backgroundColor: 'rgba(24, 24, 27, 0.95)', 
-                    boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' 
-                }} 
-                onClick={(e) => e.stopPropagation()} 
-                onTouchStart={(e) => e.stopPropagation()}
-            > 
-              {/* EMOJI BAR */}
+            <div className="absolute z-[10000] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'rgba(24, 24, 27, 0.95)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}> 
               {onReact && (
                   <div className="flex justify-between px-2 py-2 mb-1 border-b border-white/10 gap-1 select-none">
                       {['👍', '❤️', '😂', '😮', '😢', '🔥'].map(emoji => (
-                          <button 
-                              key={emoji}
-                              type="button"
-                              onPointerDown={(e) => e.preventDefault()}
-                              onClick={() => { triggerHaptic(); onReact(emoji); setContextMenu(null); }}
-                              className={`w-8 h-8 flex-1 flex items-center justify-center text-lg rounded-full transition-all active:scale-90 select-none touch-manipulation ${currentReaction === emoji ? 'bg-white/20' : 'hover:bg-white/10'}`}
-                          >
-                              {emoji}
-                          </button>
+                          <button key={emoji} type="button" onPointerDown={(e) => e.preventDefault()} onClick={() => { triggerHaptic(); onReact(emoji); setContextMenu(null); }} className={`w-8 h-8 flex-1 flex items-center justify-center text-lg rounded-full transition-all active:scale-90 select-none touch-manipulation ${currentReaction === emoji ? 'bg-white/20' : 'hover:bg-white/10'}`}>{emoji}</button>
                       ))}
                   </div>
               )}
-
               <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { if(onReply) onReply(note); else handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
-              
-              {variant === 'default' && (
-                <ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />
-              )} 
-              
-              {onEdit && ( 
-                <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} /> 
-              )} 
-              
-              {(variant === 'default' || variant === 'sent') && ( 
-                <> 
-                  <div className="h-px bg-white/10 mx-3 my-1" /> 
-                  <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> 
-                </> 
-              )} 
+              {variant === 'default' && (<ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />)} 
+              {onEdit && (<ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} />)} 
+              {(variant === 'default' || variant === 'sent') && (<> <div className="h-px bg-white/10 mx-3 my-1" /> <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> </>)} 
             </div>
-        </div>, 
-        document.body 
+        </div>, document.body 
       )}
     </>
   );

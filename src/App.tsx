@@ -22,7 +22,7 @@ import Auth from './components/Auth';
 // FIREBASE DIRECT INIT FOR INVITES
 import { initializeApp } from "firebase/app";
 import { getAuth, signOut } from "firebase/auth";
-import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, doc, arrayRemove } from "firebase/firestore";
+import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, doc, arrayRemove, arrayUnion } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCiosArE3iOxF9iGp8wduA-TlSgy1p3WUo",
@@ -55,30 +55,42 @@ const MessageAvatar = ({ userId }) => {
 };
 
 // Helper for Profile Member List
-const GroupMemberRow = ({ userId, isAdmin, isViewerAdmin, onRemove }) => {
+const GroupMemberRow = ({ userId, isAdmin, isViewerAdmin, onRemove, onMute, isMuted }) => {
     const userData = useUser(userId);
     if (!userId) return null;
 
     return (
         <div className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors group/member">
-            <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-white/5">
+            <div className={`w-10 h-10 rounded-full overflow-hidden border ${isMuted ? 'border-red-500 grayscale opacity-50' : 'border-white/5 bg-zinc-800'}`}>
                 {userData?.photoURL ? <img src={userData.photoURL} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-zinc-500 text-sm">{userData?.displayName?.[0] || '?'}</div>}
             </div>
             <div className="flex-1 min-w-0">
-                <div className="text-white font-bold text-sm truncate">{userData?.displayName || 'User'}</div>
+                <div className={`text-white font-bold text-sm truncate flex items-center gap-2 ${isMuted ? 'text-zinc-500 line-through' : ''}`}>
+                    {userData?.displayName || 'User'}
+                    {isMuted && <Mic size={10} className="text-red-500" />}
+                </div>
                 <div className="text-zinc-500 text-xs truncate">{userData?.handle || (userData?.isOnline ? 'Online' : 'Last seen recently')}</div>
             </div>
             {isAdmin && <span className="text-[#DA7756] text-[10px] font-bold uppercase tracking-wider">Admin</span>}
             
-            {/* Show Remove Button if Viewer is Admin AND this row is not the Admin */}
+            {/* Admin Actions */}
             {isViewerAdmin && !isAdmin && (
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onRemove(userId); }}
-                    className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all opacity-0 group-hover/member:opacity-100"
-                    title="Remove from group"
-                >
-                    <X size={16} />
-                </button>
+                <div className="flex items-center gap-1 opacity-0 group-hover/member:opacity-100 transition-opacity">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onMute(userId); }}
+                        className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${isMuted ? 'text-red-500 bg-red-500/10' : 'text-zinc-600 hover:text-white hover:bg-zinc-700'}`}
+                        title={isMuted ? "Unmute user" : "Mute user"}
+                    >
+                        {isMuted ? <Mic size={16} /> : <BellOff size={16} />}
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onRemove(userId); }}
+                        className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all"
+                        title="Remove from group"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
             )}
         </div>
     );
@@ -276,6 +288,7 @@ function App() {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showBackButton, setShowBackButton] = useState(true);
   const [replyingTo, setReplyingTo] = useState(null);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
   // NEW STATES
   const [reactions, setReactions] = useState(() => {
@@ -329,14 +342,36 @@ function App() {
   };
 
   const handleRemoveMember = async (memberId) => {
-      if (!activeChatId) return;
-      if (confirm("Remove this user from the group?")) {
-          try {
-              const chatRef = doc(db, "chats", activeChatId);
-              await updateDoc(chatRef, { participants: arrayRemove(memberId) });
-          } catch (e) { console.error("Error removing member:", e); }
-      }
-  };
+    if (!activeChatId) return;
+    if (confirm("Remove this user from the group?")) {
+        try {
+            const chatRef = doc(db, "chats", activeChatId);
+            await updateDoc(chatRef, { participants: arrayRemove(memberId) });
+        } catch (e) { console.error("Error removing member:", e); }
+    }
+};
+
+const handleAddMemberToGroup = async (contactId) => {
+    if (!activeChatId) return;
+    try {
+        const chatRef = doc(db, "chats", activeChatId);
+        await updateDoc(chatRef, { participants: arrayUnion(contactId) });
+        setIsAddMemberModalOpen(false);
+    } catch (e) { console.error("Error adding member:", e); }
+};
+
+const handleToggleMemberMute = async (memberId) => {
+    if (!activeChatId) return;
+    try {
+        const chatRef = doc(db, "chats", activeChatId);
+        const isMuted = currentChatObject.mutedParticipants?.includes(memberId);
+        if (isMuted) {
+            await updateDoc(chatRef, { mutedParticipants: arrayRemove(memberId) });
+        } else {
+            await updateDoc(chatRef, { mutedParticipants: arrayUnion(memberId) });
+        }
+    } catch (e) { console.error("Error toggling mute:", e); }
+};
   // NEW: Store who we found in the URL
   const [incomingInvite, setIncomingInvite] = useState(null);
   
@@ -604,6 +639,12 @@ const toggleGroupMember = (uid) => {
   const handleMainAction = async () => {
     if (!transcript.trim() && !imageUrl) return;
     if (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages') return; 
+    
+    // Check if muted in group
+    if (activeChatId && currentChatObject?.type === 'group' && currentChatObject.mutedParticipants?.includes(user.uid)) {
+        alert("You have been muted by an admin.");
+        return;
+    }
 
     try {
         if (activeChatId === 'saved_messages' || activeChatId === null) {
@@ -1558,15 +1599,20 @@ const handleLogout = async () => {
                                         {currentChatObject.participants?.length} Members
                                     </div>
                                     
-                                    {/* Add Member Button */}
-                                    <div className="px-2">
-                                        <button className="w-full flex items-center gap-4 p-3 hover:bg-white/5 rounded-xl transition-colors text-left group">
-                                            <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-white group-hover:bg-zinc-700 transition-colors">
-                                                <UserPlus size={18} />
-                                            </div>
-                                            <span className="text-[#DA7756] text-[14px] font-bold">Add Members</span>
-                                        </button>
-                                    </div>
+                                    {/* Add Member Button (Admins Only) */}
+                                    {currentChatObject.createdBy === user.uid && (
+                                        <div className="px-2">
+                                            <button 
+                                                onClick={() => setIsAddMemberModalOpen(true)}
+                                                className="w-full flex items-center gap-4 p-3 hover:bg-white/5 rounded-xl transition-colors text-left group"
+                                            >
+                                                <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-white group-hover:bg-zinc-700 transition-colors">
+                                                    <UserPlus size={18} />
+                                                </div>
+                                                <span className="text-[#DA7756] text-[14px] font-bold">Add Members</span>
+                                            </button>
+                                        </div>
+                                    )}
 
                                     {/* Member List */}
                                     <div className="px-2">
@@ -1577,6 +1623,8 @@ const handleLogout = async () => {
                                                 isAdmin={currentChatObject.createdBy === uid} 
                                                 isViewerAdmin={currentChatObject.createdBy === user.uid}
                                                 onRemove={handleRemoveMember}
+                                                onMute={handleToggleMemberMute}
+                                                isMuted={currentChatObject.mutedParticipants?.includes(uid)}
                                             />
                                         ))}
                                     </div>
@@ -1687,6 +1735,38 @@ const handleLogout = async () => {
                 </div>
             </div>
         </div>
+      )}
+
+      {/* OVERLAY: ADD MEMBER MODAL */}
+      {isAddMemberModalOpen && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
+              <div className="absolute inset-0" onClick={() => setIsAddMemberModalOpen(false)} />
+              <div className="bg-[#1c1c1d] w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col max-h-[80vh] animate-in slide-in-from-bottom-10 zoom-in-95 duration-200 border border-white/10">
+                  <div className="p-4 border-b border-white/10 flex justify-between items-center bg-zinc-900">
+                      <button onClick={() => setIsAddMemberModalOpen(false)} className="text-zinc-400 hover:text-white"><X size={24} /></button>
+                      <h3 className="font-bold text-white">Add People</h3>
+                      <div className="w-6" />
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2">
+                      {savedContacts.filter(c => !currentChatObject?.participants.includes(c.uid)).length === 0 ? (
+                          <div className="text-center py-10 text-zinc-500">No new contacts to add.</div>
+                      ) : (
+                          savedContacts.filter(c => !currentChatObject?.participants.includes(c.uid)).map(contact => (
+                              <div key={contact.uid} onClick={() => handleAddMemberToGroup(contact.uid)} className="flex items-center gap-4 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors">
+                                  <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden">
+                                      {contact.photoURL ? <img src={contact.photoURL} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center">🤖</div>}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                      <div className="font-bold text-white truncate">{contact.displayName}</div>
+                                      <div className="text-xs text-zinc-500 truncate">{contact.handle}</div>
+                                  </div>
+                                  <div className="w-8 h-8 flex items-center justify-center text-[#DA7756]"><UserPlus size={20} /></div>
+                              </div>
+                          ))
+                      )}
+                  </div>
+              </div>
+          </div>
       )}
 
       {/* OVERLAY: INCOMING INVITE MODAL */}

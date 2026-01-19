@@ -1256,7 +1256,6 @@ const handleLogout = async () => {
 
             {/* Header and other room view code remains unchanged */}
             <div className="fixed top-0 left-0 right-0 z-40">
-                <div className={`absolute top-0 left-0 w-full bg-gradient-to-b from-black/90 to-transparent pointer-events-none transition-all duration-300 ${isChatScrolled ? 'h-20' : 'h-40'}`} />
                 <header className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3 relative z-50">
                     <div className="flex items-center gap-1 w-full">
                         {/* REMOVED TOP BACK BUTTON FROM HERE */}
@@ -1579,9 +1578,6 @@ const handleLogout = async () => {
                                 <Users size={64} className="text-white/20" />
                             </div>
                         )}
-                        
-                        {/* GRADIENT OVERLAY */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#1c1c1d] via-transparent to-black/30" />
 
                         {/* PHOTO EDIT BUTTON (If Admin/Group) - z-20 */}
                         {isEditingGroupInfo && currentChatObject?.type === 'group' && (

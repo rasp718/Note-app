@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig } from '../types';
-import { getUserColor } from '../utils';
+import { getUserColor } from '../utils'; // Import the color helper
 import { AudioPlayer } from './AudioPlayer';
 import { StreetDiceGame } from './StreetDiceGame';
 

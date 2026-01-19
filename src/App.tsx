@@ -97,7 +97,7 @@ const GroupMemberRow = ({ userId, isAdmin, isViewerAdmin, onRemove, onMute, isMu
 };
 
 // Wrapper to fetch user data for individual messages (Fixes "Unknown" names in groups)
-const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact, onReply, onDelete, onEdit, setZoomedImage, bubbleStyle, isHackerMode }) => {
+const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact, onReply, onDelete, onEdit, setZoomedImage, bubbleStyle, isHackerMode, replyTheme }) => {
     const senderData = useUser(msg.senderId);
     const isMe = msg.senderId === user?.uid;
     const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
@@ -193,6 +193,7 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                             onReact={(emoji) => onReact(msg.id, emoji)}
                             onReply={(targetMsg) => onReply({ ...targetMsg, displayName })}
                             isLastInGroup={false}
+                            replyTheme={replyTheme}
                         />
                     </div>
                 </div>
@@ -1351,6 +1352,7 @@ const handleLogout = async () => {
                             setZoomedImage={setZoomedImage}
                             bubbleStyle={bubbleStyle}
                             isHackerMode={isHackerMode}
+                            replyTheme={replyTheme}
                         />
                     ))
                 )}

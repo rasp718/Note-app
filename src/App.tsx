@@ -1566,6 +1566,22 @@ const handleLogout = async () => {
                         
                         {/* REST OF INFO LIST (Bio, Username, Notifications, Members, Block) */}
                         <div className="px-2 pb-6 space-y-1 mt-2">
+
+                            {/* ACTION: ADD TO CONTACTS (Visible if not saved) */}
+                            {currentChatObject?.type !== 'group' && otherChatUser && !savedContacts.find(c => c.uid === otherChatUser.uid) && (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handleAddToContacts(); }}
+                                    className="w-full flex items-center gap-4 p-3 hover:bg-white/5 rounded-xl transition-colors text-left group mb-2"
+                                >
+                                    <div className="w-9 h-9 rounded-full bg-[#DA7756]/10 flex items-center justify-center text-[#DA7756] group-hover:bg-[#DA7756] group-hover:text-white transition-colors border border-[#DA7756]/20">
+                                        <UserPlus size={20} />
+                                    </div>
+                                    <div className="flex-1 min-w-0 border-b border-white/5 pb-2">
+                                        <p className="text-[#DA7756] text-[15px] font-bold">Add to Contacts</p>
+                                        <p className="text-[12px] text-zinc-500 mt-0.5">Save this user to your list</p>
+                                    </div>
+                                </button>
+                            )}
                             
                             {/* INFO ITEM: USERNAME (If User) */}
                             {currentChatObject?.type !== 'group' && (

@@ -157,7 +157,7 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                         </svg>
                     )}
 
-                    <NoteCard 
+<NoteCard 
                         note={msgNote} categories={[]} selectedVoice={null} 
                         variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
                         currentUserId={user?.uid}

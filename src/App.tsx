@@ -107,10 +107,24 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
     const displayName = senderData?.displayName || 'Unknown';
     const photoURL = senderData?.photoURL;
 
-    const customColors = getBubbleColors(bubbleStyle, isMe, false);
+    let customColors = getBubbleColors(bubbleStyle, isMe, false);
+
+    // OVERRIDE: Make received bubbles match the Glass/Clear aesthetic
+    if (!isMe) {
+        if (bubbleStyle === 'minimal_glass') {
+            // Dark Frosted Glass for received messages
+            customColors = { bg: 'bg-zinc-900/60 backdrop-blur-xl border border-white/10', text: 'text-zinc-100' };
+        } else if (bubbleStyle === 'clear') {
+            // Transparent with outline for received messages
+            customColors = { bg: 'bg-transparent border border-zinc-700', text: 'text-zinc-100' };
+        }
+    }
     
-    // Determine Tail Color logic (same as before)
-    let tailColor = '#ffffff'; 
+    // Determine Tail Color logic
+    let tailColor = '#ffffff';
+    // Glass/Clear types shouldn't use SVG tails to avoid "double layer" artifacts
+    const isGlassy = ['minimal_glass', 'clear'].includes(bubbleStyle);
+    
     if (!isMe) {
         tailColor = '#27272a'; 
     } else {
@@ -121,8 +135,6 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
             case 'blue_gradient': tailColor = '#2563eb'; break;
             case 'solid_gray': tailColor = '#3f3f46'; break;
             case 'minimal_solid': tailColor = '#ffffff'; break;
-            case 'minimal_glass': tailColor = 'rgba(255,255,255,0.2)'; break;
-            case 'clear': tailColor = 'transparent'; break;
             default: tailColor = '#ffffff';
         }
     }
@@ -143,7 +155,7 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                 </div>
             )}
             <div 
-                style={{ zIndex: 1000 }} // Base z-index, logic handled by relative positioning order usually
+                style={{ zIndex: 1000 }}
                 className={`flex w-full mb-1 items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
             >
                 {!isMe && (
@@ -157,35 +169,38 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                 )}
                 
                 <div className="relative z-10 max-w-[85%]">
-                    {/* TAIL SVG - Sent (Right) */}
-                    {isMe && isLastInGroup && !msg.imageUrl && (
+                    {/* TAIL SVG - Sent (Right) - HIDDEN IF GLASSY */}
+                    {isMe && isLastInGroup && !msg.imageUrl && !isGlassy && (
                         <svg className="absolute bottom-[3px] -right-[12px] rotate-[8deg] z-20 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
                             <path d="M0,0 C2,7.5 9,14 17,14 H0 V0 Z" fill={tailColor} />
                         </svg>
                     )}
 
-                    {/* TAIL SVG - Received (Left) */}
-                    {!isMe && isLastInGroup && !msg.imageUrl && (
+                    {/* TAIL SVG - Received (Left) - HIDDEN IF GLASSY */}
+                    {!isMe && isLastInGroup && !msg.imageUrl && !isGlassy && (
                         <svg className="absolute bottom-[3px] -left-[12px] rotate-[-8deg] z-20 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
                             <path d="M17,0 C15,7.5 8,14 0,14 H17 V0 Z" fill={tailColor} />
                         </svg>
                     )}
 
-<NoteCard 
-                        note={msgNote} categories={[]} selectedVoice={null} 
-                        variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
-                        currentUserId={user?.uid}
-                        onUpdate={(id, text) => {}} // Handle update if needed
-                        opponentName={isGroup ? displayName : undefined} 
-                        opponentAvatar={photoURL}
-                        onImageClick={setZoomedImage}
-                        onDelete={isMe ? onDelete : undefined}
-                        onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => onEdit(msg) : undefined}
-                        currentReaction={reactions[msg.id]}
-                        onReact={(emoji) => onReact(msg.id, emoji)}
-                        onReply={(targetMsg) => onReply({ ...targetMsg, displayName })} // Pass resolved name
-                        isLastInGroup={false}
-                    />
+                    {/* NoteCard: If glassy & last, we force the corner to be sharp using !rounded-br-none */}
+                    <div className={isGlassy && isLastInGroup && !msg.imageUrl ? (isMe ? '[&>div]:!rounded-br-none' : '[&>div]:!rounded-bl-none') : ''}>
+                        <NoteCard 
+                            note={msgNote} categories={[]} selectedVoice={null} 
+                            variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
+                            currentUserId={user?.uid}
+                            onUpdate={(id, text) => {}} 
+                            opponentName={isGroup ? displayName : undefined} 
+                            opponentAvatar={photoURL}
+                            onImageClick={setZoomedImage}
+                            onDelete={isMe ? onDelete : undefined}
+                            onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => onEdit(msg) : undefined}
+                            currentReaction={reactions[msg.id]}
+                            onReact={(emoji) => onReact(msg.id, emoji)}
+                            onReply={(targetMsg) => onReply({ ...targetMsg, displayName })}
+                            isLastInGroup={isLastInGroup} // FIXED: Passed true prop
+                        />
+                    </div>
                 </div>
             </div>
         </React.Fragment>

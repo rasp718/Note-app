@@ -109,16 +109,23 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
 
     let customColors = getBubbleColors(bubbleStyle, isMe, false);
 
-    // OVERRIDE: Make received bubbles match the Glass/Clear aesthetic
+    // --- CUSTOM THEME OVERRIDES ---
+    // This logic ensures received bubbles match the sender's chosen style
     if (!isMe) {
         if (bubbleStyle === 'minimal_glass') {
-            // Dark Frosted Glass for received messages
-            customColors = { bg: 'bg-zinc-900/60 backdrop-blur-xl border border-white/10', text: 'text-zinc-100' };
+            // For sender: default minimal_glass.
+            // For receiver: Darker Frosted Glass with a tint.
+            customColors = { bg: 'bg-zinc-800/70 backdrop-blur-xl border border-white/15', text: 'text-zinc-100' }; // Darker Tinted Glass
         } else if (bubbleStyle === 'clear') {
-            // Transparent with outline for received messages
-            customColors = { bg: 'bg-transparent border border-zinc-700', text: 'text-zinc-100' };
+            // For sender: default clear.
+            // For receiver: Transparent with a subtle darker border.
+            customColors = { bg: 'bg-transparent border border-zinc-700', text: 'text-zinc-100' }; // Transparent, but slightly darker border
+        } else if (bubbleStyle === 'soft_glass') {
+             // If sender chose soft_glass, receiver gets a darker version of it.
+            customColors = { bg: 'bg-white/15 backdrop-blur-lg border border-white/20', text: 'text-white' };
         }
     }
+    // --- END CUSTOM THEME OVERRIDES ---
     
     // Determine Tail Color logic
     let tailColor = '#ffffff';

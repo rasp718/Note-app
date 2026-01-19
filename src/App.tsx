@@ -82,6 +82,102 @@ const GroupMemberRow = ({ userId, isAdmin, isViewerAdmin, onRemove }) => {
     );
 };
 
+// Wrapper to fetch user data for individual messages (Fixes "Unknown" names in groups)
+const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact, onReply, onDelete, onEdit, setZoomedImage, bubbleStyle, isHackerMode }) => {
+    const senderData = useUser(msg.senderId);
+    const isMe = msg.senderId === user?.uid;
+    const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
+    const isLastInGroup = !nextMsg || nextMsg.senderId !== msg.senderId || !isSameDay(msg.timestamp, nextMsg.timestamp);
+    
+    // Resolve Display Name
+    const displayName = senderData?.displayName || 'Unknown';
+    const photoURL = senderData?.photoURL;
+
+    const customColors = getBubbleColors(bubbleStyle, isMe, false);
+    
+    // Determine Tail Color logic (same as before)
+    let tailColor = '#ffffff'; 
+    if (!isMe) {
+        tailColor = '#27272a'; 
+    } else {
+        switch(bubbleStyle) {
+            case 'whatsapp': tailColor = '#005c4b'; break;
+            case 'telegram': tailColor = '#2b5278'; break;
+            case 'purple': tailColor = '#6d28d9'; break;
+            case 'blue_gradient': tailColor = '#2563eb'; break;
+            case 'solid_gray': tailColor = '#3f3f46'; break;
+            case 'minimal_solid': tailColor = '#ffffff'; break;
+            case 'minimal_glass': tailColor = 'rgba(255,255,255,0.2)'; break;
+            case 'clear': tailColor = 'transparent'; break;
+            default: tailColor = '#ffffff';
+        }
+    }
+
+    const msgNote = {
+        id: msg.id, text: msg.text, date: normalizeDate(msg.timestamp), 
+        category: 'default', isPinned: false, isExpanded: true, imageUrl: msg.imageUrl,
+        audioUrl: msg.audioUrl
+    };
+
+    return (
+        <React.Fragment key={msg.id}>
+            {showHeader && (
+                <div className="flex justify-center my-4 w-full select-none">
+                    <span className="text-white/90 text-[11px] font-bold uppercase tracking-widest drop-shadow-md shadow-black">
+                        {getDateLabel(msg.timestamp)}
+                    </span>
+                </div>
+            )}
+            <div 
+                style={{ zIndex: 1000 }} // Base z-index, logic handled by relative positioning order usually
+                className={`flex w-full mb-1 items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
+            >
+                {!isMe && (
+                    <div className="flex-shrink-0 w-8 h-8 relative z-10 mb-1">
+                        {isLastInGroup ? (
+                            <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 shadow-md">
+                                {photoURL ? <img src={photoURL} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">{displayName?.[0]}</div>}
+                            </div>
+                        ) : <div className="w-8 h-8" />}
+                    </div>
+                )}
+                
+                <div className="relative z-10 max-w-[85%]">
+                    {/* TAIL SVG - Sent (Right) */}
+                    {isMe && isLastInGroup && !msg.imageUrl && (
+                        <svg className="absolute bottom-[3px] -right-[12px] rotate-[8deg] z-20 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
+                            <path d="M0,0 C2,7.5 9,14 17,14 H0 V0 Z" fill={tailColor} />
+                        </svg>
+                    )}
+
+                    {/* TAIL SVG - Received (Left) */}
+                    {!isMe && isLastInGroup && !msg.imageUrl && (
+                        <svg className="absolute bottom-[3px] -left-[12px] rotate-[-8deg] z-20 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
+                            <path d="M17,0 C15,7.5 8,14 0,14 H17 V0 Z" fill={tailColor} />
+                        </svg>
+                    )}
+
+                    <NoteCard 
+                        note={msgNote} categories={[]} selectedVoice={null} 
+                        variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
+                        currentUserId={user?.uid}
+                        onUpdate={(id, text) => {}} // Handle update if needed
+                        opponentName={isGroup ? displayName : undefined} 
+                        opponentAvatar={photoURL}
+                        onImageClick={setZoomedImage}
+                        onDelete={isMe ? onDelete : undefined}
+                        onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => onEdit(msg) : undefined}
+                        currentReaction={reactions[msg.id]}
+                        onReact={(emoji) => onReact(msg.id, emoji)}
+                        onReply={(targetMsg) => onReply({ ...targetMsg, displayName })} // Pass resolved name
+                        isLastInGroup={false}
+                    />
+                </div>
+            </div>
+        </React.Fragment>
+    );
+};
+
 // Fixed Chat Row to display Group Photos correctly - SQUIRCLE STYLE
 const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
     const otherUser = useUser(chat.otherUserId);
@@ -1127,104 +1223,24 @@ const handleAddReaction = (msgId, emoji) => {
                         );
                     })
                 ) : (
-                    activeMessages.map((msg, index) => {
-                        const prevMsg = activeMessages[index - 1];
-                        const nextMsg = activeMessages[index + 1];
-                        
-                        const showHeader = !prevMsg || !isSameDay(msg.timestamp, prevMsg.timestamp);
-                        const isMe = msg.senderId === user?.uid;
-                        
-                        // Check if this is the last message in a consecutive group
-                        const isLastInGroup = !nextMsg || nextMsg.senderId !== msg.senderId || !isSameDay(msg.timestamp, nextMsg.timestamp);
-                        
-                        const customColors = getBubbleColors(bubbleStyle, isMe, false);
-
-                        // Determine Tail Color
-                        let tailColor = '#ffffff'; // default
-                        if (!isMe) {
-                            tailColor = '#27272a'; // Received default (zinc-800)
-                        } else {
-                            switch(bubbleStyle) {
-                                case 'whatsapp': tailColor = '#005c4b'; break;
-                                case 'telegram': tailColor = '#2b5278'; break;
-                                case 'purple': tailColor = '#6d28d9'; break;
-                                case 'blue_gradient': tailColor = '#2563eb'; break; // End color of gradient
-                                case 'solid_gray': tailColor = '#3f3f46'; break;
-                                case 'minimal_solid': tailColor = '#ffffff'; break;
-                                case 'minimal_glass': tailColor = 'rgba(255,255,255,0.2)'; break;
-                                case 'clear': tailColor = 'transparent'; break;
-                                default: tailColor = '#ffffff';
-                            }
-                        }
-
-                        const msgNote = {
-                            id: msg.id, text: msg.text, date: normalizeDate(msg.timestamp), 
-                            category: 'default', isPinned: false, isExpanded: true, imageUrl: msg.imageUrl,
-                            audioUrl: msg.audioUrl
-                        };
-
-                        return (
-                            <React.Fragment key={msg.id}>
-                                {showHeader && (
-                                  <div className="flex justify-center my-4 w-full select-none">
-                                    <span className="text-white/90 text-[11px] font-bold uppercase tracking-widest drop-shadow-md shadow-black">
-                                      {getDateLabel(msg.timestamp)}
-                                    </span>
-                                  </div>
-                                )}
-                                <div 
-                                    style={{ zIndex: activeMessages.length - index }}
-                                    className={`flex w-full mb-1 items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
-                                >
-                                {!isMe && (
-                                        <div className="flex-shrink-0 w-8 h-8 relative z-10 mb-1">
-                                            {/* Use helper to fetch specific sender info for Groups */}
-                                            {isLastInGroup ? <MessageAvatar userId={msg.senderId} /> : <div className="w-8 h-8" />}
-                                        </div>
-                                    )}
-                                    
-                                    <div className="relative z-10 max-w-[85%]">
-                                        {/* TAIL SVG - Sent (Right) - Shifted Up 1px */}
-                                        {isMe && isLastInGroup && !msg.imageUrl && (
-                                            <svg className="absolute bottom-[3px] -right-[12px] rotate-[8deg] z-20 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
-                                                <path d="M0,0 C2,7.5 9,14 17,14 H0 V0 Z" fill={tailColor} />
-                                            </svg>
-                                        )}
-
-                                        {/* TAIL SVG - Received (Left) - Shifted Up 1px */}
-                                        {!isMe && isLastInGroup && !msg.imageUrl && (
-                                            <svg className="absolute bottom-[3px] -left-[12px] rotate-[-8deg] z-20 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
-                                                <path d="M17,0 C15,7.5 8,14 0,14 H17 V0 Z" fill={tailColor} />
-                                            </svg>
-                                        )}
-
-                                        <NoteCard 
-                                            note={msgNote} categories={[]} selectedVoice={selectedVoice} 
-                                            variant={isMe ? 'sent' : 'received'} status={msg.status} customColors={customColors}
-                                            currentUserId={user?.uid}
-                                            onUpdate={(id, text) => updateMessage(id, text)}
-                                            opponentName={otherChatUser?.displayName || 'Opponent'} 
-                                            opponentAvatar={otherChatUser?.photoURL}
-                                            onImageClick={setZoomedImage}
-                                            onDelete={isMe ? (id) => handleDeleteMessage(id) : undefined}
-                                            onEdit={isMe && !msg.audioUrl && !msg.imageUrl ? () => handleEditMessage(msg) : undefined}
-                                            currentReaction={reactions[msg.id]}
-                                            onReact={(emoji) => handleAddReaction(msg.id, emoji)}
-                                            onReply={(targetMsg) => { 
-                                                // Determine the name of the person being replied to
-                                                const isTargetMe = targetMsg.senderId === user?.uid;
-                                                const displayName = isTargetMe ? 'You' : (otherChatUser?.displayName || 'Unknown');
-                                                
-                                                setReplyingTo({ ...targetMsg, displayName }); 
-                                                setTimeout(() => textareaRef.current?.focus(), 50); 
-                                            }}
-                                            isLastInGroup={false}
-                                        />
-                                    </div>
-                                </div>
-                            </React.Fragment>
-                        );
-                    })
+                    activeMessages.map((msg, index) => (
+                        <MessageItem 
+                            key={msg.id}
+                            msg={msg}
+                            prevMsg={activeMessages[index - 1]}
+                            nextMsg={activeMessages[index + 1]}
+                            user={user}
+                            isGroup={currentChatObject?.type === 'group'}
+                            reactions={reactions}
+                            onReact={handleAddReaction}
+                            onReply={(target) => { setReplyingTo(target); setTimeout(() => textareaRef.current?.focus(), 50); }}
+                            onDelete={handleDeleteMessage}
+                            onEdit={handleEditMessage}
+                            setZoomedImage={setZoomedImage}
+                            bubbleStyle={bubbleStyle}
+                            isHackerMode={isHackerMode}
+                        />
+                    ))
                 )}
                 <div ref={bottomRef} className="h-0 w-full shrink-0" />
               </div>

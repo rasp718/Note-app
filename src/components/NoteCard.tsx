@@ -269,6 +269,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             onTouchMove={handleTouchMove} 
             onTouchEnd={handleTouchEnd}
         >
+          {/* SENDER NAME (GROUP CHAT STYLE) */}
+          {variant === 'received' && opponentName && opponentName !== 'OPP' && (
+              <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName).split(' ')[0]}`}>
+                  ~ {opponentName}
+              </div>
+          )}
+
           {/* REPLY BLOCK INSIDE BUBBLE */}
           {replyData && (() => {
               const [textColor, borderColor] = getUserColor(replyData.sender).split(' ');

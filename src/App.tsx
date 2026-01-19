@@ -267,6 +267,7 @@ function App() {
   const [bgOpacity, setBgOpacity] = useState(0.45);
   const [bgScale, setBgScale] = useState(100);
   const [bubbleStyle, setBubbleStyle] = useState('minimal_solid');
+  const [replyTheme, setReplyTheme] = useState('soft_glass'); // New State
   const [redModeIntensity, setRedModeIntensity] = useState(0);
   const [isAutoRedMode, setIsAutoRedMode] = useState(false);
 
@@ -607,6 +608,13 @@ const toggleGroupMember = (uid) => {
   useEffect(() => { localStorage.setItem('vibenotes_bg_opacity', bgOpacity.toString()); }, [bgOpacity]);
   useEffect(() => { localStorage.setItem('vibenotes_bg_scale', bgScale.toString()); }, [bgScale]);
   useEffect(() => { localStorage.setItem('vibenotes_bubble_style', bubbleStyle); }, [bubbleStyle]);
+  useEffect(() => { localStorage.setItem('vibenotes_reply_theme', replyTheme); }, [replyTheme]);
+  
+  // Load initial state
+  useEffect(() => {
+      const savedReply = localStorage.getItem('vibenotes_reply_theme');
+      if (savedReply) setReplyTheme(savedReply);
+  }, []);
   
   useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
 
@@ -1114,6 +1122,21 @@ const handleLogout = async () => {
                                     <button onClick={() => changeBubbleStyle('blue_gradient')} className={`h-12 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden ${bubbleStyle === 'blue_gradient' ? 'border-blue-500 ring-1 ring-blue-500/50' : 'border-white/5 hover:border-blue-500/50'}`} title="Blue Gradient"><div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600" /><span className="relative z-10 text-xs font-bold text-white uppercase tracking-wider">Blue</span></button>
                                 </div>
                             </div>
+
+                            {/* REPLY THEME SELECTOR */}
+                            <div className="space-y-3 pt-2 border-t border-white/5">
+                                <label className="text-white text-sm font-medium flex items-center gap-2"><MessageSquareDashed size={14}/> Reply Theme</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={() => setReplyTheme('classic')} className={`h-10 rounded-xl border transition-all flex items-center justify-center gap-2 ${replyTheme === 'classic' ? 'bg-zinc-800 border-zinc-500 text-white' : 'bg-white/5 border-white/5 text-zinc-500 hover:text-white'}`}>
+                                        <div className="w-2 h-2 bg-[#DA7756] rounded-sm" />
+                                        <span className="text-xs font-bold uppercase tracking-wider">Classic Bold</span>
+                                    </button>
+                                    <button onClick={() => setReplyTheme('soft_glass')} className={`h-10 rounded-xl border transition-all flex items-center justify-center gap-2 ${replyTheme === 'soft_glass' ? 'bg-white/10 border-white/20 text-white backdrop-blur-md' : 'bg-white/5 border-white/5 text-zinc-500 hover:text-white'}`}>
+                                        <div className="w-2 h-2 bg-[#DA7756] rounded-full" />
+                                        <span className="text-xs font-bold uppercase tracking-wider">Soft Glass</span>
+                                    </button>
+                                </div>
+                            </div>
                             
                             {/* RED MODE */}
                             <div className="space-y-4 pt-2 border-t border-white/5">
@@ -1316,18 +1339,30 @@ const handleLogout = async () => {
                      previewText = parts.slice(1).join("|||RPLY|||");
                  }
                  
+                 const isGlass = replyTheme === 'soft_glass';
+
                  return (
                      <div className="max-w-2xl mx-auto mb-2 animate-in slide-in-from-bottom-2 duration-200">
-                         <div className={`mx-1 p-2 rounded-xl bg-[#1c1c1d] border-l-4 ${borderColor} relative flex items-center justify-between shadow-lg shadow-black/50`}>
-                             <div className="flex-1 min-w-0 pr-8">
-                                 <div className={`text-xs font-bold ${textColor} mb-0.5`}>
+                         <div className={`mx-1 p-2 rounded-xl relative flex items-center justify-between shadow-lg shadow-black/50 transition-all ${
+                            isGlass 
+                             ? 'bg-zinc-800/40 backdrop-blur-xl border border-white/10' 
+                             : `bg-[#1c1c1d] border-l-4 ${borderColor}`
+                         }`}>
+                             
+                             {/* Soft Glass Accent Pill */}
+                             {isGlass && (
+                                <div className={`absolute left-2 top-2 bottom-2 w-1 rounded-full ${borderColor.replace('border-', 'bg-')} opacity-60`} />
+                             )}
+
+                             <div className={`flex-1 min-w-0 ${isGlass ? 'pl-4 pr-8' : 'pr-8'}`}>
+                                 <div className={`text-xs font-bold mb-0.5 ${isGlass ? 'text-white/90 tracking-wide' : textColor}`}>
                                      {senderName}
                                  </div>
-                                 <div className="text-sm text-zinc-300 truncate">
+                                 <div className={`text-sm truncate ${isGlass ? 'text-zinc-400 font-light' : 'text-zinc-300'}`}>
                                      {previewText || (replyingTo.imageUrl ? 'Photo' : 'Voice Message')}
                                  </div>
                              </div>
-                             <button onClick={() => setReplyingTo(null)} className="absolute top-2 right-2 p-1 bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors">
+                             <button onClick={() => setReplyingTo(null)} className={`absolute top-2 right-2 p-1 rounded-full transition-colors ${isGlass ? 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10' : 'bg-zinc-800 text-zinc-400 hover:text-white'}`}>
                                  <X size={14} />
                              </button>
                          </div>

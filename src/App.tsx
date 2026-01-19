@@ -273,7 +273,6 @@ function App() {
   const [bgOpacity, setBgOpacity] = useState(0.45);
   const [bgScale, setBgScale] = useState(100);
   const [bubbleStyle, setBubbleStyle] = useState('minimal_solid');
-  const [replyTheme, setReplyTheme] = useState('soft_glass'); // New State
   const [redModeIntensity, setRedModeIntensity] = useState(0);
   const [isAutoRedMode, setIsAutoRedMode] = useState(false);
 
@@ -614,13 +613,6 @@ const toggleGroupMember = (uid) => {
   useEffect(() => { localStorage.setItem('vibenotes_bg_opacity', bgOpacity.toString()); }, [bgOpacity]);
   useEffect(() => { localStorage.setItem('vibenotes_bg_scale', bgScale.toString()); }, [bgScale]);
   useEffect(() => { localStorage.setItem('vibenotes_bubble_style', bubbleStyle); }, [bubbleStyle]);
-  useEffect(() => { localStorage.setItem('vibenotes_reply_theme', replyTheme); }, [replyTheme]);
-  
-  // Load initial state
-  useEffect(() => {
-      const savedReply = localStorage.getItem('vibenotes_reply_theme');
-      if (savedReply) setReplyTheme(savedReply);
-  }, []);
   
   useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
 
@@ -1129,20 +1121,7 @@ const handleLogout = async () => {
                                 </div>
                             </div>
 
-                            {/* REPLY THEME SELECTOR */}
-                            <div className="space-y-3 pt-2 border-t border-white/5">
-                                <label className="text-white text-sm font-medium flex items-center gap-2"><MessageSquareDashed size={14}/> Reply Theme</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button onClick={() => setReplyTheme('classic')} className={`h-10 rounded-xl border transition-all flex items-center justify-center gap-2 ${replyTheme === 'classic' ? 'bg-zinc-800 border-zinc-500 text-white' : 'bg-white/5 border-white/5 text-zinc-500 hover:text-white'}`}>
-                                        <div className="w-2 h-2 bg-[#DA7756] rounded-sm" />
-                                        <span className="text-xs font-bold uppercase tracking-wider">Classic Bold</span>
-                                    </button>
-                                    <button onClick={() => setReplyTheme('soft_glass')} className={`h-10 rounded-xl border transition-all flex items-center justify-center gap-2 ${replyTheme === 'soft_glass' ? 'bg-white/10 border-white/20 text-white backdrop-blur-md' : 'bg-white/5 border-white/5 text-zinc-500 hover:text-white'}`}>
-                                        <div className="w-2 h-2 bg-[#DA7756] rounded-full" />
-                                        <span className="text-xs font-bold uppercase tracking-wider">Soft Glass</span>
-                                    </button>
-                                </div>
-                            </div>
+                            {/* REPLY THEME SELECTOR - REMOVED */}
                             
                             {/* RED MODE */}
                             <div className="space-y-4 pt-2 border-t border-white/5">
@@ -1336,7 +1315,24 @@ const handleLogout = async () => {
              {/* REPLY PREVIEW BAR */}
              {replyingTo && (() => {
                  const senderName = replyingTo.displayName || (replyingTo.senderId === user?.uid ? 'You' : 'Unknown');
-                 const [textColor, borderColor] = getUserColor(senderName).split(' ');
+                 
+                 // CUSTOM PASTEL PALETTE (Fixed Sequence)
+                 const getPastelColor = (name) => {
+                    const colors = [
+                        { text: 'text-[#DA7756]', border: 'border-[#DA7756]' }, // 1. Claude Orange
+                        { text: 'text-[#93C5FD]', border: 'border-[#93C5FD]' }, // 2. Pastel Blue
+                        { text: 'text-[#FDE047]', border: 'border-[#FDE047]' }, // 3. Pastel Yellow
+                        { text: 'text-[#86EFAC]', border: 'border-[#86EFAC]' }, // 4. Pastel Green
+                        { text: 'text-[#D8B4FE]', border: 'border-[#D8B4FE]' }, // 5. Pastel Purple
+                        { text: 'text-[#F472B6]', border: 'border-[#F472B6]' }, // 6. Pastel Pink
+                        { text: 'text-[#CBD5E1]', border: 'border-[#CBD5E1]' }, // 7. Slate
+                    ];
+                    let hash = 0;
+                    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+                    return colors[Math.abs(hash) % colors.length];
+                 };
+
+                 const { text: textColor, border: borderColor } = getPastelColor(senderName);
                  
                  // Clean text for preview
                  let previewText = replyingTo.text || '';
@@ -1345,30 +1341,18 @@ const handleLogout = async () => {
                      previewText = parts.slice(1).join("|||RPLY|||");
                  }
                  
-                 const isGlass = replyTheme === 'soft_glass';
-
                  return (
                      <div className="max-w-2xl mx-auto mb-2 animate-in slide-in-from-bottom-2 duration-200">
-                         <div className={`mx-1 p-2 rounded-xl relative flex items-center justify-between shadow-lg shadow-black/50 transition-all ${
-                            isGlass 
-                             ? 'bg-zinc-800/40 backdrop-blur-xl border border-white/10' 
-                             : `bg-[#1c1c1d] border-l-4 ${borderColor}`
-                         }`}>
-                             
-                             {/* Soft Glass Accent Pill */}
-                             {isGlass && (
-                                <div className={`absolute left-2 top-2 bottom-2 w-1 rounded-full ${borderColor.replace('border-', 'bg-')} opacity-60`} />
-                             )}
-
-                             <div className={`flex-1 min-w-0 ${isGlass ? 'pl-4 pr-8' : 'pr-8'}`}>
-                                 <div className={`text-xs font-bold mb-0.5 ${isGlass ? 'text-white/90 tracking-wide' : textColor}`}>
+                         <div className={`mx-1 p-2 rounded-xl bg-[#1c1c1d] border-l-4 ${borderColor} relative flex items-center justify-between shadow-lg shadow-black/50`}>
+                             <div className="flex-1 min-w-0 pr-8">
+                                 <div className={`text-xs font-bold ${textColor} mb-0.5`}>
                                      {senderName}
                                  </div>
-                                 <div className={`text-sm truncate ${isGlass ? 'text-zinc-400 font-light' : 'text-zinc-300'}`}>
+                                 <div className="text-sm text-zinc-300 truncate">
                                      {previewText || (replyingTo.imageUrl ? 'Photo' : 'Voice Message')}
                                  </div>
                              </div>
-                             <button onClick={() => setReplyingTo(null)} className={`absolute top-2 right-2 p-1 rounded-full transition-colors ${isGlass ? 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10' : 'bg-zinc-800 text-zinc-400 hover:text-white'}`}>
+                             <button onClick={() => setReplyingTo(null)} className="absolute top-2 right-2 p-1 bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors">
                                  <X size={14} />
                              </button>
                          </div>

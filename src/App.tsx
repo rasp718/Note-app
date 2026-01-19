@@ -924,6 +924,20 @@ const handleLogout = async () => {
   }).sort((a, b) => { if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1; return a.date - b.date; });
 
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
+  // Helper to group items by date for sticky headers
+  const groupItemsByDate = (items) => {
+    const groups = [];
+    items.forEach((item) => {
+        const dateLabel = getDateLabel(item.date || item.timestamp);
+        let lastGroup = groups[groups.length - 1];
+        if (!lastGroup || lastGroup.date !== dateLabel) {
+            lastGroup = { date: dateLabel, items: [] };
+            groups.push(lastGroup);
+        }
+        lastGroup.items.push(item);
+    });
+    return groups;
+};
 
   // ============================================================================
   // SECTION: RENDER
@@ -1323,60 +1337,68 @@ const handleLogout = async () => {
    <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-1 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
    {activeChatId === 'saved_messages' ? (
-                    filteredNotes.map((note, index) => {
-                        const prevNote = filteredNotes[index - 1];
-                        const showHeader = !prevNote || !isSameDay(note.date, prevNote.date);
-                        
-                        const noteColors = getBubbleColors(bubbleStyle, true, isHackerMode);
-
-                        return (
-                            <React.Fragment key={note.id}>
-                                {showHeader && (
-                                  <div className="flex justify-center my-2 w-full select-none">
-                                    <span className="text-white/90 text-[11px] font-bold uppercase tracking-widest drop-shadow-md shadow-black">
-                                      {getDateLabel(note.date)}
-                                    </span>
-                                  </div>
-                                )}
-                                <div onDoubleClick={() => handleToggleExpand(note.id)} className={`select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
-                                    {/* Added max-w-[85%] wrapper to fix Note width issue */}
-                                    <div className="max-w-[85%] w-fit">
-                                        <NoteCard 
-                                            note={note} 
-                                            categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
-                                            selectedVoice={selectedVoice} 
-                                            onDelete={handleDeleteNote} 
-                                            onPin={togglePin} 
-                                            onCategoryClick={(cat) => setActiveFilter(cat)} 
-                                            onEdit={() => handleEditClick(note)} 
-                                            onToggleExpand={handleToggleExpand}
-                                            onImageClick={setZoomedImage}
-                                            customColors={noteColors}
-                                        />
+                    groupItemsByDate(filteredNotes).map((group) => (
+                        <div key={group.date} className="relative w-full">
+                            {/* STICKY DATE HEADER */}
+                            <div className="sticky top-20 z-30 flex justify-center py-4 pointer-events-none">
+                                <span className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-black/50">
+                                    {group.date}
+                                </span>
+                            </div>
+                            
+                            {group.items.map((note, index) => {
+                                const noteColors = getBubbleColors(bubbleStyle, true, isHackerMode);
+                                return (
+                                    <div key={note.id} onDoubleClick={() => handleToggleExpand(note.id)} className={`mb-1 select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
+                                        <div className="max-w-[85%] w-fit">
+                                            <NoteCard 
+                                                note={note} 
+                                                categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 
+                                                selectedVoice={selectedVoice} 
+                                                onDelete={handleDeleteNote} 
+                                                onPin={togglePin} 
+                                                onCategoryClick={(cat) => setActiveFilter(cat)} 
+                                                onEdit={() => handleEditClick(note)} 
+                                                onToggleExpand={handleToggleExpand}
+                                                onImageClick={setZoomedImage}
+                                                customColors={noteColors}
+                                            />
+                                        </div>
                                     </div>
-                                </div>
-                            </React.Fragment>
-                        );
-                    })
+                                );
+                            })}
+                        </div>
+                    ))
                 ) : (
-                    activeMessages.map((msg, index) => (
-                        <MessageItem 
-                            key={msg.id}
-                            msg={msg}
-                            prevMsg={activeMessages[index - 1]}
-                            nextMsg={activeMessages[index + 1]}
-                            user={user}
-                            isGroup={currentChatObject?.type === 'group'}
-                            reactions={reactions}
-                            onReact={handleAddReaction}
-                            onReply={(target) => { setReplyingTo(target); setTimeout(() => textareaRef.current?.focus(), 50); }}
-                            onDelete={handleDeleteMessage}
-                            onEdit={handleEditMessage}
-                            setZoomedImage={setZoomedImage}
-                            bubbleStyle={bubbleStyle}
-                            isHackerMode={isHackerMode}
-                            replyTheme={replyTheme}
-                        />
+                    groupItemsByDate(activeMessages).map((group) => (
+                        <div key={group.date} className="relative w-full">
+                            {/* STICKY DATE HEADER */}
+                            <div className="sticky top-20 z-30 flex justify-center py-4 pointer-events-none">
+                                <span className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-black/50">
+                                    {group.date}
+                                </span>
+                            </div>
+
+                            {group.items.map((msg, index) => (
+                                <MessageItem 
+                                    key={msg.id}
+                                    msg={msg}
+                                    prevMsg={group.items[index - 1]}
+                                    nextMsg={group.items[index + 1]}
+                                    user={user}
+                                    isGroup={currentChatObject?.type === 'group'}
+                                    reactions={reactions}
+                                    onReact={handleAddReaction}
+                                    onReply={(target) => { setReplyingTo(target); setTimeout(() => textareaRef.current?.focus(), 50); }}
+                                    onDelete={handleDeleteMessage}
+                                    onEdit={handleEditMessage}
+                                    setZoomedImage={setZoomedImage}
+                                    bubbleStyle={bubbleStyle}
+                                    isHackerMode={isHackerMode}
+                                    replyTheme={replyTheme}
+                                />
+                            ))}
+                        </div>
                     ))
                 )}
                 <div ref={bottomRef} className="h-0 w-full shrink-0" />

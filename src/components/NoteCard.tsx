@@ -146,32 +146,37 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         const response = await fetch(note.imageUrl, { mode: 'cors' });
         if (!response.ok) throw new Error("Restricted");
         const blob = await response.blob();
-
-        // Prepare file for mobile sharing
+        
         const mimeType = blob.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
-        const file = new File([blob], `image.${mimeType.split('/')[1]}`, { type: mimeType });
 
-        // 1. MOBILE: Use Native Share Sheet (Reliable)
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                files: [file],
-                title: 'Image'
-            });
-            return; // Stop here if share worked
+        // 1. Try Direct Clipboard First (Fastest, No Popup)
+        try {
+            const cleanBlob = blob.type === mimeType ? blob : new Blob([blob], { type: mimeType });
+            await navigator.clipboard.write([new ClipboardItem({ [mimeType]: cleanBlob })]);
+            triggerHaptic(50);
+            return; 
+        } catch (clipErr) {
+            // Ignore, fall through to Share Sheet
         }
 
-        // 2. DESKTOP: Use Clipboard API
-        await navigator.clipboard.write([new ClipboardItem({ [mimeType]: file })]);
-        triggerHaptic(50);
+        // 2. Mobile Share Sheet (Fallback for iOS/Android if Clipboard failed)
+        const file = new File([blob], `image.${mimeType.split('/')[1]}`, { type: mimeType });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                files: [file] 
+                // Removed 'title' property to stop it from pasting the word "Image"
+            });
+            return;
+        }
 
     } catch (e) { 
-        // 3. FALLBACK: Link Copy
+        // 3. Last Resort: Copy Link
         try {
             await navigator.clipboard.writeText(note.imageUrl);
             triggerHaptic([10, 50]);
         } catch (err) {}
     }
-  };
+};
   
   const openMenu = (clientX: number, clientY: number) => { 
       triggerHaptic(); 

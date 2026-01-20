@@ -150,7 +150,8 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                     </div>
                 )}
                 
-                <div className="relative z-10 max-w-[85%] w-fit">
+                <div className={`relative z-10 w-fit ${msg.imageUrl ? 'max-w-[75%] sm:max-w-[340px]' : 'max-w-[85%]'}`}>
+                    {/* TAIL SVG - Sent (Right) */}
                     {isMe && isLastInGroup && !msg.imageUrl && (
                         <svg className="absolute bottom-[3px] -right-[12px] rotate-[8deg] z-20 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
                             <path d="M0,0 C2,7.5 9,14 17,14 H0 V0 Z" fill={tailColor} />
@@ -1397,7 +1398,7 @@ const handleLogout = async () => {
 
                                 return (
                                     <div key={note.id} onDoubleClick={() => handleToggleExpand(note.id)} className={`mb-1 select-none transition-all duration-300 active:scale-[0.99] w-full flex ${alignment === 'left' ? 'justify-start' : alignment === 'center' ? 'justify-center' : 'justify-end'} ${editingNote && editingNote.id !== note.id ? 'opacity-50 blur-[1px]' : 'opacity-100'}`}>
-                                        <div className="max-w-[85%] w-fit">
+                                        <div className={`w-fit ${note.imageUrl ? 'max-w-[75%] sm:max-w-[340px]' : 'max-w-[85%]'}`}>
                                             <NoteCard 
                                                 note={note} 
                                                 categories={activeFilter === 'secret' ? [activeSecretConfig] : categories} 

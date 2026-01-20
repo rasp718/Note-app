@@ -146,7 +146,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         const response = await fetch(note.imageUrl, { mode: 'cors' });
         if (!response.ok) throw new Error("Restricted");
         const blob = await response.blob();
-        await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+        
+        // Force valid MIME type for Clipboard API
+        const mimeType = blob.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
+        const cleanBlob = blob.type === mimeType ? blob : new Blob([blob], { type: mimeType });
+
+        await navigator.clipboard.write([new ClipboardItem({ [mimeType]: cleanBlob })]);
         triggerHaptic(50);
     } catch (e) { 
         // Silent Fallback: Copy Link without popup

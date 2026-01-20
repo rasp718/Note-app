@@ -146,26 +146,22 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         const response = await fetch(note.imageUrl, { mode: 'cors' });
         if (!response.ok) throw new Error("Restricted");
         const blob = await response.blob();
-        
         const mimeType = blob.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
 
-        // 1. Try Direct Clipboard First (Fastest, No Popup)
+        // 1. Try Direct Clipboard First (Silent)
         try {
             const cleanBlob = blob.type === mimeType ? blob : new Blob([blob], { type: mimeType });
             await navigator.clipboard.write([new ClipboardItem({ [mimeType]: cleanBlob })]);
             triggerHaptic(50);
-            return; 
+            return; // Success! No popup needed.
         } catch (clipErr) {
-            // Ignore, fall through to Share Sheet
+            // Clipboard API failed (likely mobile restriction), continue to fallback...
         }
 
-        // 2. Mobile Share Sheet (Fallback for iOS/Android if Clipboard failed)
+        // 2. Mobile Share Sheet (Only if Silent Copy failed)
         const file = new File([blob], `image.${mimeType.split('/')[1]}`, { type: mimeType });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                files: [file] 
-                // Removed 'title' property to stop it from pasting the word "Image"
-            });
+            await navigator.share({ files: [file] });
             return;
         }
 

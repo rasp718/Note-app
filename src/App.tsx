@@ -1548,19 +1548,74 @@ const handleLogout = async () => {
                  );
              })()}
 
-             {/* NEW IMAGE PREVIEW (Moved above input) */}
-             {imageUrl && (
-                 <div className="max-w-2xl mx-auto mb-3 px-1 animate-in slide-in-from-bottom-2 duration-200">
-                     <div className="relative inline-block group">
-                        <div className="h-24 w-24 rounded-xl overflow-hidden border border-white/10 bg-zinc-900 shadow-lg relative">
-                            <img src={imageUrl} className="w-full h-full object-cover" />
-                        </div>
-                        <button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-2 -right-2 w-7 h-7 bg-zinc-800 border border-zinc-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-zinc-700 active:scale-90 transition-transform z-10">
-                            <X size={16} />
-                        </button>
-                     </div>
-                 </div>
-             )}
+             {/* OVERLAY: TELEGRAM STYLE IMAGE PREVIEW MODAL */}
+{imageUrl && (
+    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+        {/* Click outside to cancel */}
+        <div className="absolute inset-0" onClick={() => { setImageUrl(''); setTranscript(''); }} />
+        
+        <div className="bg-[#1c1c1d] w-full max-w-md rounded-2xl overflow-hidden shadow-2xl relative z-10 flex flex-col animate-in zoom-in-95 duration-200 border border-white/10">
+            
+            {/* Header */}
+            <div className="px-4 py-3 flex justify-between items-center border-b border-white/5 bg-zinc-900/50">
+                <h3 className="font-bold text-white text-base">Send an image</h3>
+                <button onClick={() => { setImageUrl(''); setTranscript(''); }} className="text-zinc-400 hover:text-white p-1">
+                    <X size={20} />
+                </button>
+            </div>
+
+            {/* Image Preview Area */}
+            <div className="relative w-full aspect-[4/5] bg-black/50 flex items-center justify-center overflow-hidden">
+                <img src={imageUrl} className="max-w-full max-h-full object-contain" alt="Preview" />
+            </div>
+
+            {/* Caption Input & Tools */}
+            <div className="p-4 space-y-4 bg-[#1c1c1d]">
+                
+                {/* Dummy Compression Checkbox (Visual only to match Telegram) */}
+                <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded bg-[#DA7756] flex items-center justify-center">
+                        <Check size={14} className="text-white" strokeWidth={3} />
+                    </div>
+                    <span className="text-white font-medium text-sm">Compress the image</span>
+                </div>
+
+                {/* Caption Input (Binds to transcript) */}
+                <div className="relative">
+                    <input 
+                        autoFocus
+                        type="text" 
+                        value={transcript}
+                        onChange={(e) => setTranscript(e.target.value)}
+                        placeholder="Caption"
+                        className="w-full bg-transparent border-b border-zinc-700 text-white pb-2 focus:outline-none focus:border-[#DA7756] transition-colors placeholder:text-zinc-500"
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                handleMainAction(); // Sends the message
+                            }
+                        }}
+                    />
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex justify-between items-center pt-2">
+                    <button 
+                        onClick={() => { setImageUrl(''); setTranscript(''); }} 
+                        className="text-[#DA7756] font-medium text-sm hover:text-[#c46243] px-2"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={handleMainAction}
+                        className="bg-[#DA7756] text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-[#c46243] transition-all active:scale-95 shadow-lg shadow-orange-900/20"
+                    >
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
 
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  
@@ -2126,7 +2181,7 @@ const handleLogout = async () => {
         .no-scrollbar::-webkit-scrollbar { display: none; } 
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
-    </div>
+    </div>f
   );
 }
 

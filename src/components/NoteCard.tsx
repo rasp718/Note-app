@@ -161,7 +161,17 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         }
 
         // 2. DESKTOP: Use Clipboard API
-        await navigator.clipboard.write([new ClipboardIt
+        await navigator.clipboard.write([new ClipboardItem({ [mimeType]: file })]);
+        triggerHaptic(50);
+
+    } catch (e) { 
+        // 3. FALLBACK: Link Copy
+        try {
+            await navigator.clipboard.writeText(note.imageUrl);
+            triggerHaptic([10, 50]);
+        } catch (err) {}
+    }
+  };
   
   const openMenu = (clientX: number, clientY: number) => { 
       triggerHaptic(); 

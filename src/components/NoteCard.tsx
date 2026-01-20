@@ -141,19 +141,19 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const handleCopyImage = async () => { 
     if (!note.imageUrl) return;
     try {
-        // Attempt to fetch with CORS mode
         const response = await fetch(note.imageUrl, { mode: 'cors' });
-        if (!response.ok) throw new Error("Network response was not ok");
+        if (!response.ok) throw new Error("Restricted");
         const blob = await response.blob();
         await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-        setContextMenu(null);
-        // Optional: Haptic success
         triggerHaptic(50);
     } catch (e) { 
-        console.error(e); 
-        alert("Could not copy image. Browser security prevented access to this file.");
-        setContextMenu(null); 
+        // Security Fallback: Copy Link instead of crashing
+        try {
+            await navigator.clipboard.writeText(note.imageUrl);
+            alert("Image protected by browser security.\n\nLink copied to clipboard instead!");
+        } catch (err) {}
     }
+    setContextMenu(null);
 };
   
   const openMenu = (clientX: number, clientY: number) => { 

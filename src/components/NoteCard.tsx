@@ -87,7 +87,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   // --- Refs ---
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  const touchStartTime = useRef<number>(0);
+  const touchStartTime = useRef<number>(0);f
   const longPressTimer = useRef<any>(null);
   const isLongPress = useRef(false); 
 

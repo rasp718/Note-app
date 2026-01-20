@@ -30,13 +30,14 @@ interface NoteCardProps {
   replyTheme?: string;
 }
 
-// ... (Helper functions like triggerHaptic, ContextMenuItem, InlineActionButton) ...
+// Helper: Haptic Feedback
 const triggerHaptic = (pattern: number | number[] = 15) => { 
   if (typeof navigator !== 'undefined' && navigator.vibrate) { 
       try { navigator.vibrate(pattern); } catch (e) {} 
   } 
 };
 
+// Component: Context Menu Item
 const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
   const [isHovered, setIsHovered] = useState(false);
   
@@ -63,6 +64,7 @@ const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
   );
 };
 
+// Component: Inline Action Button
 const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any) => {
   const [isHovered, setIsHovered] = useState(false);
   return (
@@ -138,41 +140,64 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; window.speechSynthesis.speak(utterance); } };
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
-  const handleCopyImage = async () => { 
+
+  // --- FIX: ROBUST IMAGE COPY HANDLER ---
+  const handleCopyImage = async () => {
     if (!note.imageUrl) return;
     setContextMenu(null);
 
     try {
-        const response = await fetch(note.imageUrl, { mode: 'cors' });
-        if (!response.ok) throw new Error("Restricted");
-        const blob = await response.blob();
-        const mimeType = blob.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
+        // 1. Load the image into a standard HTML Image Element
+        // This handles cross-origin credentials and decoding automatically
+        const img = new Image();
+        img.crossOrigin = "anonymous"; 
+        img.src = note.imageUrl;
 
-        // 1. Try Direct Clipboard First (Silent)
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+        });
+
+        // 2. Draw to Canvas (This converts WebP/JPEG/Avif to a standard bitmap)
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error("Canvas context blocked");
+        ctx.drawImage(img, 0, 0);
+
+        // 3. Export as PNG Blob (PNG is the only format safely supported by all browsers)
+        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error("Blob creation failed");
+
+        // 4. Write to Clipboard
+        // Using strict 'image/png' type is required for iOS Safari
+        const data = [new ClipboardItem({ 'image/png': blob })];
+        await navigator.clipboard.write(data);
+        triggerHaptic(50);
+        
+        // Optional: You could show a "Copied" toast here
+    } catch (e) {
+        console.error("Clipboard API failed, trying fallback", e);
+        
+        // 5. Fallback: Mobile Share Sheet (If Clipboard API fails on mobile)
         try {
-            const cleanBlob = blob.type === mimeType ? blob : new Blob([blob], { type: mimeType });
-            await navigator.clipboard.write([new ClipboardItem({ [mimeType]: cleanBlob })]);
-            triggerHaptic(50);
-            return; // Success! No popup needed.
-        } catch (clipErr) {
-            // Clipboard API failed (likely mobile restriction), continue to fallback...
+            const response = await fetch(note.imageUrl, { mode: 'cors' });
+            const blob = await response.blob();
+            // Try to share as a file
+            const file = new File([blob], "image.png", { type: blob.type });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file] });
+            } else {
+                // Final Fallback: Copy URL as text
+                await navigator.clipboard.writeText(note.imageUrl);
+                alert("Image URL copied to clipboard.");
+            }
+        } catch (err) {
+            console.error("Share failed", err);
         }
-
-        // 2. Mobile Share Sheet (Only if Silent Copy failed)
-        const file = new File([blob], `image.${mimeType.split('/')[1]}`, { type: mimeType });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file] });
-            return;
-        }
-
-    } catch (e) { 
-        // 3. Last Resort: Copy Link
-        try {
-            await navigator.clipboard.writeText(note.imageUrl);
-            triggerHaptic([10, 50]);
-        } catch (err) {}
     }
-};
+  };
   
   const openMenu = (clientX: number, clientY: number) => { 
       triggerHaptic(); 
@@ -274,7 +299,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
              </div>
           )}
 
-{variant === 'received' && opponentName && opponentName !== 'OPP' && (
+          {variant === 'received' && opponentName && opponentName !== 'OPP' && (
               <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}
 

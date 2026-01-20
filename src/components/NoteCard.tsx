@@ -140,27 +140,28 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
   const handleCopyImage = async () => { 
     if (!note.imageUrl) return;
-    setContextMenu(null); // Close menu immediately
+    setContextMenu(null);
 
     try {
         const response = await fetch(note.imageUrl, { mode: 'cors' });
         if (!response.ok) throw new Error("Restricted");
         const blob = await response.blob();
-        
-        // Force valid MIME type for Clipboard API
-        const mimeType = blob.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
-        const cleanBlob = blob.type === mimeType ? blob : new Blob([blob], { type: mimeType });
 
-        await navigator.clipboard.write([new ClipboardItem({ [mimeType]: cleanBlob })]);
-        triggerHaptic(50);
-    } catch (e) { 
-        // Silent Fallback: Copy Link without popup
-        try {
-            await navigator.clipboard.writeText(note.imageUrl);
-            triggerHaptic([10, 50]); 
-        } catch (err) {}
-    }
-};
+        // Prepare file for mobile sharing
+        const mimeType = blob.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
+        const file = new File([blob], `image.${mimeType.split('/')[1]}`, { type: mimeType });
+
+        // 1. MOBILE: Use Native Share Sheet (Reliable)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                files: [file],
+                title: 'Image'
+            });
+            return; // Stop here if share worked
+        }
+
+        // 2. DESKTOP: Use Clipboard API
+        await navigator.clipboard.write([new ClipboardIt
   
   const openMenu = (clientX: number, clientY: number) => { 
       triggerHaptic(); 

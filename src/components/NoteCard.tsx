@@ -140,6 +140,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
   const handleCopyImage = async () => { 
     if (!note.imageUrl) return;
+    setContextMenu(null); // Close menu immediately
+
     try {
         const response = await fetch(note.imageUrl, { mode: 'cors' });
         if (!response.ok) throw new Error("Restricted");
@@ -147,13 +149,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
         triggerHaptic(50);
     } catch (e) { 
-        // Security Fallback: Copy Link instead of crashing
+        // Silent Fallback: Copy Link without popup
         try {
             await navigator.clipboard.writeText(note.imageUrl);
-            alert("Image protected by browser security.\n\nLink copied to clipboard instead!");
+            triggerHaptic([10, 50]); 
         } catch (err) {}
     }
-    setContextMenu(null);
 };
   
   const openMenu = (clientX: number, clientY: number) => { 

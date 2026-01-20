@@ -325,9 +325,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
              </div>
           ) : hasImage ? (
             <div className="relative">
-                <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="rounded-xl overflow-hidden border-none bg-zinc-950 flex justify-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative">
-                <img src={note.imageUrl} alt="Attachment" crossOrigin="anonymous" className="w-full h-auto md:max-h-96 object-contain" />
-                    <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1.5 shadow-sm">
+                <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="rounded-xl overflow-hidden border-none bg-black flex justify-center items-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative min-w-[120px] min-h-[120px]">
+                <img src={note.imageUrl} alt="Attachment" crossOrigin="anonymous" className="block max-w-full max-h-[320px] w-auto h-auto object-contain" />
+                    <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1.5 shadow-sm border border-white/10">
                         <span className="text-[10px] font-medium text-white/90">{formatTime(note.date)}</span>
                         {variant === 'sent' && <StatusIcon isOverlay={true} />}
                     </div>

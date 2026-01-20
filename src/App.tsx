@@ -1548,6 +1548,20 @@ const handleLogout = async () => {
                  );
              })()}
 
+             {/* NEW IMAGE PREVIEW (Moved above input) */}
+             {imageUrl && (
+                 <div className="max-w-2xl mx-auto mb-3 px-1 animate-in slide-in-from-bottom-2 duration-200">
+                     <div className="relative inline-block group">
+                        <div className="h-24 w-24 rounded-xl overflow-hidden border border-white/10 bg-zinc-900 shadow-lg relative">
+                            <img src={imageUrl} className="w-full h-full object-cover" />
+                        </div>
+                        <button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-2 -right-2 w-7 h-7 bg-zinc-800 border border-zinc-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-zinc-700 active:scale-90 transition-transform z-10">
+                            <X size={16} />
+                        </button>
+                     </div>
+                 </div>
+             )}
+
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  
                  {isRecording ? (
@@ -1582,12 +1596,6 @@ const handleLogout = async () => {
 
                         {/* MIDDLE: INPUT PILL */}
                         <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-[20px] flex items-end px-4 py-2 focus-within:border-zinc-700 transition-colors gap-2 min-h-[44px]">
-                            {imageUrl && (
-                                <div className="relative flex-shrink-0 mb-0.5">
-                                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-zinc-700"><img src={imageUrl} className="w-full h-full object-cover" /></div>
-                                    <button onClick={() => { setImageUrl(''); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-zinc-800 border border-zinc-700 text-white rounded-full flex items-center justify-center"><X size={12} /></button>
-                                </div>
-                            )}
                             <textarea 
                                 ref={textareaRef} 
                                 value={transcript} 

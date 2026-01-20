@@ -16,7 +16,6 @@ import {
 
 // IMPORT COMPONENTS
 import { NoteCard } from './components/NoteCard'; 
-// ChatListItem removed to fix build error
 import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers, useUser, usePresence } from './useFirebaseSync';
 import Auth from './components/Auth';
 // FIREBASE DIRECT INIT FOR INVITES
@@ -96,26 +95,22 @@ const GroupMemberRow = ({ userId, isAdmin, isViewerAdmin, onRemove, onMute, isMu
     );
 };
 
-// Wrapper to fetch user data for individual messages (Fixes "Unknown" names in groups)
+// Wrapper to fetch user data for individual messages
 const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact, onReply, onDelete, onEdit, setZoomedImage, bubbleStyle, isHackerMode, replyTheme }) => {
     const senderData = useUser(msg.senderId);
     const isMe = msg.senderId === user?.uid;
-    // REMOVED showHeader to prevent duplicate dates
     const isLastInGroup = !nextMsg || nextMsg.senderId !== msg.senderId || !isSameDay(msg.timestamp, nextMsg.timestamp);
     
-    // Resolve Display Name
     const displayName = senderData?.displayName || 'Unknown';
     const photoURL = senderData?.photoURL;
 
     let customColors = getBubbleColors(bubbleStyle, isMe, false);
 
-    // Map New Solid Colors (Manual Overrides for items not in utils.ts)
     if (isMe) {
         if (bubbleStyle === 'midnight') customColors = { bg: 'bg-[#172554]', text: 'text-zinc-100' };
         if (bubbleStyle === 'slate') customColors = { bg: 'bg-[#475569]', text: 'text-white' };
     }
     
-    // Determine Tail Color logic (Solid Only)
     let tailColor = '#ffffff'; 
     if (!isMe) {
         tailColor = '#27272a'; 
@@ -127,8 +122,8 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
             case 'blue_gradient': tailColor = '#2563eb'; break;
             case 'solid_gray': tailColor = '#3f3f46'; break;
             case 'minimal_solid': tailColor = '#ffffff'; break;
-            case 'midnight': tailColor = '#172554'; break; // New
-            case 'slate': tailColor = '#475569'; break;    // New
+            case 'midnight': tailColor = '#172554'; break; 
+            case 'slate': tailColor = '#475569'; break;    
             default: tailColor = '#ffffff';
         }
     }
@@ -141,10 +136,8 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
 
     return (
         <React.Fragment key={msg.id}>
-            {/* Header removed from here to fix duplicates */}
             <div 
                 style={{ zIndex: 1 }}
-                // mb-1 is default tight spacing, mb-6 adds room for the reaction badge so it doesn't get covered
                 className={`flex w-full ${reactions[msg.id] ? 'mb-3' : 'mb-1'} items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
             >
                 {!isMe && (
@@ -158,21 +151,18 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                 )}
                 
                 <div className="relative z-10 max-w-[85%] w-fit">
-                    {/* TAIL SVG - Sent (Right) */}
                     {isMe && isLastInGroup && !msg.imageUrl && (
                         <svg className="absolute bottom-[3px] -right-[12px] rotate-[8deg] z-20 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
                             <path d="M0,0 C2,7.5 9,14 17,14 H0 V0 Z" fill={tailColor} />
                         </svg>
                     )}
 
-                    {/* TAIL SVG - Received (Left) */}
                     {!isMe && isLastInGroup && !msg.imageUrl && (
                         <svg className="absolute bottom-[3px] -left-[12px] rotate-[-8deg] z-20 w-[17px] h-[14px] fill-current" viewBox="0 0 17 14">
                             <path d="M17,0 C15,7.5 8,14 0,14 H17 V0 Z" fill={tailColor} />
                         </svg>
                     )}
 
-                    {/* Force fully rounded corners (Squircle) using CSS override to guarantee the look */}
                     <div className={isMe ? "[&>div]:!rounded-br-2xl" : "[&>div]:!rounded-bl-2xl"}>
                         <NoteCard 
                             note={msgNote} categories={[]} selectedVoice={null} 
@@ -197,17 +187,15 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
     );
 };
 
-// Fixed Chat Row to display Group Photos correctly - SQUIRCLE STYLE
+// Fixed Chat Row
 const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
     const otherUser = useUser(chat.otherUserId);
     const isGroup = chat.type === 'group';
     const displayName = isGroup ? chat.displayName : (otherUser?.displayName || 'Unknown');
     const photoURL = isGroup ? chat.photoURL : otherUser?.photoURL;
     
-    // FIX: Parse raw text to hide JSON reply metadata
     let lastMsg = chat.lastMessageText || '';
     if (lastMsg.includes("|||RPLY|||")) {
-        // Take the part AFTER the separator
         lastMsg = lastMsg.split("|||RPLY|||")[1] || 'Reply'; 
     }
     if (lastMsg.includes("STREET_DICE_GAME")) {
@@ -226,7 +214,6 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
                 </div>
             )}
             <div className="w-14 h-14 flex-shrink-0 relative group/icon">
-                {/* SQUIRCLE SHAPE (rounded-2xl) to match Notes, Borders removed to make content bigger */}
                 <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center overflow-hidden shadow-lg shadow-black/50 relative">
                     {photoURL ? (
                         <img src={photoURL} className="w-full h-full object-cover transition-transform duration-500 group-hover/icon:scale-110" alt="avatar" />
@@ -238,8 +225,6 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-black z-10"></div>
                 )}
                 
-                {/* Red Notification Badge */}
-                {/* Checks for unreadCount OR falls back to a 'mock' count for demo if the ID is 'saved_messages' */}
                 {(chat.unreadCount > 0 || (chat.id === 'saved_messages' && !active)) && (
                     <div className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-[#ff3b30] rounded-full border-[2px] border-[#09090b] z-20 flex items-center justify-center shadow-sm animate-in zoom-in duration-300">
                         <span className="text-[10px] font-bold text-white leading-none font-sans translate-y-[0.5px]">
@@ -270,14 +255,12 @@ function App() {
   const { notes = [], addNote, deleteNote: deleteNoteFromFirebase, updateNote } = useNotes(user?.uid || null);
   const { chats: realChats, createChat } = useChats(user?.uid || null);
   
-  // Navigation & View
   const [currentView, setCurrentView] = useState('list');
   const [activeTab, setActiveTab] = useState('chats');
   const [activeChatId, setActiveChatId] = useState(null); 
   const [isEditing, setIsEditing] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState(new Set());
   
-  // Profile Settings
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [profileName, setProfileName] = useState("Vibe User");
@@ -286,7 +269,6 @@ function App() {
   const [profilePic, setProfilePic] = useState(null);
   const [categories] = useState(DEFAULT_CATEGORIES);
   
-  // Visual Settings
   const [alignment, setAlignment] = useState('right');
   const [bgIndex, setBgIndex] = useState(1);
   const [bgOpacity, setBgOpacity] = useState(0.45);
@@ -294,19 +276,18 @@ function App() {
   const [bubbleStyle, setBubbleStyle] = useState('minimal_solid');
   const [redModeIntensity, setRedModeIntensity] = useState(0);
   const [isAutoRedMode, setIsAutoRedMode] = useState(false);
-  const [replyTheme, setReplyTheme] = useState<string>('retro');
+  const [replyTheme, setReplyTheme] = useState('retro');
 
   useEffect(() => { 
       const savedTheme = localStorage.getItem('vibenotes_reply_theme');
       if (savedTheme) setReplyTheme(savedTheme);
   }, []);
 
-  const changeReplyTheme = (theme: string) => {
+  const changeReplyTheme = (theme) => {
       setReplyTheme(theme);
       localStorage.setItem('vibenotes_reply_theme', theme);
   };
 
-  // Inputs & Media
   const [contactSearchQuery, setContactSearchQuery] = useState('');
   const [contactSearchResults, setContactSearchResults] = useState([]);
   const [isSearchingContacts, setIsSearchingContacts] = useState(false);
@@ -327,7 +308,6 @@ function App() {
   const [replyingTo, setReplyingTo] = useState(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
-  // NEW STATES
   const [reactions, setReactions] = useState(() => {
       try { return JSON.parse(localStorage.getItem('vibenotes_reactions') || '{}'); } catch { return {}; }
   });
@@ -339,13 +319,11 @@ function App() {
   const [showLeaveGroupModal, setShowLeaveGroupModal] = useState(false); 
   const [mutedChats, setMutedChats] = useState(new Set());
   
-  // Group Editing State
   const [isEditingGroupInfo, setIsEditingGroupInfo] = useState(false);
   const [isProfileScrolled, setIsProfileScrolled] = useState(false);
   const [editGroupName, setEditGroupName] = useState('');
   const [editGroupDesc, setEditGroupDesc] = useState('');
 
-  // Save Group Profile Changes
   const handleSaveGroupInfo = async () => {
     if (!activeChatId || !editGroupName.trim()) return;
     try {
@@ -366,7 +344,6 @@ function App() {
       }
   };
 
-  // Handle Leaving Group
   const handleLeaveGroup = async () => {
     if (!activeChatId || !user) return;
     try {
@@ -409,15 +386,14 @@ const handleToggleMemberMute = async (memberId) => {
         }
     } catch (e) { console.error("Error toggling mute:", e); }
 };
-  // NEW: Store who we found in the URL
+  
   const [incomingInvite, setIncomingInvite] = useState(null);
   
-  // NEW: Group Chat States
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [groupImage, setGroupImage] = useState(null);
   const [groupMembers, setGroupMembers] = useState(new Set());
-  const [groupStep, setGroupStep] = useState(1); // 1: Select, 2: Name
+  const [groupStep, setGroupStep] = useState(1); 
 
   const handleGroupImageSelect = async (e) => {
     if (e.target.files?.[0]) {
@@ -456,25 +432,21 @@ const handleToggleMemberMute = async (memberId) => {
     localStorage.setItem('vibenotes_contacts', JSON.stringify(savedContacts));
   }, [savedContacts]);
 
-  // Check URL for Invite Links and fetch REAL user from Firebase
   useEffect(() => {
     const checkInvite = async () => {
         const path = window.location.pathname;
-        const match = path.match(/\/invite\/([^/]+)/); // Matches /invite/neo
+        const match = path.match(/\/invite\/([^/]+)/); 
         
         if (match && match[1]) {
             const rawHandle = match[1];
-            // Ensure handle has @ for search
             const handleToSearch = rawHandle.startsWith('@') ? rawHandle : `@${rawHandle}`;
             
             try {
-                // REAL DB LOOKUP
                 const q = query(collection(db, "users"), where("handle", "==", handleToSearch));
                 const snapshot = await getDocs(q);
                 
                 if (!snapshot.empty) {
                     const userData = snapshot.docs[0].data();
-                    // Save the full user object (including photo & uid) to state
                     setIncomingInvite({ ...userData, uid: snapshot.docs[0].id });
                 } else {
                     alert("User not found!");
@@ -482,8 +454,6 @@ const handleToggleMemberMute = async (memberId) => {
             } catch (e) {
                 console.error("Error fetching invite:", e);
             }
-            
-            // Clean URL
             window.history.replaceState(null, "", "/");
         }
     };
@@ -492,13 +462,10 @@ const handleToggleMemberMute = async (memberId) => {
 
 const handleAcceptInvite = () => {
     if (!incomingInvite) return;
-
-    // Play Success Pop
     const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAAAAAP///yH/If8h/yH/If8=");
     audio.volume = 0.2;
     audio.play().catch(() => {});
     
-    // Use the REAL data fetched from Firebase
     const newContact = {
         uid: incomingInvite.uid,
         displayName: incomingInvite.displayName || incomingInvite.handle,
@@ -544,7 +511,6 @@ const toggleGroupMember = (uid) => {
     setGroupMembers(newSet);
 };
 
-  // Refs
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const mimeTypeRef = useRef('');
@@ -558,31 +524,24 @@ const toggleGroupMember = (uid) => {
   const canvasRef = useRef(null);
   const scrollTimeoutRef = useRef(null);
   
-  // SCROLL REFS
   const bubbleListRef = useRef(null);
   const replyListRef = useRef(null);
   const bgListRef = useRef(null);
 
-  // SCROLL HANDLERS
-  // Use native listeners to forcefully prevent parent scrolling
   useEffect(() => {
     if (activeTab !== 'settings') return;
-
     const handleHorizontalWheel = (e) => {
         if (e.deltaY !== 0) {
-            e.preventDefault(); // This stops the main menu from scrolling
+            e.preventDefault(); 
             e.currentTarget.scrollLeft += e.deltaY;
         }
     };
-
-    // Small timeout to ensure DOM is rendered after tab switch
     const timeoutId = setTimeout(() => {
         const refs = [bubbleListRef.current, replyListRef.current, bgListRef.current];
         refs.forEach(el => {
             if (el) el.addEventListener('wheel', handleHorizontalWheel, { passive: false });
         });
     }, 50);
-
     return () => {
         clearTimeout(timeoutId);
         const refs = [bubbleListRef.current, replyListRef.current, bgListRef.current];
@@ -599,7 +558,6 @@ const toggleGroupMember = (uid) => {
     }
   };
 
-  // Helpers
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedVoice, setSelectedVoice] = useState(null);
   const [secretTaps, setSecretTaps] = useState(0);
@@ -640,7 +598,6 @@ const toggleGroupMember = (uid) => {
       }
   }, [myProfile]);
 
-  // Matrix Rain
   useEffect(() => {
     if (!showSecretAnim || currentView !== 'room') return;
     const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
@@ -698,10 +655,8 @@ const toggleGroupMember = (uid) => {
         const { scrollTop, scrollHeight, clientHeight } = listRef.current;
         const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
         setShowScrollButton(!isNearBottom);
-        // Collapsed if NOT near bottom (viewing history)
         setIsChatScrolled(!isNearBottom);
         
-        // Back Button Logic: Hide while scrolling, show when stopped
         setShowBackButton(false);
         if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
         scrollTimeoutRef.current = setTimeout(() => {
@@ -729,7 +684,6 @@ const toggleGroupMember = (uid) => {
     if (!transcript.trim() && !imageUrl) return;
     if (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages') return; 
     
-    // Check if muted in group
     if (activeChatId && currentChatObject?.type === 'group' && currentChatObject.mutedParticipants?.includes(user.uid)) {
         alert("You have been muted by an admin.");
         return;
@@ -751,7 +705,6 @@ const toggleGroupMember = (uid) => {
             if (editingNote && editingNote.id) { 
                 let textToSave = transcript.trim();
                 
-                // If we hid reply code earlier, put it back now
                 if (editingNote.replyMetadata) {
                     textToSave = `${editingNote.replyMetadata}|||RPLY|||${textToSave}`;
                 }
@@ -761,10 +714,8 @@ const toggleGroupMember = (uid) => {
             } else if (user) { 
                 let finalMessage = transcript.trim();
                 if (replyingTo) {
-                    // Use the name we captured when the reply was initiated
                     const senderName = replyingTo.displayName || (replyingTo.senderId === user.uid ? 'You' : 'Unknown');
                     
-                    // Flatten reply structure: Quote only the content, not the metadata
                     let quoteText = replyingTo.text || '';
                     if (quoteText.includes("|||RPLY|||")) {
                         const parts = quoteText.split("|||RPLY|||");
@@ -830,7 +781,7 @@ const toggleGroupMember = (uid) => {
 const handleAddReaction = (msgId, emoji) => {
     setReactions(prev => {
         const current = prev[msgId];
-        if (current === emoji) { // Toggle off if same
+        if (current === emoji) { 
             const next = { ...prev };
             delete next[msgId];
             return next;
@@ -849,7 +800,7 @@ const handleProfileSave = () => {
 const handleLogout = async () => {
     try {
         await signOut(auth);
-        window.location.reload(); // Reload to clear any local state/cache
+        window.location.reload(); 
     } catch (error) {
         console.error("Error signing out: ", error);
     }
@@ -863,19 +814,16 @@ const handleLogout = async () => {
     setIsUploadingImage(true); try { const url = await compressImage(file); setImageUrl(url); } catch (e) { console.error(e); } finally { setIsUploadingImage(false); }
   };
   const handlePaste = async (e) => {
-    // 1. Handle File/Blob Paste
     const items = e.clipboardData.items;
     for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
-            e.preventDefault(); // Stop text from appearing
+            e.preventDefault(); 
             const file = items[i].getAsFile();
             if (file) await handleImageUpload(file);
             return;
         }
     }
     
-    // 2. Handle "Crazy" Base64 Text Paste (Backup)
-    // If the clipboard contains a raw image string instead of a file
     const textData = e.clipboardData.getData('text');
     if (textData.startsWith('data:image')) {
         e.preventDefault();
@@ -934,14 +882,12 @@ const handleLogout = async () => {
       let cleanText = msg.text;
       let hiddenMeta = null;
 
-      // Check if this is a reply and separate the hidden code
       if (cleanText.includes("|||RPLY|||")) {
           const parts = cleanText.split("|||RPLY|||");
-          hiddenMeta = parts[0]; // Save the JSON
-          cleanText = parts.slice(1).join("|||RPLY|||"); // Only show user text
+          hiddenMeta = parts[0]; 
+          cleanText = parts.slice(1).join("|||RPLY|||"); 
       }
 
-      // Store the hidden metadata in editingNote so we can save it later
       setEditingNote({ ...msg, category: 'default', replyMetadata: hiddenMeta }); 
       setTranscript(cleanText); 
       setTimeout(() => textareaRef.current?.focus(), 100); 
@@ -953,7 +899,6 @@ const handleLogout = async () => {
   };
   const startNewChat = async (otherUid) => {
     if (!otherUid) return;
-    // Find existing chat, prioritizing the one with the most recent history
     const existingChats = realChats.filter(c => c.otherUserId === otherUid);
     const existing = existingChats.sort((a, b) => (b.lastMessageTimestamp || 0) - (a.lastMessageTimestamp || 0))[0];
 
@@ -1026,8 +971,6 @@ const handleLogout = async () => {
 
   return (
     <div className={`fixed top-0 left-0 w-full h-[100dvh] bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
-      {/* ... (Rest of your JSX remains exactly the same, the fix was in the import) */}
-      
       {/* OVERLAY: ZOOM */}
       {zoomedImage && (
           <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-in fade-in duration-200" onClick={() => setZoomedImage(null)}>
@@ -1046,7 +989,6 @@ const handleLogout = async () => {
                       <p className="text-zinc-500 font-mono">{profileHandle}</p>
                   </div>
                   <div className="bg-white p-2 rounded-xl border-2 border-black">
-                      {/* Generates a URL so phone cameras recognize it as a link to your app */}
                       <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${window.location.origin}/invite/${profileHandle.replace('@','')}`} alt="QR Code" className="w-full h-full" />
                   </div>
                   <p className="text-xs text-center text-zinc-400">Scan to connect securely</p>
@@ -1120,11 +1062,8 @@ const handleLogout = async () => {
                         </div>
 
                         {realChats.reduce((acc, chat) => {
-                            // Ensure Groups are never deduplicated against each other (as they have undefined otherUserId)
                             const existingIndex = chat.type === 'group' ? -1 : acc.findIndex(c => c.otherUserId === chat.otherUserId);
-                            
                             if (existingIndex > -1) {
-                                // If duplicate exists (only for DMs), keep the one with the newer timestamp
                                 if ((chat.lastMessageTimestamp || 0) > (acc[existingIndex].lastMessageTimestamp || 0)) {
                                     acc[existingIndex] = chat;
                                 }
@@ -1244,7 +1183,7 @@ const handleLogout = async () => {
                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6">
                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
                             
-                            {/* BUBBLE STYLES - SIDE SCROLL */}
+                            {/* BUBBLE STYLES */}
                             <div className="space-y-3">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
                                 <div className="relative group/scroll">
@@ -1274,7 +1213,7 @@ const handleLogout = async () => {
                                 </div>
                             </div>
 
-                            {/* REPLY THEME SELECTOR - VISUAL PREVIEW SCROLL */}
+                            {/* REPLY THEME */}
                             <div className="space-y-3 pt-2 border-t border-white/5">
                                 <label className="text-white text-sm font-medium flex items-center gap-2"><MessageSquareDashed size={14}/> Reply Colors</label>
                                 <div className="relative group/scroll">
@@ -1315,7 +1254,7 @@ const handleLogout = async () => {
                              <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Opacity</label><span className="text-zinc-500 text-xs font-mono">{Math.round(bgOpacity * 100)}%</span></div><input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
                         </div>
 
-                        {/* BACKGROUND GRID - SOLID BACKGROUND TO SEE THUMBNAILS */}
+                        {/* BACKGROUND GRID */}
                         <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 space-y-4 shadow-2xl relative">
                              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
                              <div className="relative group/scroll">
@@ -1352,11 +1291,10 @@ const handleLogout = async () => {
       {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
 
-            {/* Header and other room view code remains unchanged */}
             <div className="fixed top-0 left-0 right-0 z-40">
                 <header className="max-w-2xl mx-auto flex items-center justify-center px-4 py-3 relative z-50">
                     <div className="w-full relative flex items-center justify-center">
-                        {/* BACK BUTTON - ABSOLUTE LEFT */}
+                        {/* BACK BUTTON */}
                         <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center z-50">
                             <button 
                                 onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
@@ -1368,7 +1306,7 @@ const handleLogout = async () => {
 
                         {activeChatId !== 'saved_messages' ? (
                            <div onClick={() => setCurrentView('profile')} className="flex items-center justify-center cursor-pointer hover:bg-white/5 p-2 rounded-xl transition-all duration-300 group flex-row gap-3 h-auto">
-                               {/* HEADER IMAGE: Fixed Compact Size */}
+                               {/* HEADER IMAGE */}
                                <div className="w-10 h-10 rounded-xl shadow-lg shadow-black/60 flex-shrink-0 bg-zinc-800 overflow-hidden border border-white/5 relative group-hover:border-white/20 transition-all duration-300 flex items-center justify-center">
                                {currentChatObject?.type === 'group' ? (
                                       currentChatObject.photoURL ? (
@@ -1384,7 +1322,6 @@ const handleLogout = async () => {
                                </div>
                                
                                <div className="flex flex-col items-start text-left justify-center transition-all duration-300 min-w-0">
-                                   {/* TEXT: Fixed Compact Size */}
                                    <div className="transition-all duration-300">
                                         <h3 className="text-white leading-none truncate tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] font-bold text-lg">
                                             {currentChatObject?.type === 'group' ? currentChatObject.displayName : (otherChatUser?.displayName || 'Unknown')}
@@ -1455,7 +1392,6 @@ const handleLogout = async () => {
                             {group.items.map((note, index) => {
                                 let noteColors = getBubbleColors(bubbleStyle, true, isHackerMode);
 
-                                // Manual overrides to match MessageItem logic
                                 if (bubbleStyle === 'midnight') noteColors = { bg: 'bg-[#172554]', text: 'text-zinc-100' };
                                 if (bubbleStyle === 'slate') noteColors = { bg: 'bg-[#475569]', text: 'text-white' };
 
@@ -1522,7 +1458,6 @@ const handleLogout = async () => {
                  const senderName = replyingTo.displayName || (replyingTo.senderId === user?.uid ? 'You' : 'Unknown');
                  const [textColor, borderColor] = getUserColor(senderName, replyTheme).split(' ');
                  
-                 // Clean text for preview
                  let previewText = replyingTo.text || '';
                  if (previewText.includes("|||RPLY|||")) {
                      const parts = previewText.split("|||RPLY|||");
@@ -1548,79 +1483,9 @@ const handleLogout = async () => {
                  );
              })()}
 
-             {/* OVERLAY: TELEGRAM STYLE IMAGE PREVIEW MODAL */}
-{imageUrl && (
-    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-        {/* Click outside to cancel */}
-        <div className="absolute inset-0" onClick={() => { setImageUrl(''); setTranscript(''); }} />
-        
-        <div className="bg-[#1c1c1d] w-full max-w-md rounded-2xl overflow-hidden shadow-2xl relative z-10 flex flex-col animate-in zoom-in-95 duration-200 border border-white/10">
-            
-            {/* Header */}
-            <div className="px-4 py-3 flex justify-between items-center border-b border-white/5 bg-zinc-900/50">
-                <h3 className="font-bold text-white text-base">Send an image</h3>
-                <button onClick={() => { setImageUrl(''); setTranscript(''); }} className="text-zinc-400 hover:text-white p-1">
-                    <X size={20} />
-                </button>
-            </div>
-
-            {/* Image Preview Area */}
-            <div className="relative w-full aspect-[4/5] bg-black/50 flex items-center justify-center overflow-hidden">
-                <img src={imageUrl} className="max-w-full max-h-full object-contain" alt="Preview" />
-            </div>
-
-            {/* Caption Input & Tools */}
-            <div className="p-4 space-y-4 bg-[#1c1c1d]">
-                
-                {/* Dummy Compression Checkbox (Visual only to match Telegram) */}
-                <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded bg-[#DA7756] flex items-center justify-center">
-                        <Check size={14} className="text-white" strokeWidth={3} />
-                    </div>
-                    <span className="text-white font-medium text-sm">Compress the image</span>
-                </div>
-
-                {/* Caption Input (Binds to transcript) */}
-                <div className="relative">
-                    <input 
-                        autoFocus
-                        type="text" 
-                        value={transcript}
-                        onChange={(e) => setTranscript(e.target.value)}
-                        placeholder="Caption"
-                        className="w-full bg-transparent border-b border-zinc-700 text-white pb-2 focus:outline-none focus:border-[#DA7756] transition-colors placeholder:text-zinc-500"
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                handleMainAction(); // Sends the message
-                            }
-                        }}
-                    />
-                </div>
-
-                {/* Footer Buttons */}
-                <div className="flex justify-between items-center pt-2">
-                    <button 
-                        onClick={() => { setImageUrl(''); setTranscript(''); }} 
-                        className="text-[#DA7756] font-medium text-sm hover:text-[#c46243] px-2"
-                    >
-                        Cancel
-                    </button>
-                    <button 
-                        onClick={handleMainAction}
-                        className="bg-[#DA7756] text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-[#c46243] transition-all active:scale-95 shadow-lg shadow-orange-900/20"
-                    >
-                        Send
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-)}
-
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  
                  {isRecording ? (
-                    /* RECORDING STATE - NEATER LAYOUT */
                     <div className="flex-1 flex items-center gap-2 animate-in slide-in-from-bottom-2 fade-in duration-200 h-[48px]">
                         <button onClick={cancelRecording} className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-red-500 transition-colors"> <Trash2 size={24} /> </button>
                         <div className="flex-1 bg-zinc-900/80 rounded-full h-full flex items-center px-2 gap-3 border border-white/10 relative overflow-hidden">
@@ -1631,9 +1496,7 @@ const handleLogout = async () => {
                         <button onClick={finishRecording} className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full bg-[#DA7756] text-white shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"> <ArrowUp size={24} strokeWidth={3} /> </button>
                     </div>
                  ) : (
-                    /* TYPING STATE - TELEGRAM STYLE */
                     <>
-                        {/* LEFT SIDE: TOOLS (Transparent, Clean) */}
                         <div className="flex items-end gap-1 pb-1">
                             {activeChatId === 'saved_messages' ? (
                                 <button onClick={cycleFilter} className="w-10 h-10 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">
@@ -1645,11 +1508,8 @@ const handleLogout = async () => {
                                     <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} />
                                 </label>
                             )}
-                            
-                            {/* Old Dice button removed */}
                         </div>
 
-                        {/* MIDDLE: INPUT PILL */}
                         <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-[20px] flex items-end px-4 py-2 focus-within:border-zinc-700 transition-colors gap-2 min-h-[44px]">
                             <textarea 
                                 ref={textareaRef} 
@@ -1674,7 +1534,6 @@ const handleLogout = async () => {
                             )}
                         </div>
                         
-                        {/* RIGHT SIDE: BIGGER BUTTON */}
                         <div className="pb-0 animate-in fade-in zoom-in duration-200">
                              {(transcript.trim() || imageUrl || editingNote) ? (
                                 <button onClick={handleMainAction} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg active:scale-95 bg-[#DA7756] text-white hover:bg-[#c46243]">
@@ -1696,16 +1555,13 @@ const handleLogout = async () => {
         </div>
       )}
 
-      {/* VIEW: PROFILE (User or Group) - MODERN COMPACT STYLE (SCROLLABLE HEADER) */}
+      {/* VIEW: PROFILE (User or Group) */}
       {currentView === 'profile' && (otherChatUser || currentChatObject?.type === 'group') && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            {/* CLICK OUTSIDE TO CLOSE */}
             <div className="absolute inset-0" onClick={() => { setIsEditingGroupInfo(false); setCurrentView('room'); setIsProfileScrolled(false); }} />
 
-            {/* MAIN CARD - Full Screen on Mobile, Fixed Height on Laptop (Fixes Black Screen) */}
             <div className="relative w-full h-[100dvh] sm:h-[85vh] sm:max-w-[420px] bg-[#1c1c1d] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col border-x sm:border border-white/10 animate-in slide-in-from-bottom duration-300">
                 
-                {/* STICKY COLLAPSED HEADER (Shows on Scroll) */}
                 <div className={`absolute top-0 left-0 right-0 z-50 transition-all duration-300 ${isProfileScrolled ? 'bg-[#1c1c1d]/95 backdrop-blur-xl border-b border-white/10 py-3 pointer-events-auto' : 'pt-4 pointer-events-none'}`}>
                     <div className="flex items-center px-4 gap-3 pointer-events-auto">
                         <button 
@@ -1718,7 +1574,6 @@ const handleLogout = async () => {
                             <ChevronLeft size={24} className="-ml-0.5" />
                         </button>
                         
-                        {/* Collapsed Info */}
                         <div className={`flex items-center gap-3 transition-all duration-300 ${isProfileScrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                             <div className="w-9 h-9 rounded-full bg-zinc-800 overflow-hidden border border-white/10">
                                 <img 
@@ -1733,14 +1588,11 @@ const handleLogout = async () => {
                     </div>
                 </div>
 
-                {/* SCROLLABLE CONTAINER (Contains Image + Content) */}
                 <div 
                     className="absolute inset-0 overflow-y-auto no-scrollbar"
                     onScroll={(e) => setIsProfileScrolled(e.currentTarget.scrollTop > 180)}
                 >
-                    {/* HEADER IMAGE SECTION (BANNER) */}
                     <div className="relative h-72 sm:h-64 w-full bg-zinc-800 group/header flex-shrink-0 -mt-[68px]">
-                        {/* IMAGE */}
                         {(currentChatObject?.type === 'group' ? currentChatObject.photoURL : otherChatUser?.photoURL) ? (
                             <img 
                                 src={currentChatObject?.type === 'group' ? currentChatObject.photoURL : otherChatUser?.photoURL} 
@@ -1752,7 +1604,6 @@ const handleLogout = async () => {
                             </div>
                         )}
 
-                        {/* PHOTO EDIT BUTTON (If Admin/Group) - z-20 */}
                         {isEditingGroupInfo && currentChatObject?.type === 'group' && (
                             <label className="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer z-20">
                                 <div className="bg-black/50 p-3 rounded-full backdrop-blur-md border border-white/20">
@@ -1762,13 +1613,11 @@ const handleLogout = async () => {
                             </label>
                         )}
 
-                        {/* TEXT INFO - z-30 (Must be higher than photo edit button to be clickable) */}
                         <div className="absolute bottom-3 left-6 right-4 z-30 flex flex-col items-start shadow-sm">
                             {isEditingGroupInfo ? (
                                 <div className="w-full bg-black/20 backdrop-blur-sm p-3 rounded-xl border border-white/10">
                                     <div className="flex items-center gap-2 mb-2">
                                         <input 
-                                            // REMOVED AUTO FOCUS
                                             type="text" 
                                             value={editGroupName} 
                                             onChange={(e) => setEditGroupName(e.target.value)}
@@ -1780,7 +1629,6 @@ const handleLogout = async () => {
                                         value={editGroupDesc} 
                                         onChange={(e) => setEditGroupDesc(e.target.value)}
                                         placeholder="Add a description..."
-                                        // Changed to text-base (16px) to prevent iOS auto-zoom resizing
                                         className="w-full bg-transparent border-none p-0 text-white/90 text-base focus:outline-none resize-none placeholder:text-white/40"
                                         rows={2}
                                     />
@@ -1791,14 +1639,12 @@ const handleLogout = async () => {
                                         <h2 className="text-3xl font-black text-white leading-tight tracking-tight drop-shadow-xl shadow-black truncate">
                                             {currentChatObject?.type === 'group' ? currentChatObject.displayName : otherChatUser?.displayName}
                                         </h2>
-                                        {/* GROUP DESCRIPTION OR USER STATUS */}
                                         <p className="text-sm text-zinc-200 font-normal mt-1 drop-shadow-md opacity-90 line-clamp-2 leading-relaxed">
                                             {currentChatObject?.type === 'group' 
                                                 ? (currentChatObject.description || '') 
                                                 : (otherChatUser?.isOnline ? <span className="text-green-400">Online</span> : 'Last seen recently')}
                                         </p>
                                     </div>
-                                    {/* Edit Pencil if admin */}
                                     {currentChatObject?.type === 'group' && currentChatObject.createdBy === user.uid && !isEditingGroupInfo && (
                                         <button onClick={startGroupEdit} className="mb-1 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors border border-white/5 flex-shrink-0">
                                             <PenLine size={16} />
@@ -1809,10 +1655,7 @@ const handleLogout = async () => {
                         </div>
                     </div>
 
-                    {/* CONTENT BODY */}
                     <div className="bg-[#1c1c1d] pb-24 min-h-[50vh]">
-                        
-                        {/* SAVE BUTTON ROW (Only visible when editing) */}
                         {isEditingGroupInfo && (
                             <div className="flex gap-2 px-4 py-4 border-b border-white/5 animate-in slide-in-from-top-2 duration-200 sticky top-0 bg-[#1c1c1d] z-40">
                                 <button onClick={() => setIsEditingGroupInfo(false)} className="flex-1 py-3 rounded-xl bg-zinc-800 text-white font-bold text-sm hover:bg-zinc-700 transition-colors">Cancel</button>
@@ -1820,7 +1663,6 @@ const handleLogout = async () => {
                             </div>
                         )}
 
-                        {/* Action Row - MONOCHROME - COMPACT */}
                         {!isEditingGroupInfo && (
                             <div className="flex items-center justify-between gap-1 p-3 border-b border-white/5">
                                 <button className="flex-1 py-2.5 bg-zinc-800/40 rounded-2xl flex flex-col items-center justify-center gap-1 hover:bg-zinc-800 transition-all active:scale-95 group border border-white/5">
@@ -1842,10 +1684,7 @@ const handleLogout = async () => {
                             </div>
                         )}
                         
-                        {/* REST OF INFO LIST (Bio, Username, Notifications, Members, Block) */}
                         <div className="px-2 pb-6 space-y-1 mt-2">
-
-                            {/* ACTION: ADD TO CONTACTS (Visible if not saved) */}
                             {currentChatObject?.type !== 'group' && otherChatUser && !savedContacts.find(c => c.uid === otherChatUser.uid) && (
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); handleAddToContacts(); }}
@@ -1861,7 +1700,6 @@ const handleLogout = async () => {
                                 </button>
                             )}
                             
-                            {/* INFO ITEM: USERNAME (If User) */}
                             {currentChatObject?.type !== 'group' && (
                                 <div className="p-3 hover:bg-white/5 rounded-xl flex gap-4 transition-colors">
                                     <div className="text-zinc-500 mt-0.5 flex-shrink-0"><AtSign size={20} /></div>
@@ -1872,7 +1710,6 @@ const handleLogout = async () => {
                                 </div>
                             )}
 
-                            {/* INFO ITEM: NOTIFICATIONS */}
                             <div className="p-3 hover:bg-white/5 rounded-xl flex gap-4 transition-colors cursor-pointer" onClick={toggleMute}>
                                 <div className="text-zinc-500 mt-0.5 flex-shrink-0"><Bell size={20} /></div>
                                 <div className="flex-1 min-w-0 flex items-center justify-between">
@@ -1886,14 +1723,12 @@ const handleLogout = async () => {
                                 </div>
                             </div>
 
-                            {/* SECTION: MEMBERS (If Group) */}
                             {currentChatObject?.type === 'group' && !isEditingGroupInfo && (
                                 <div className="mt-4 pt-2 border-t border-white/5">
                                     <div className="px-4 py-2 text-zinc-500 text-[13px] font-medium tracking-wide">
                                         {currentChatObject.participants?.length} Members
                                     </div>
                                     
-                                    {/* Add Member Button (Admins Only) */}
                                     {currentChatObject.createdBy === user.uid && (
                                         <div className="px-2">
                                             <button 
@@ -1908,7 +1743,6 @@ const handleLogout = async () => {
                                         </div>
                                     )}
 
-                                    {/* Member List */}
                                     <div className="px-2">
                                         {currentChatObject.participants.map(uid => (
                                             <GroupMemberRow 
@@ -1925,7 +1759,6 @@ const handleLogout = async () => {
                                 </div>
                             )}
 
-                            {/* DANGER: BLOCK/LEAVE (Bottom) */}
                             <div className="px-2 mt-4 pt-2 border-t border-white/5">
                                 <button 
                                     onClick={() => currentChatObject?.type === 'group' ? setShowLeaveGroupModal(true) : setShowBlockModal(true)} 
@@ -1952,15 +1785,12 @@ const handleLogout = async () => {
         <div className="fixed inset-0 z-[100] bg-black/80 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0" onClick={() => setIsGroupModalOpen(false)} />
             <div className="bg-[#1c1c1d] w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col max-h-[80vh] animate-in slide-in-from-bottom-10 zoom-in-95 duration-200 border border-white/10">
-                
-                {/* Header */}
                 <div className="p-4 border-b border-white/10 flex justify-between items-center bg-zinc-900">
                     <button onClick={() => { if(groupStep===2) setGroupStep(1); else setIsGroupModalOpen(false); }} className="text-zinc-400 hover:text-white"><ChevronLeft size={24} /></button>
                     <h3 className="font-bold text-white">{groupStep === 1 ? 'New Group' : 'Name Group'}</h3>
                     <div className="w-6" />
                 </div>
 
-                {/* Step 1: Select Members */}
                 {groupStep === 1 && (
                     <div className="flex-1 overflow-y-auto p-2">
                         {savedContacts.length === 0 ? (
@@ -1984,7 +1814,6 @@ const handleLogout = async () => {
                     </div>
                 )}
 
-                {/* Step 2: Name Group */}
                 {groupStep === 2 && (
                     <div className="p-6 space-y-6">
                         <label className="w-24 h-24 rounded-full bg-zinc-800 mx-auto flex items-center justify-center border border-white/10 cursor-pointer overflow-hidden relative group">
@@ -2007,7 +1836,6 @@ const handleLogout = async () => {
                     </div>
                 )}
 
-                {/* Footer Action */}
                 <div className="p-4 border-t border-white/10 bg-zinc-900">
                     {groupStep === 1 ? (
                         <button 
@@ -2073,7 +1901,6 @@ const handleLogout = async () => {
                 <div className="bg-[#1c1c1d] rounded-[14px] overflow-hidden shadow-2xl shadow-black/50">
                         <div className="p-6 flex flex-col items-center justify-center gap-3 border-b border-white/10 min-h-[120px]">
                             <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center text-3xl overflow-hidden border border-white/10">
-                                {/* Show Real Profile Pic if available */}
                                 {incomingInvite.photoURL ? <img src={incomingInvite.photoURL} className="w-full h-full object-cover" /> : '🎁'}
                             </div>
                             <div className="text-center space-y-1">
@@ -2109,8 +1936,6 @@ const handleLogout = async () => {
             
             <div className="relative w-full max-w-sm mx-auto p-4 z-10 animate-in slide-in-from-bottom duration-300 md:animate-in md:zoom-in-95 md:duration-200">
                 <div className="bg-[#1c1c1d] rounded-2xl overflow-hidden shadow-2xl shadow-black/50 p-6 flex flex-col items-center gap-4">
-                    
-                    {/* Group Avatar */}
                     <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center border-2 border-[#1c1c1d] shadow-lg">
                         <Users size={32} className="text-zinc-500" />
                     </div>
@@ -2144,13 +1969,10 @@ const handleLogout = async () => {
       {/* OVERLAY: BLOCK USER MODAL */}
       {showBlockModal && otherChatUser && (
         <div className="fixed inset-0 z-[100] bg-black/70 flex flex-col justify-end md:justify-center md:items-center animate-in fade-in duration-200">
-            {/* Click backdrop to close */}
             <div className="absolute inset-0" onClick={() => setShowBlockModal(false)} />
             
             <div className="relative w-full max-w-sm mx-auto p-4 z-10 animate-in slide-in-from-bottom duration-300 md:animate-in md:zoom-in-95 md:duration-200">
                 <div className="flex flex-col gap-2">
-                    
-                    {/* Main Action Sheet */}
                     <div className="bg-[#1c1c1d] rounded-[14px] overflow-hidden shadow-2xl shadow-black/50">
                         <div className="p-4 flex flex-col items-center justify-center gap-1 border-b border-white/10 min-h-[80px]">
                             <p className="text-[13px] text-zinc-500 text-center leading-tight px-4">
@@ -2165,7 +1987,6 @@ const handleLogout = async () => {
                         </button>
                     </div>
 
-                    {/* Cancel Button */}
                     <button 
                         onClick={() => setShowBlockModal(false)}
                         className="w-full py-4 bg-[#1c1c1d] rounded-[14px] text-[17px] font-semibold text-[#0a84ff] hover:bg-white/5 active:bg-white/10 transition-colors shadow-2xl shadow-black/50"
@@ -2177,11 +1998,72 @@ const handleLogout = async () => {
         </div>
       )}
 
-<style>{`
+      {/* OVERLAY: TELEGRAM STYLE IMAGE PREVIEW MODAL - MOVED HERE */}
+      {imageUrl && (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="absolute inset-0" onClick={() => { setImageUrl(''); setTranscript(''); }} />
+            
+            <div className="bg-[#1c1c1d] w-full max-w-md rounded-2xl overflow-hidden shadow-2xl relative z-10 flex flex-col animate-in zoom-in-95 duration-200 border border-white/10">
+                
+                <div className="px-4 py-3 flex justify-between items-center border-b border-white/5 bg-zinc-900/50">
+                    <h3 className="font-bold text-white text-base">Send an image</h3>
+                    <button onClick={() => { setImageUrl(''); setTranscript(''); }} className="text-zinc-400 hover:text-white p-1">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="relative w-full aspect-[4/5] bg-black/50 flex items-center justify-center overflow-hidden">
+                    <img src={imageUrl} className="max-w-full max-h-full object-contain" alt="Preview" />
+                </div>
+
+                <div className="p-4 space-y-4 bg-[#1c1c1d]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded bg-[#DA7756] flex items-center justify-center">
+                            <Check size={14} className="text-white" strokeWidth={3} />
+                        </div>
+                        <span className="text-white font-medium text-sm">Compress the image</span>
+                    </div>
+
+                    <div className="relative">
+                        <input 
+                            autoFocus
+                            type="text" 
+                            value={transcript}
+                            onChange={(e) => setTranscript(e.target.value)}
+                            placeholder="Caption"
+                            className="w-full bg-transparent border-b border-zinc-700 text-white pb-2 focus:outline-none focus:border-[#DA7756] transition-colors placeholder:text-zinc-500"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleMainAction(); 
+                                }
+                            }}
+                        />
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2">
+                        <button 
+                            onClick={() => { setImageUrl(''); setTranscript(''); }} 
+                            className="text-[#DA7756] font-medium text-sm hover:text-[#c46243] px-2"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={handleMainAction}
+                            className="bg-[#DA7756] text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-[#c46243] transition-all active:scale-95 shadow-lg shadow-orange-900/20"
+                        >
+                            Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
+      <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; } 
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
-    </div>f
+    </div>
   );
 }
 

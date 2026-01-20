@@ -305,6 +305,7 @@ function App() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isChatScrolled, setIsChatScrolled] = useState(false);
+  const [isTopScrolled, setIsTopScrolled] = useState(false); // NEW HEADER STATE
   const [showBackButton, setShowBackButton] = useState(true);
   const [replyingTo, setReplyingTo] = useState(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
@@ -654,6 +655,10 @@ const toggleGroupMember = (uid) => {
   const handleScroll = () => {
     if (listRef.current) {
         const { scrollTop, scrollHeight, clientHeight } = listRef.current;
+        
+        // Header Transparency Logic (Trigger after 10px scroll)
+        setIsTopScrolled(scrollTop > 10);
+
         const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
         setShowScrollButton(!isNearBottom);
         setIsChatScrolled(!isNearBottom);
@@ -1292,11 +1297,12 @@ const handleLogout = async () => {
       {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
 
-            <div className="fixed top-0 left-0 right-0 z-40">
-                <header className="max-w-2xl mx-auto flex items-center justify-center px-4 py-3 relative z-50">
+            {/* SCROLL-AWARE HEADER CONTAINER */}
+            <div className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ease-out ${isTopScrolled ? 'bg-black/80 backdrop-blur-2xl border-b border-white/5 shadow-2xl shadow-black/50 pt-2 pb-2' : 'bg-transparent pt-5 pb-3'}`}>
+                <header className="max-w-2xl mx-auto flex items-center justify-center px-4 relative z-50">
                     <div className="w-full relative flex items-center justify-center">
-                        {/* BACK BUTTON */}
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center z-50">
+                        {/* BACK BUTTON (Nudged down 2px for alignment) */}
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 mt-[2px] flex items-center z-50">
                             <button 
                                 onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
                                 className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-90"

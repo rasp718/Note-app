@@ -1998,40 +1998,47 @@ const handleLogout = async () => {
         </div>
       )}
 
-      {/* OVERLAY: TELEGRAM STYLE IMAGE PREVIEW MODAL - MOVED HERE */}
+      {/* OVERLAY: TELEGRAM STYLE IMAGE PREVIEW MODAL */}
       {imageUrl && (
         <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+            {/* Click outside to cancel */}
             <div className="absolute inset-0" onClick={() => { setImageUrl(''); setTranscript(''); }} />
             
-            <div className="bg-[#1c1c1d] w-full max-w-md rounded-2xl overflow-hidden shadow-2xl relative z-10 flex flex-col animate-in zoom-in-95 duration-200 border border-white/10">
+            {/* Modal Container: w-fit ensures it shrinks to image width, min-w-[320px] ensures text field is usable */}
+            <div className="bg-[#1c1c1d] rounded-2xl overflow-hidden shadow-2xl relative z-10 flex flex-col animate-in zoom-in-95 duration-200 border border-white/10 w-fit max-w-[95vw] min-w-[320px]">
                 
-                <div className="px-4 py-3 flex justify-between items-center border-b border-white/5 bg-zinc-900/50">
-                    <h3 className="font-bold text-white text-base">Send an image</h3>
-                    <button onClick={() => { setImageUrl(''); setTranscript(''); }} className="text-zinc-400 hover:text-white p-1">
-                        <X size={20} />
+                {/* Floating Close Button */}
+                <div className="absolute top-2 right-2 z-20">
+                    <button onClick={() => { setImageUrl(''); setTranscript(''); }} className="w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-colors">
+                        <X size={16} />
                     </button>
                 </div>
 
-                <div className="relative w-full aspect-[4/5] bg-black/50 flex items-center justify-center overflow-hidden">
-                    <img src={imageUrl} className="max-w-full max-h-full object-contain" alt="Preview" />
+                {/* Image Area: auto width/height to dictate container size */}
+                <div className="relative bg-black flex items-center justify-center overflow-hidden">
+                    <img src={imageUrl} className="max-w-full max-h-[65vh] w-auto h-auto object-contain" alt="Preview" />
                 </div>
 
+                {/* Footer Area */}
                 <div className="p-4 space-y-4 bg-[#1c1c1d]">
+                    
+                    {/* Checkbox - Changed to BLUE to remove orange */}
                     <div className="flex items-center gap-3">
-                        <div className="w-5 h-5 rounded bg-[#DA7756] flex items-center justify-center">
+                        <div className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center">
                             <Check size={14} className="text-white" strokeWidth={3} />
                         </div>
                         <span className="text-white font-medium text-sm">Compress the image</span>
                     </div>
 
+                    {/* Caption Input - White border focus instead of orange */}
                     <div className="relative">
                         <input 
                             autoFocus
                             type="text" 
                             value={transcript}
                             onChange={(e) => setTranscript(e.target.value)}
-                            placeholder="Caption"
-                            className="w-full bg-transparent border-b border-zinc-700 text-white pb-2 focus:outline-none focus:border-[#DA7756] transition-colors placeholder:text-zinc-500"
+                            placeholder="Add a caption..."
+                            className="w-full bg-transparent border-b border-zinc-700 text-white pb-2 focus:outline-none focus:border-white transition-colors placeholder:text-zinc-500 text-[16px]"
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     handleMainAction(); 
@@ -2040,18 +2047,22 @@ const handleLogout = async () => {
                         />
                     </div>
 
-                    <div className="flex justify-between items-center pt-2">
+                    {/* Footer Buttons */}
+                    <div className="flex justify-between items-center pt-1">
+                        {/* Cancel - Zinc instead of orange */}
                         <button 
                             onClick={() => { setImageUrl(''); setTranscript(''); }} 
-                            className="text-[#DA7756] font-medium text-sm hover:text-[#c46243] px-2"
+                            className="text-zinc-400 font-medium text-sm hover:text-white transition-colors px-2"
                         >
                             Cancel
                         </button>
+                        
+                        {/* Send - ROUND BUTTON with Arrow */}
                         <button 
                             onClick={handleMainAction}
-                            className="bg-[#DA7756] text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-[#c46243] transition-all active:scale-95 shadow-lg shadow-orange-900/20"
+                            className="w-12 h-12 rounded-full bg-[#DA7756] text-white flex items-center justify-center hover:bg-[#c46243] transition-all active:scale-95 shadow-lg shadow-orange-900/20"
                         >
-                            Send
+                            <ArrowUp size={24} strokeWidth={3} />
                         </button>
                     </div>
                 </div>

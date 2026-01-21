@@ -731,7 +731,8 @@ const toggleGroupMember = (uid) => {
                     const replyMetadata = JSON.stringify({
                         id: replyingTo.id,
                         text: quoteText,
-                        sender: senderName
+                        sender: senderName,
+                        imageUrl: replyingTo.imageUrl || null // Save image URL for thumbnail
                     });
                     finalMessage = `${replyMetadata}|||RPLY|||${finalMessage}`;
                 }
@@ -1475,22 +1476,27 @@ const handleLogout = async () => {
                  }
                  
                  return (
-                     <div className="max-w-2xl mx-auto mb-2 animate-in slide-in-from-bottom-2 duration-200">
-                         <div className={`mx-1 p-2 rounded-xl bg-[#1c1c1d] border-l-4 ${borderColor} relative flex items-center justify-between shadow-lg shadow-black/50`}>
-                             <div className="flex-1 min-w-0 pr-8">
-                                 <div className={`text-xs font-bold ${textColor} mb-0.5`}>
-                                     {senderName}
-                                 </div>
-                                 <div className="text-sm text-zinc-300 truncate">
-                                     {previewText || (replyingTo.imageUrl ? 'Photo' : 'Voice Message')}
-                                 </div>
-                             </div>
-                             <button onClick={() => setReplyingTo(null)} className="absolute top-2 right-2 p-1 bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors">
-                                 <X size={14} />
-                             </button>
-                         </div>
-                     </div>
-                 );
+                    <div className="max-w-2xl mx-auto mb-2 animate-in slide-in-from-bottom-2 duration-200">
+                        <div className={`mx-1 p-2 rounded-xl bg-[#1c1c1d] border-l-4 ${borderColor} relative flex items-center justify-between shadow-lg shadow-black/50`}>
+                            {replyingTo.imageUrl && (
+                               <div className="w-10 h-10 rounded bg-zinc-800 overflow-hidden mr-3 flex-shrink-0 border border-white/10 relative">
+                                   <img src={replyingTo.imageUrl} className="w-full h-full object-cover" />
+                               </div>
+                            )}
+                            <div className="flex-1 min-w-0 pr-8">
+                                <div className={`text-xs font-bold ${textColor} mb-0.5`}>
+                                    {senderName}
+                                </div>
+                                <div className="text-sm text-zinc-300 truncate">
+                                    {previewText || (replyingTo.imageUrl ? 'Photo' : 'Voice Message')}
+                                </div>
+                            </div>
+                            <button onClick={() => setReplyingTo(null)} className="absolute top-2 right-2 p-1 bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors">
+                                <X size={14} />
+                            </button>
+                        </div>
+                    </div>
+                );
              })()}
 
              <div className="max-w-2xl mx-auto flex items-end gap-2">

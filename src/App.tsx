@@ -1549,7 +1549,7 @@ const handleLogout = async () => {
                         </div>
                     ))
                 ) : (
-                    ggroupItemsByDate([...activeMessages].sort((a: any, b: any) => {
+                    groupItemsByDate([...activeMessages].sort((a: any, b: any) => {
                         // Robust sort: handle Firestore objects, seconds, or plain numbers
                         const getT = (t: any) => t?.seconds ? t.seconds * 1000 : (t?.toMillis ? t.toMillis() : (Number(t) || 0));
                         return getT(a.timestamp) - getT(b.timestamp);

@@ -55,7 +55,7 @@ const ContextMenuItem = ({ icon: Icon, label, onClick, isDestructive = false }: 
   );
 };
 
-// Component: Inline Action Button (Restored!)
+// Component: Inline Action Button
 const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any) => {
   const [isHovered, setIsHovered] = useState(false);
   return (
@@ -324,7 +324,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   <div 
                     onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
                     // mx-[1px] and mt-[1px] ensures the top margin matches the side margin perfectly
-                    className={`mx-[1px] mt-[1px] mb-2 rounded-[8px] ${replyBg} flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer transition-colors hover:opacity-80`}
+                    // CHANGED mb-2 to mb-1 to reduce space below reply pill
+                    className={`mx-[1px] mt-[1px] mb-1 rounded-[8px] ${replyBg} flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer transition-colors hover:opacity-80`}
                     style={preventSelectStyle}
                   >
                       <div className="flex-1 min-w-0 py-2 px-2.5 flex flex-col justify-center gap-0.5">
@@ -383,7 +384,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             </div>
           ) : (
              <div className="flex flex-col min-w-[80px]">
-               <div className={`block w-full px-2 pb-2 pt-1`}>
+               {/* Reduced top padding from pt-1 to pt-0.5 to tighten layout */}
+               <div className={`block w-full px-2 pb-2 pt-0.5`}>
                    {safeText && (<span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>)}
                    <div className="float-right ml-3 mt-1.5 flex items-center gap-1 align-bottom h-4 select-none">
                    {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#ffffff'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}

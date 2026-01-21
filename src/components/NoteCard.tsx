@@ -258,7 +258,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const bgColor = customColors?.bg || 'bg-zinc-900';
   const textColor = customColors?.text || 'text-zinc-300';
   const subtextColor = customColors?.subtext || 'text-zinc-400 opacity-60'; 
-  // This adds a tight, WhatsApp-style shadow (1px down, slightly visible)
+  
+  // FIXED: Applied custom tight shadow
   const shadowClass = customColors?.shadow || 'shadow-[0_1px_1px_rgba(0,0,0,0.3)]';
   const chatBorderClasses = customColors?.border || 'border-none';
   const paddingClass = 'p-1';
@@ -308,6 +309,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
              </div>
           )}
 
+          {/* FIXED: Applied user preference padding */}
           {variant === 'received' && opponentName && opponentName !== 'OPP' && (
               <div className={`px-2 pt-1 pb-2 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}

@@ -36,7 +36,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 // Helper to convert file to base64 without compression
-const fileToBase64 = (file) => new Promise((resolve, reject) => {
+const fileToBase64 = (file: File): Promise<string | ArrayBuffer | null> => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result);
@@ -44,7 +44,7 @@ const fileToBase64 = (file) => new Promise((resolve, reject) => {
 });
 
 // Helper component to resolve avatars in Group Chats
-const MessageAvatar = ({ userId }) => {
+const MessageAvatar = ({ userId }: { userId: string }) => {
     const userData = useUser(userId);
     if (!userId) return <div className="w-8 h-8 rounded-full bg-zinc-800" />;
     
@@ -62,7 +62,7 @@ const MessageAvatar = ({ userId }) => {
 };
 
 // Helper for Profile Member List
-const GroupMemberRow = ({ userId, isAdmin, isViewerAdmin, onRemove, onMute, isMuted }) => {
+const GroupMemberRow = ({ userId, isAdmin, isViewerAdmin, onRemove, onMute, isMuted }: any) => {
     const userData = useUser(userId);
     if (!userId) return null;
 
@@ -104,7 +104,7 @@ const GroupMemberRow = ({ userId, isAdmin, isViewerAdmin, onRemove, onMute, isMu
 };
 
 // Wrapper to fetch user data for individual messages
-const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact, onReply, onDelete, onEdit, setZoomedImage, bubbleStyle, isHackerMode, replyTheme }) => {
+const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact, onReply, onDelete, onEdit, setZoomedImage, bubbleStyle, isHackerMode, replyTheme }: any) => {
     const senderData = useUser(msg.senderId);
     const isMe = msg.senderId === user?.uid;
     const isLastInGroup = !nextMsg || nextMsg.senderId !== msg.senderId || !isSameDay(msg.timestamp, nextMsg.timestamp);
@@ -136,7 +136,7 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
         }
     }
 
-    const msgNote = {
+    const msgNote: any = {
         id: msg.id, text: msg.text, date: normalizeDate(msg.timestamp), 
         category: 'default', isPinned: false, isExpanded: true, imageUrl: msg.imageUrl,
         audioUrl: msg.audioUrl
@@ -151,7 +151,8 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
                 {!isMe && (
                     <div className="flex-shrink-0 w-8 h-8 relative z-10 mb-1">
                         {isLastInGroup ? (
-                            <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 shadow-md">
+                            // FIXED: Added same shadow to avatar
+                            <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
                                 {photoURL ? <img src={photoURL} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">{displayName?.[0]}</div>}
                             </div>
                         ) : <div className="w-8 h-8" />}
@@ -197,7 +198,7 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
 };
 
 // Fixed Chat Row
-const ChatRow = ({ chat, active, isEditing, onSelect, onClick }) => {
+const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
     const otherUser = useUser(chat.otherUserId);
     const isGroup = chat.type === 'group';
     const displayName = isGroup ? chat.displayName : (otherUser?.displayName || 'Unknown');
@@ -266,7 +267,7 @@ function App() {
   
   const [currentView, setCurrentView] = useState('list');
   const [activeTab, setActiveTab] = useState('chats');
-  const [activeChatId, setActiveChatId] = useState(null); 
+  const [activeChatId, setActiveChatId] = useState<string | null>(null); 
   const [isEditing, setIsEditing] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState(new Set());
   
@@ -275,7 +276,7 @@ function App() {
   const [profileName, setProfileName] = useState("Vibe User");
   const [profileHandle, setProfileHandle] = useState("@neo");
   const [profileBio, setProfileBio] = useState("Status: Online");
-  const [profilePic, setProfilePic] = useState(null);
+  const [profilePic, setProfilePic] = useState<string | null>(null);
   const [categories] = useState(DEFAULT_CATEGORIES);
   
   const [alignment, setAlignment] = useState('right');
@@ -292,23 +293,23 @@ function App() {
       if (savedTheme) setReplyTheme(savedTheme);
   }, []);
 
-  const changeReplyTheme = (theme) => {
+  const changeReplyTheme = (theme: string) => {
       setReplyTheme(theme);
       localStorage.setItem('vibenotes_reply_theme', theme);
   };
 
   const [contactSearchQuery, setContactSearchQuery] = useState('');
-  const [contactSearchResults, setContactSearchResults] = useState([]);
+  const [contactSearchResults, setContactSearchResults] = useState<any[]>([]);
   const [isSearchingContacts, setIsSearchingContacts] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isCompressionEnabled, setIsCompressionEnabled] = useState(true);
-  const [originalFile, setOriginalFile] = useState(null);
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [editingNote, setEditingNote] = useState(null);
+  const [editingNote, setEditingNote] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [zoomedImage, setZoomedImage] = useState(null);
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [showQRCode, setShowQRCode] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -317,13 +318,13 @@ function App() {
   const [isChatScrolled, setIsChatScrolled] = useState(false);
   const [isTopScrolled, setIsTopScrolled] = useState(false); // NEW HEADER STATE
   const [showBackButton, setShowBackButton] = useState(true);
-  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyingTo, setReplyingTo] = useState<any>(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
   const [reactions, setReactions] = useState(() => {
       try { return JSON.parse(localStorage.getItem('vibenotes_reactions') || '{}'); } catch { return {}; }
   });
-  const [activeReactionId, setActiveReactionId] = useState(null);
+  const [activeReactionId, setActiveReactionId] = useState<string | null>(null);
   
   useEffect(() => { localStorage.setItem('vibenotes_reactions', JSON.stringify(reactions)); }, [reactions]);
 
@@ -367,7 +368,7 @@ function App() {
     } catch (e) { console.error("Error leaving group:", e); }
   };
 
-  const handleRemoveMember = async (memberId) => {
+  const handleRemoveMember = async (memberId: string) => {
     if (!activeChatId) return;
     if (confirm("Remove this user from the group?")) {
         try {
@@ -377,7 +378,7 @@ function App() {
     }
 };
 
-const handleAddMemberToGroup = async (contactId) => {
+const handleAddMemberToGroup = async (contactId: string) => {
     if (!activeChatId) return;
     try {
         const chatRef = doc(db, "chats", activeChatId);
@@ -386,7 +387,7 @@ const handleAddMemberToGroup = async (contactId) => {
     } catch (e) { console.error("Error adding member:", e); }
 };
 
-const handleToggleMemberMute = async (memberId) => {
+const handleToggleMemberMute = async (memberId: string) => {
     if (!activeChatId) return;
     try {
         const chatRef = doc(db, "chats", activeChatId);
@@ -399,15 +400,15 @@ const handleToggleMemberMute = async (memberId) => {
     } catch (e) { console.error("Error toggling mute:", e); }
 };
   
-  const [incomingInvite, setIncomingInvite] = useState(null);
+  const [incomingInvite, setIncomingInvite] = useState<any>(null);
   
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [groupName, setGroupName] = useState('');
-  const [groupImage, setGroupImage] = useState(null);
+  const [groupImage, setGroupImage] = useState<string | null>(null);
   const [groupMembers, setGroupMembers] = useState(new Set());
   const [groupStep, setGroupStep] = useState(1); 
 
-  const handleGroupImageSelect = async (e) => {
+  const handleGroupImageSelect = async (e: any) => {
     if (e.target.files?.[0]) {
         try {
             const url = await compressImage(e.target.files[0]);
@@ -416,7 +417,7 @@ const handleToggleMemberMute = async (memberId) => {
     }
   };
 
-  const handleUpdateGroupPhoto = async (file) => {
+  const handleUpdateGroupPhoto = async (file: File) => {
     if (!activeChatId) return;
     try {
         const url = await compressImage(file);
@@ -433,7 +434,7 @@ const handleToggleMemberMute = async (memberId) => {
     }
   };
 
-  const [savedContacts, setSavedContacts] = useState(() => {
+  const [savedContacts, setSavedContacts] = useState<any[]>(() => {
     try {
       const saved = localStorage.getItem('vibenotes_contacts');
       return saved ? JSON.parse(saved) : [];
@@ -516,33 +517,33 @@ const handleCreateGroup = async () => {
     } catch (e) { console.error("Error creating group", e); }
 };
 
-const toggleGroupMember = (uid) => {
+const toggleGroupMember = (uid: string) => {
     const newSet = new Set(groupMembers);
     if (newSet.has(uid)) newSet.delete(uid);
     else newSet.add(uid);
     setGroupMembers(newSet);
 };
 
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const mimeTypeRef = useRef('');
-  const streamRef = useRef(null);
-  const recordingTimerRef = useRef(null);
-  const searchInputRef = useRef(null);
-  const textareaRef = useRef(null); 
-  const fileInputRef = useRef(null);
-  const bottomRef = useRef(null);
-  const listRef = useRef(null);
-  const canvasRef = useRef(null);
-  const scrollTimeoutRef = useRef(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recordingTimerRef = useRef<any>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null); 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scrollTimeoutRef = useRef<any>(null);
   
-  const bubbleListRef = useRef(null);
-  const replyListRef = useRef(null);
-  const bgListRef = useRef(null);
+  const bubbleListRef = useRef<HTMLDivElement>(null);
+  const replyListRef = useRef<HTMLDivElement>(null);
+  const bgListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (activeTab !== 'settings') return;
-    const handleHorizontalWheel = (e) => {
+    const handleHorizontalWheel = (e: WheelEvent) => {
         if (e.deltaY !== 0) {
             e.preventDefault(); 
             e.currentTarget.scrollLeft += e.deltaY;
@@ -563,17 +564,17 @@ const toggleGroupMember = (uid) => {
     };
   }, [activeTab]);
 
-  const scrollContainer = (ref, direction) => {
+  const scrollContainer = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
     if (ref.current) {
         const amount = direction === 'left' ? -200 : 200;
         ref.current.scrollBy({ left: amount, behavior: 'smooth' });
     }
   };
 
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [selectedVoice, setSelectedVoice] = useState(null);
+  const [activeFilter, setActiveFilter] = useState<CategoryId | 'all'>('all');
+  const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [secretTaps, setSecretTaps] = useState(0);
-  const tapTimeoutRef = useRef(null);
+  const tapTimeoutRef = useRef<any>(null);
   const [showSecretAnim, setShowSecretAnim] = useState(false);
 
   const currentChatObject = activeChatId && activeChatId !== 'saved_messages' ? realChats.find(c => c.id === activeChatId) : null;
@@ -616,7 +617,7 @@ const toggleGroupMember = (uid) => {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     const FONT_SIZE = 24; const FADE_SPEED = 0.1; const MASTER_SPEED = 50; const STUTTER_AMOUNT = 0.85; const RAIN_BUILDUP = 50; const COLOR_HEAD = '#FFF'; const COLOR_TRAIL = '#0D0'; const GLOW_COLOR = '#0F0'; const GLOW_INTENSITY = 10;     
     const binary = '010101010101'; const nums = '0123456789'; const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; const alphabet = binary + nums + latin;
-    const columns = canvas.width / FONT_SIZE; const drops = [];
+    const columns = canvas.width / FONT_SIZE; const drops: number[] = [];
     for(let x = 0; x < columns; x++) { drops[x] = Math.floor(Math.random() * -RAIN_BUILDUP); }
     const draw = () => {
         ctx.fillStyle = `rgba(0, 0, 0, ${FADE_SPEED})`; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.font = `bold ${FONT_SIZE}px monospace`;
@@ -660,7 +661,7 @@ const toggleGroupMember = (uid) => {
   // ============================================================================
   // SECTION: ACTIONS & HANDLERS
   // ============================================================================
-  const scrollToBottom = (behavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
 
   const handleScroll = () => {
     if (listRef.current) {
@@ -711,13 +712,13 @@ const toggleGroupMember = (uid) => {
             if (isCompressionEnabled) {
                 finalImageUrl = await compressImage(originalFile);
             } else {
-                finalImageUrl = await fileToBase64(originalFile);
+                finalImageUrl = await fileToBase64(originalFile) as string;
             }
         }
 
         if (activeChatId === 'saved_messages' || activeChatId === null) {
             if (editingNote) {
-                const updates = { text: transcript.trim(), editedAt: Date.now() }; 
+                const updates: Partial<Note> = { text: transcript.trim(), editedAt: Date.now() }; 
                 if (finalImageUrl !== editingNote.imageUrl) updates.imageUrl = finalImageUrl || undefined;
                 await updateNote(editingNote.id, updates);
                 setEditingNote(null);
@@ -771,7 +772,7 @@ const toggleGroupMember = (uid) => {
       else { const hour = new Date().getHours(); if (hour >= 18 || hour < 6) { setRedModeIntensity(50); } else { setRedModeIntensity(0); } }
   };
 
-  const changeBubbleStyle = (style) => { setBubbleStyle(style); };
+  const changeBubbleStyle = (style: string) => { setBubbleStyle(style); };
 
   const handleSecretTrigger = () => {
     setSecretTaps(prev => prev + 1);
@@ -780,7 +781,7 @@ const toggleGroupMember = (uid) => {
     if (secretTaps + 1 >= 5) { setActiveFilter('secret'); setSecretTaps(0); setShowSecretAnim(true); setTimeout(() => setShowSecretAnim(false), 8000); if (navigator.vibrate) navigator.vibrate([100, 50, 100]); }
   };
 
-  const toggleChatSelection = (id) => { const newSet = new Set(selectedChatIds); if (newSet.has(id)) newSet.delete(id); else newSet.add(id); setSelectedChatIds(newSet); };
+  const toggleChatSelection = (id: string) => { const newSet = new Set(selectedChatIds); if (newSet.has(id)) newSet.delete(id); else newSet.add(id); setSelectedChatIds(newSet); };
   
   const toggleMute = () => {
     if (!activeChatId) return;
@@ -804,8 +805,8 @@ const toggleGroupMember = (uid) => {
     setActiveChatId(null);
 };
 
-const handleAddReaction = (msgId, emoji) => {
-    setReactions(prev => {
+const handleAddReaction = (msgId: string, emoji: string) => {
+    setReactions((prev: any) => {
         const current = prev[msgId];
         if (current === emoji) { 
             const next = { ...prev };
@@ -832,10 +833,10 @@ const handleLogout = async () => {
     }
 };
 
-  const handleAvatarUpload = async (file) => { try { const url = await compressImage(file); setProfilePic(url); setShowAvatarSelector(false); } catch(e) { console.error(e); } };
-  const handleSelectPreset = (num) => { setProfilePic(`/robot${num}.jpeg?v=1`); setShowAvatarSelector(false); };
+  const handleAvatarUpload = async (file: File) => { try { const url = await compressImage(file); setProfilePic(url); setShowAvatarSelector(false); } catch(e) { console.error(e); } };
+  const handleSelectPreset = (num: number) => { setProfilePic(`/robot${num}.jpeg?v=1`); setShowAvatarSelector(false); };
 
-  const handleImageUpload = async (file) => {
+  const handleImageUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) return alert('Please select an image file');
     
     setIsUploadingImage(true);
@@ -850,7 +851,7 @@ const handleLogout = async () => {
         setIsUploadingImage(false); 
     }
   };
-  const handlePaste = async (e) => {
+  const handlePaste = async (e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
     for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
@@ -911,11 +912,11 @@ const handleLogout = async () => {
 
   const cancelRecording = () => { if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') { mediaRecorderRef.current.onstop = null; mediaRecorderRef.current.stop(); } cleanupRecording(); };
   const cleanupRecording = () => { setIsRecording(false); setIsPaused(false); setRecordingDuration(0); if (recordingTimerRef.current) clearInterval(recordingTimerRef.current); if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; } };
-  const formatDuration = (sec) => { const m = Math.floor(sec / 60); const s = sec % 60; return `${m}:${s.toString().padStart(2, '0')}`; };
+  const formatDuration = (sec: number) => { const m = Math.floor(sec / 60); const s = sec % 60; return `${m}:${s.toString().padStart(2, '0')}`; };
 
-  const handleDeleteMessage = async (id) => { await deleteMessage(id); };
+  const handleDeleteMessage = async (id: string) => { await deleteMessage(id); };
   
-  const handleEditMessage = (msg) => { 
+  const handleEditMessage = (msg: any) => { 
       let cleanText = msg.text;
       let hiddenMeta = null;
 
@@ -930,11 +931,11 @@ const handleLogout = async () => {
       setTimeout(() => textareaRef.current?.focus(), 100); 
   };
 
-  const handleSearchContacts = async (e) => {
+  const handleSearchContacts = async (e: React.FormEvent) => {
       e.preventDefault(); if (!contactSearchQuery.trim()) return; setIsSearchingContacts(true);
-      try { const results = await searchUsers(contactSearchQuery); setContactSearchResults(results.filter((u) => u.uid !== user?.uid)); } catch (err) { console.error(err); } finally { setIsSearchingContacts(false); }
+      try { const results = await searchUsers(contactSearchQuery); setContactSearchResults(results.filter((u: any) => u.uid !== user?.uid)); } catch (err) { console.error(err); } finally { setIsSearchingContacts(false); }
   };
-  const startNewChat = async (otherUid) => {
+  const startNewChat = async (otherUid: string) => {
     if (!otherUid) return;
     const existingChats = realChats.filter(c => c.otherUserId === otherUid);
     const existing = existingChats.sort((a, b) => (b.lastMessageTimestamp || 0) - (a.lastMessageTimestamp || 0))[0];
@@ -954,13 +955,13 @@ const handleLogout = async () => {
       const order = ['all', ...categories.map(c => c.id)];
       const currentIndex = order.indexOf(activeFilter);
       if (currentIndex === -1) { setActiveFilter('all'); return; }
-      const nextIndex = (currentIndex + 1) % order.length; setActiveFilter(order[nextIndex]);
+      const nextIndex = (currentIndex + 1) % order.length; setActiveFilter(order[nextIndex] as CategoryId | 'all');
   };
 
-  const handleEditClick = (note) => { setActiveFilter(note.category); setEditingNote(note); setTranscript(note.text); setImageUrl(note.imageUrl || ''); setTimeout(() => { textareaRef.current?.focus(); textareaRef.current?.select(); }, 50); };
-  const handleDeleteNote = async (id) => { await deleteNoteFromFirebase(id); };
-  const handleToggleExpand = async (id) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
-  const togglePin = async (id) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
+  const handleEditClick = (note: Note) => { setActiveFilter(note.category); setEditingNote(note); setTranscript(note.text); setImageUrl(note.imageUrl || ''); setTimeout(() => { textareaRef.current?.focus(); textareaRef.current?.select(); }, 50); };
+  const handleDeleteNote = async (id: string) => { await deleteNoteFromFirebase(id); };
+  const handleToggleExpand = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isExpanded: !n.isExpanded }); };
+  const togglePin = async (id: string) => { const n = notes.find(n => n.id === id); if(n) await updateNote(id, { isPinned: !n.isPinned }); };
 
   const safeNotes = (notes || []).map(n => {
       const date = normalizeDate(n.date); const editedAt = n.editedAt ? normalizeDate(n.editedAt) : undefined;
@@ -977,8 +978,8 @@ const handleLogout = async () => {
   }).sort((a, b) => { if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1; return a.date - b.date; });
 
   const getAlignmentClass = () => alignment === 'center' ? 'items-center' : alignment === 'right' ? 'items-end' : 'items-start';
-  const groupItemsByDate = (items) => {
-    const groups = [];
+  const groupItemsByDate = (items: any[]) => {
+    const groups: { date: string; items: any[] }[] = [];
     items.forEach((item) => {
         const dateLabel = getDateLabel(item.date || item.timestamp);
         let lastGroup = groups[groups.length - 1];
@@ -1098,7 +1099,7 @@ const handleLogout = async () => {
                             </div>
                         </div>
 
-                        {realChats.reduce((acc, chat) => {
+                        {realChats.reduce((acc: any[], chat) => {
                             const existingIndex = chat.type === 'group' ? -1 : acc.findIndex(c => c.otherUserId === chat.otherUserId);
                             if (existingIndex > -1) {
                                 if ((chat.lastMessageTimestamp || 0) > (acc[existingIndex].lastMessageTimestamp || 0)) {
@@ -1477,7 +1478,7 @@ const handleLogout = async () => {
                                     isGroup={currentChatObject?.type === 'group'}
                                     reactions={reactions}
                                     onReact={handleAddReaction}
-                                    onReply={(target) => { setReplyingTo(target); setTimeout(() => textareaRef.current?.focus(), 50); }}
+                                    onReply={(target: any) => { setReplyingTo(target); setTimeout(() => textareaRef.current?.focus(), 50); }}
                                     onDelete={handleDeleteMessage}
                                     onEdit={handleEditMessage}
                                     setZoomedImage={setZoomedImage}

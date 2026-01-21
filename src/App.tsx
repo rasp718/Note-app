@@ -1311,11 +1311,11 @@ const handleLogout = async () => {
                         </button>
                     </div>
 
-                    {/* CENTER PILL: CONTEXT INFO */}
-                    <div className="flex-1 min-w-0 max-w-[70%] pointer-events-auto flex justify-center">
-                        <div className="bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-lg shadow-black/50 h-11 px-1.5 flex items-center justify-center min-w-0 w-full">
+                    {/* CENTER PILL: CONTEXT INFO (Snaps to content size) */}
+                    <div className="flex-1 min-w-0 pointer-events-auto flex justify-center">
+                        <div className="bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-lg shadow-black/50 h-11 flex items-center min-w-0 w-fit max-w-full px-1.5 transition-all duration-300">
                             {activeChatId !== 'saved_messages' ? (
-                               <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 cursor-pointer group px-1 py-1 rounded-full hover:bg-white/5 transition-colors w-full justify-center">
+                               <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 cursor-pointer group rounded-full hover:bg-white/5 transition-colors max-w-full pr-4 pl-0.5 py-0.5">
                                    {/* AVATAR */}
                                    <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-white/10 relative flex-shrink-0 shadow-sm">
                                    {currentChatObject?.type === 'group' ? (
@@ -1333,8 +1333,8 @@ const handleLogout = async () => {
                                    </div>
                                    
                                    {/* TEXT */}
-                                   <div className="flex flex-col items-start overflow-hidden min-w-0 pr-2">
-                                        <h3 className="text-white text-sm font-bold leading-none truncate w-full text-left">
+                                   <div className="flex flex-col items-start overflow-hidden min-w-0">
+                                        <h3 className="text-white text-sm font-bold leading-none truncate max-w-[120px] sm:max-w-[200px] text-left">
                                             {currentChatObject?.type === 'group' ? currentChatObject.displayName : (otherChatUser?.displayName || 'Unknown')}
                                         </h3>
                                         <p className={`text-[10px] font-mono uppercase tracking-widest truncate leading-tight ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>
@@ -1343,7 +1343,7 @@ const handleLogout = async () => {
                                    </div>
                                </div>
                             ) : (
-                               <div onClick={handleSecretTrigger} className="flex items-center gap-2 cursor-pointer select-none px-4 w-full justify-center">
+                               <div onClick={handleSecretTrigger} className="flex items-center gap-2 cursor-pointer select-none px-4">
                                     {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={16} />) : (<div className="w-2 h-2 rounded-full" style={{ backgroundColor: accentColor, boxShadow: `0 0 8px ${accentColor}` }} />)}
                                     <span className="font-bold text-white text-sm tracking-widest uppercase">My Notes</span>
                                </div>

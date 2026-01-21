@@ -674,7 +674,7 @@ const toggleGroupMember = (uid: string) => {
   // ============================================================================
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
 
-  cconst handleScroll = () => {
+  const handleScroll = () => {
     if (!listRef.current) return;
 
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;

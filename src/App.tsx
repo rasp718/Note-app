@@ -667,7 +667,7 @@ const toggleGroupMember = (uid) => {
         if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
         scrollTimeoutRef.current = setTimeout(() => {
             setShowBackButton(true);
-        }, 500);
+        }, 1000);
     }
   };
   
@@ -1297,12 +1297,12 @@ const handleLogout = async () => {
       {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
 
-            {/* OPTION 3: 3-PILL FLOATING HEADER (SLIDING ANIMATION) */}
+            {/* OPTION 3: 3-PILL FLOATING HEADER (SLOWER SLIDING ANIMATION) */}
             <div className="fixed top-0 left-0 right-0 z-40 pointer-events-none overflow-hidden pb-4">
                 <div className="max-w-2xl mx-auto px-4 pt-3 flex items-center justify-between gap-3 relative">
                     
                     {/* LEFT PILL: BACK BUTTON (Slides Left on Scroll) */}
-                    <div className={`flex-none pointer-events-auto transition-all duration-500 ease-in-out ${showBackButton ? 'translate-x-0 opacity-100' : '-translate-x-[200%] opacity-0'}`}>
+                    <div className={`flex-none pointer-events-auto transition-all duration-1000 ease-in-out ${showBackButton ? 'translate-x-0 opacity-100' : '-translate-x-[200%] opacity-0'}`}>
                         <button 
                             onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
                             className="w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all shadow-lg shadow-black/50 active:scale-90"
@@ -1312,7 +1312,7 @@ const handleLogout = async () => {
                     </div>
 
                     {/* CENTER PILL: CONTEXT INFO (Slides Up on Scroll) */}
-                    <div className={`flex-1 min-w-0 pointer-events-auto flex justify-center z-10 transition-all duration-500 ease-in-out ${showBackButton ? 'translate-y-0 opacity-100' : '-translate-y-[200%] opacity-0'}`}>
+                    <div className={`flex-1 min-w-0 pointer-events-auto flex justify-center z-10 transition-all duration-1000 ease-in-out ${showBackButton ? 'translate-y-0 opacity-100' : '-translate-y-[200%] opacity-0'}`}>
                         <div className="bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-lg shadow-black/50 h-11 flex items-center min-w-0 w-fit max-w-full px-1.5 transition-all duration-300">
                             {activeChatId !== 'saved_messages' ? (
                                <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 cursor-pointer group rounded-full hover:bg-white/5 transition-colors max-w-full pr-4 pl-0.5 py-0.5">
@@ -1338,7 +1338,7 @@ const handleLogout = async () => {
                                             {currentChatObject?.type === 'group' ? currentChatObject.displayName : (otherChatUser?.displayName || 'Unknown')}
                                         </h3>
                                         <p className={`text-[10px] font-mono uppercase tracking-widest truncate leading-tight ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>
-                                            {currentChatObject?.type === 'group' ? `${currentChatObject.participants?.length} MBRS` : (otherChatUser?.isOnline ? 'ONLINE' : 'OFFLINE')}
+                                            {currentChatObject?.type === 'group' ? `${currentChatObject.participants?.length} Members` : (otherChatUser?.isOnline ? 'ONLINE' : 'OFFLINE')}
                                         </p>
                                    </div>
                                </div>
@@ -1352,7 +1352,7 @@ const handleLogout = async () => {
                     </div>
 
                     {/* RIGHT PILL: SEARCH (Slides Right on Scroll) */}
-                    <div className={`flex-none pointer-events-auto relative transition-all duration-500 ease-in-out ${showBackButton ? 'translate-x-0 opacity-100' : 'translate-x-[200%] opacity-0'}`}>
+                    <div className={`flex-none pointer-events-auto relative transition-all duration-1000 ease-in-out ${showBackButton ? 'translate-x-0 opacity-100' : 'translate-x-[200%] opacity-0'}`}>
                          <div className="flex items-center h-11">
                             <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all shadow-lg shadow-black/50 active:scale-90 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={20} /></button>
                             

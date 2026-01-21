@@ -390,7 +390,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                        {variant === 'sent' && <div className="ml-0.5"><StatusIcon /></div>}
                    </div>
                </div>
-             </div>
           )}
 
           {currentReaction && (

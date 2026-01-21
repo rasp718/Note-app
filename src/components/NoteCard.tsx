@@ -363,7 +363,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                  <StreetDiceGame dataStr={gameData} onSave={handleGameUpdate} myId={currentUserId || 'unknown'} oppName={opponentName} oppAvatar={opponentAvatar} />
              </div>
           ) : hasImage ? (
-            <div className="relative">
+            <div className={`relative ${(variant === 'received' && opponentName && opponentName !== 'OPP') ? 'mt-1' : ''}`}>
                 <div 
                     onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} 
                     className="rounded-xl overflow-hidden border-none bg-black flex justify-center items-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative min-w-[120px] min-h-[120px] select-none"

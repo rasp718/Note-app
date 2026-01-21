@@ -692,35 +692,24 @@ const toggleGroupMember = (uid: string) => {
     scrollTimeoutRef.current = setTimeout(() => setShowBackButton(true), 1000);
 
     // 2. Date Header Logic
-    // We use a safe threshold. Since the header is sticky at top-20 (80px),
-    // we start detecting earlier to ensure smoothness.
-    const HEADER_OFFSET = 80; 
+    // Moved up to 75px (was 80px) per your request
+    const HEADER_OFFSET = 75; 
     const HEADER_HEIGHT = 45; 
     
     const dateGroups = listRef.current.querySelectorAll('[data-date]');
     let activeDate = '';
     let pushOffset = 0;
-    let shouldShowFloating = false;
 
+    // A. Detect Active Date & Bump
     for (let i = 0; i < dateGroups.length; i++) {
         const group = dateGroups[i] as HTMLElement;
         const rect = group.getBoundingClientRect();
 
-        // Find the group that is currently "active" (covering the top area)
-        // Logic: The group starts before the offset, and ends after it.
+        // If the group is covering the top area (starts before offset, ends after it)
         if (rect.top <= HEADER_OFFSET + 10 && rect.bottom > HEADER_OFFSET) {
             activeDate = group.getAttribute('data-date') || '';
             
-            // DOUBLES FIX: 
-            // If the static header is currently visible (rect.top > 0), 
-            // we HIDE the floating one. We only show floating if static is off-screen.
-            // We use 20px buffer to ensure clean transition.
-            if (rect.top < 20) {
-                shouldShowFloating = true;
-            }
-
-            // BUMP FIX:
-            // Check if the *next* group is pushing us up
+            // Check Collision with NEXT group
             const nextGroup = dateGroups[i + 1] as HTMLElement;
             if (nextGroup) {
                 const nextRect = nextGroup.getBoundingClientRect();
@@ -728,11 +717,25 @@ const toggleGroupMember = (uid: string) => {
                     pushOffset = nextRect.top - (HEADER_OFFSET + HEADER_HEIGHT);
                 }
             }
-            
-            // We found our active group, stop looking
             break;
         }
     }
+
+    // B. Sync Visibility (Prevent Doubles)
+    // We loop all groups to ensure only the active static header is hidden
+    dateGroups.forEach((group) => {
+        const header = group.querySelector('.static-date-header') as HTMLElement;
+        if (header) {
+            const date = group.getAttribute('data-date');
+            // If this is the active date, HIDE the static version (opacity 0)
+            // UNLESS we are currently scrolled to the very top (scrollTop < 50)
+            if (date === activeDate && scrollTop > 50) {
+                header.style.opacity = '0';
+            } else {
+                header.style.opacity = '1';
+            }
+        }
+    });
 
     // 3. Apply Updates
     if (activeDate !== visibleDate) setVisibleDate(activeDate);
@@ -741,13 +744,11 @@ const toggleGroupMember = (uid: string) => {
         floatingBubbleRef.current.style.transform = `translateY(${pushOffset}px)`;
     }
 
-    // 4. Handle Visibility Timer
-    if (shouldShowFloating && activeDate) {
-        // Show immediately
+    // 4. Timer Logic
+    if (activeDate && scrollTop > 50) {
         if (dateHeaderState !== 'visible') setDateHeaderState('visible');
         if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
 
-        // Only start fading out if we are NOT currently bumping (user stopped scrolling or isn't at a boundary)
         if (pushOffset === 0) {
             dateHeaderTimeoutRef.current = setTimeout(() => {
                 setDateHeaderState('blinking'); 
@@ -755,7 +756,6 @@ const toggleGroupMember = (uid: string) => {
             }, 1000);
         }
     } else {
-        // Hide immediately if static header is visible
         if (dateHeaderState !== 'hidden') setDateHeaderState('hidden');
     }
   };
@@ -1487,7 +1487,7 @@ const handleLogout = async () => {
             {/* FLOATING DATE HEADER (Animation Only) */}
             <div 
                 ref={floatingBubbleRef}
-                className={`fixed top-20 left-0 right-0 z-50 flex justify-center pointer-events-none transition-opacity duration-200 ease-out ${
+                className={`fixed top-[75px] left-0 right-0 z-50 flex justify-center pointer-events-none transition-opacity duration-200 ease-out ${
                     dateHeaderState === 'hidden' || !visibleDate ? 'opacity-0' : 'opacity-100'
                 }`}
             >
@@ -1519,7 +1519,7 @@ const handleLogout = async () => {
                         <div key={group.date} className="relative w-full" data-date={group.date}>
                             {/* STATIC INLINE DATE SEPARATOR */}
                             <div className="flex justify-center py-4 pointer-events-none">
-                            <span className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-sm">
+                            <span className="static-date-header transition-opacity duration-0 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-sm">
                                     {group.date}
                                 </span>
                             </div>
@@ -1560,7 +1560,7 @@ const handleLogout = async () => {
                         <div key={group.date} className="relative w-full" data-date={group.date}>
                             {/* STATIC INLINE DATE SEPARATOR */}
                             <div className="flex justify-center py-4 pointer-events-none">
-                                <span className="bg-black/20 backdrop-blur-sm border border-white/5 px-3 py-1 rounded-full text-zinc-400 text-[11px] font-bold uppercase tracking-widest">
+                            <span className="static-date-header transition-opacity duration-0 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-sm">
                                     {group.date}
                                 </span>
                             </div>

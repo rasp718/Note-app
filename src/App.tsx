@@ -35,6 +35,14 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// Helper to convert file to base64 without compression
+const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+});
+
 // Helper component to resolve avatars in Group Chats
 const MessageAvatar = ({ userId }) => {
     const userData = useUser(userId);
@@ -294,6 +302,8 @@ function App() {
   const [isSearchingContacts, setIsSearchingContacts] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [isCompressionEnabled, setIsCompressionEnabled] = useState(true);
+  const [originalFile, setOriginalFile] = useState(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -696,15 +706,24 @@ const toggleGroupMember = (uid) => {
     }
 
     try {
+        let finalImageUrl = imageUrl;
+        if (originalFile) {
+            if (isCompressionEnabled) {
+                finalImageUrl = await compressImage(originalFile);
+            } else {
+                finalImageUrl = await fileToBase64(originalFile);
+            }
+        }
+
         if (activeChatId === 'saved_messages' || activeChatId === null) {
             if (editingNote) {
                 const updates = { text: transcript.trim(), editedAt: Date.now() }; 
-                if (imageUrl !== editingNote.imageUrl) updates.imageUrl = imageUrl || undefined;
+                if (finalImageUrl !== editingNote.imageUrl) updates.imageUrl = finalImageUrl || undefined;
                 await updateNote(editingNote.id, updates);
                 setEditingNote(null);
             } else {
                 const categoryToUse = activeFilter; 
-                await addNote({ text: transcript.trim(), date: Date.now(), category: categoryToUse, isPinned: false, isExpanded: true, imageUrl: imageUrl || undefined });
+                await addNote({ text: transcript.trim(), date: Date.now(), category: categoryToUse, isPinned: false, isExpanded: true, imageUrl: finalImageUrl || undefined });
                 scrollToBottom(); 
             }
         } else {
@@ -732,15 +751,15 @@ const toggleGroupMember = (uid) => {
                         id: replyingTo.id,
                         text: quoteText,
                         sender: senderName,
-                        imageUrl: replyingTo.imageUrl || null // Save image URL for thumbnail
+                        imageUrl: replyingTo.imageUrl || null
                     });
                     finalMessage = `${replyMetadata}|||RPLY|||${finalMessage}`;
                 }
-                await sendMessage(finalMessage, imageUrl, null, user.uid);
+                await sendMessage(finalMessage, finalImageUrl, null, user.uid);
                 setReplyingTo(null);
             }
         }
-        setTranscript(''); setImageUrl(''); scrollToBottom();
+        setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
     } catch (e) { console.error(e); }
   };
 
@@ -818,7 +837,18 @@ const handleLogout = async () => {
 
   const handleImageUpload = async (file) => {
     if (!file.type.startsWith('image/')) return alert('Please select an image file');
-    setIsUploadingImage(true); try { const url = await compressImage(file); setImageUrl(url); } catch (e) { console.error(e); } finally { setIsUploadingImage(false); }
+    
+    setIsUploadingImage(true);
+    try {
+        setOriginalFile(file);
+        const previewUrl = URL.createObjectURL(file);
+        setImageUrl(previewUrl);
+        setIsCompressionEnabled(true);
+    } catch (e) { 
+        console.error(e); 
+    } finally { 
+        setIsUploadingImage(false); 
+    }
   };
   const handlePaste = async (e) => {
     const items = e.clipboardData.items;
@@ -2018,14 +2048,14 @@ const handleLogout = async () => {
       {imageUrl && (
         <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
             {/* Click outside to cancel */}
-            <div className="absolute inset-0" onClick={() => { setImageUrl(''); setTranscript(''); }} />
+            <div className="absolute inset-0" onClick={() => { setImageUrl(''); setTranscript(''); setOriginalFile(null); }} />
             
             {/* Modal Container: w-fit ensures it shrinks to image width, min-w-[320px] ensures text field is usable */}
             <div className="bg-[#1c1c1d] rounded-2xl overflow-hidden shadow-2xl relative z-10 flex flex-col animate-in zoom-in-95 duration-200 border border-white/10 w-fit max-w-[95vw] min-w-[320px]">
                 
                 {/* Floating Close Button */}
                 <div className="absolute top-2 right-2 z-20">
-                    <button onClick={() => { setImageUrl(''); setTranscript(''); }} className="w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-colors">
+                    <button onClick={() => { setImageUrl(''); setTranscript(''); setOriginalFile(null); }} className="w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-colors">
                         <X size={16} />
                     </button>
                 </div>
@@ -2039,11 +2069,11 @@ const handleLogout = async () => {
                 <div className="p-4 space-y-4 bg-[#1c1c1d]">
                     
                     {/* Checkbox - Changed to BLUE to remove orange */}
-                    <div className="flex items-center gap-3">
-                        <div className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center">
-                            <Check size={14} className="text-white" strokeWidth={3} />
+                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => setIsCompressionEnabled(!isCompressionEnabled)}>
+                        <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${isCompressionEnabled ? 'bg-blue-500' : 'bg-zinc-700 border border-zinc-500'}`}>
+                            {isCompressionEnabled && <Check size={14} className="text-white" strokeWidth={3} />}
                         </div>
-                        <span className="text-white font-medium text-sm">Compress the image</span>
+                        <span className="text-white font-medium text-sm select-none">Compress the image</span>
                     </div>
 
                     {/* Caption Input - White border focus instead of orange */}
@@ -2067,7 +2097,7 @@ const handleLogout = async () => {
                     <div className="flex justify-between items-center pt-1">
                         {/* Cancel - Zinc instead of orange */}
                         <button 
-                            onClick={() => { setImageUrl(''); setTranscript(''); }} 
+                            onClick={() => { setImageUrl(''); setTranscript(''); setOriginalFile(null); }} 
                             className="text-zinc-400 font-medium text-sm hover:text-white transition-colors px-2"
                         >
                             Cancel

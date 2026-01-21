@@ -692,7 +692,6 @@ const toggleGroupMember = (uid: string) => {
     scrollTimeoutRef.current = setTimeout(() => setShowBackButton(true), 1000);
 
     // 2. Date Header Logic
-    // Moved up to 75px (was 80px) per your request
     const HEADER_OFFSET = 75; 
     const HEADER_HEIGHT = 45; 
     
@@ -705,7 +704,7 @@ const toggleGroupMember = (uid: string) => {
         const group = dateGroups[i] as HTMLElement;
         const rect = group.getBoundingClientRect();
 
-        // If the group is covering the top area (starts before offset, ends after it)
+        // If the group is covering the top area
         if (rect.top <= HEADER_OFFSET + 10 && rect.bottom > HEADER_OFFSET) {
             activeDate = group.getAttribute('data-date') || '';
             
@@ -721,14 +720,12 @@ const toggleGroupMember = (uid: string) => {
         }
     }
 
-    // B. Sync Visibility (Prevent Doubles)
-    // We loop all groups to ensure only the active static header is hidden
+    // B. Sync Visibility (THE FIX)
     dateGroups.forEach((group) => {
         const header = group.querySelector('.static-date-header') as HTMLElement;
         if (header) {
             const date = group.getAttribute('data-date');
             // If this is the active date, HIDE the static version (opacity 0)
-            // UNLESS we are currently scrolled to the very top (scrollTop < 50)
             if (date === activeDate && scrollTop > 50) {
                 header.style.opacity = '0';
             } else {
@@ -1552,7 +1549,7 @@ const handleLogout = async () => {
                         </div>
                     ))
                 ) : (
-                    groupItemsByDate([...activeMessages].sort((a: any, b: any) => {
+                    ggroupItemsByDate([...activeMessages].sort((a: any, b: any) => {
                         // Robust sort: handle Firestore objects, seconds, or plain numbers
                         const getT = (t: any) => t?.seconds ? t.seconds * 1000 : (t?.toMillis ? t.toMillis() : (Number(t) || 0));
                         return getT(a.timestamp) - getT(b.timestamp);
@@ -1560,7 +1557,7 @@ const handleLogout = async () => {
                         <div key={group.date} className="relative w-full" data-date={group.date}>
                             {/* STATIC INLINE DATE SEPARATOR */}
                             <div className="flex justify-center py-4 pointer-events-none">
-                            <span className="static-date-header transition-opacity duration-0 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-sm">
+                                <span className="static-date-header transition-opacity duration-0 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-sm">
                                     {group.date}
                                 </span>
                             </div>

@@ -280,7 +280,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}
 
-          {/* --- REPLY LOGIC (1PX BORDER) --- */}
+          {/* --- REPLY LOGIC --- */}
           {replyData && (() => {
               const [replyTextColor, replyBorderColor] = getUserColor(replyData.sender, replyTheme).split(' ');
               const hasThumb = !!replyData.imageUrl;
@@ -288,8 +288,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               return (
                   <div 
                     onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
-                    // Changed to border-l-[1px]
-                    className={`mx-1 mt-1 mb-2 rounded-[8px] bg-black/20 flex border-l-[1px] ${replyBorderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}
+                    // REVERTED to border-l-4 (thick color bar)
+                    // CHANGED mx-1 to mx-[1px] (thin side margin)
+                    className={`mx-[1px] mt-1 mb-2 rounded-[8px] bg-black/20 flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}
                     style={preventSelectStyle}
                   >
                       {/* TEXT CONTENT */}

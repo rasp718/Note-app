@@ -55,14 +55,6 @@ const ContextMenuItem = ({ icon: Icon, label, onClick, isDestructive = false }: 
   );
 };
 
-// Component: Inline Action Button
-const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any) => {
-  const [isHovered, setIsHovered] = useState(false);
-  return (
-    <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? accentColor : (iconColor || '#71717a') }}><Icon size={12} /></button>
-  );
-};
-
 export const NoteCard: React.FC<NoteCardProps> = ({ 
   note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, onReply,
   currentReaction, onReact, 
@@ -131,10 +123,43 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; window.speechSynthesis.speak(utterance); } };
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
 
-  // --- UPDATED SAVE IMAGE LOGIC ---
+  // --- RESTORED COPY IMAGE LOGIC (Writes to Clipboard) ---
+  const handleCopyImage = async () => {
+    if (!note.imageUrl) return;
+    setContextMenu(null);
+    try {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = note.imageUrl;
+        await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error("Canvas blocked");
+        ctx.drawImage(img, 0, 0);
+        
+        canvas.toBlob(async (blob) => {
+            if (blob) {
+                try {
+                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                    triggerHaptic(50);
+                } catch (err) {
+                    console.error("Clipboard write failed", err);
+                    alert("Failed to copy image.");
+                }
+            }
+        }, 'image/png');
+    } catch (e) {
+        console.error("Copy failed", e);
+    }
+  };
+
+  // --- UPDATED SAVE IMAGE LOGIC (Smart Platform Detection) ---
   const handleSaveImage = async () => {
     if (!note.imageUrl) return;
-    setContextMenu(null); // Close menu first
+    setContextMenu(null); 
     
     try {
         const response = await fetch(note.imageUrl, { mode: 'cors' });
@@ -142,13 +167,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         
         const blob = await response.blob();
         const file = new File([blob], "image.png", { type: blob.type });
+        
+        // DETECT MOBILE: Only share on mobile devices
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-        // Try Native Share (Mobile)
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({ files: [file] });
         } 
-        // Try Direct Download (Desktop)
         else {
+            // DESKTOP: Force direct download to avoid Windows Share UI
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = `vibe_image_${Date.now()}.png`;
@@ -157,8 +184,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             document.body.removeChild(a);
         }
     } catch (e) {
-        console.error("Save failed, using fallback", e);
-        // FALLBACK: Open in new tab (The "Pop Up" behavior)
+        console.error("Save failed", e);
+        // Fallback
         window.open(note.imageUrl, '_blank');
     }
   };
@@ -230,7 +257,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 
-  // Detect Light Mode Bubble (e.g. White or Light Slate)
+  // Detect Light Mode Bubble
   const isLightBubble = customColors?.bg?.includes('white') || customColors?.bg?.includes('slate-200') || customColors?.text?.includes('black');
 
   const StatusIcon = ({ isOverlay = false }: { isOverlay?: boolean }) => {
@@ -357,7 +384,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         </div>
       </div>
       
-      {/* TELEGRAM-STYLE MENU PORTAL */}
+      {/* MENU PORTAL */}
       {contextMenu && typeof document !== 'undefined' && document.body && createPortal(
         <div className="fixed inset-0 z-[9999]" onClick={() => setContextMenu(null)} onTouchStart={() => setContextMenu(null)}>
             <div 
@@ -395,8 +422,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   
                   <ContextMenuItem icon={Pin} label="Pin" onClick={() => { if(onPin && note.id) onPin(note.id); setContextMenu(null); }} />
 
+                  {/* SHOW COPY IMAGE *AND* SAVE FOR IMAGES */}
                   {hasImage ? (
-                      <ContextMenuItem icon={Download} label="Save to Gallery" onClick={() => { handleSaveImage(); }} />
+                      <>
+                        <ContextMenuItem icon={Copy} label="Copy Image" onClick={() => { handleCopyImage(); }} />
+                        <ContextMenuItem icon={Download} label="Save to Gallery" onClick={() => { handleSaveImage(); }} />
+                      </>
                   ) : (
                       <ContextMenuItem icon={Copy} label="Copy Text" onClick={() => { handleCopy(); setContextMenu(null); }} />
                   )}

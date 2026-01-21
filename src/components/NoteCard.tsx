@@ -316,13 +316,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               const [replyTextColor, replyBorderColor] = getUserColor(replyData.sender, replyTheme).split(' ');
               const hasThumb = !!replyData.imageUrl;
               
-              const replyBg = isLightBubble ? 'bg-black/5' : 'bg-black/20'; 
+              // Darker background (bg-black/10) for white bubbles to match WhatsApp contrast
+              const replyBg = isLightBubble ? 'bg-black/10' : 'bg-black/20'; 
               const replySubText = isLightBubble ? 'text-zinc-600' : 'text-zinc-300'; 
 
               return (
                   <div 
                     onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
-                    className={`mx-0 mt-1 mb-2 rounded-[8px] ${replyBg} flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer transition-colors hover:opacity-80`}
+                    // mx-[1px] and mt-[1px] ensures the top margin matches the side margin perfectly
+                    className={`mx-[1px] mt-[1px] mb-2 rounded-[8px] ${replyBg} flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer transition-colors hover:opacity-80`}
                     style={preventSelectStyle}
                   >
                       <div className="flex-1 min-w-0 py-2 px-2.5 flex flex-col justify-center gap-0.5">

@@ -1311,8 +1311,8 @@ const handleLogout = async () => {
                         </button>
                     </div>
 
-                    {/* CENTER PILL: CONTEXT INFO (Always Visible, Snaps to content) */}
-                    <div className="flex-1 min-w-0 pointer-events-auto flex justify-center z-10">
+                    {/* CENTER PILL: CONTEXT INFO (Slides Up on Scroll) */}
+                    <div className={`flex-1 min-w-0 pointer-events-auto flex justify-center z-10 transition-all duration-500 ease-in-out ${showBackButton ? 'translate-y-0 opacity-100' : '-translate-y-[200%] opacity-0'}`}>
                         <div className="bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-lg shadow-black/50 h-11 flex items-center min-w-0 w-fit max-w-full px-1.5 transition-all duration-300">
                             {activeChatId !== 'saved_messages' ? (
                                <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 cursor-pointer group rounded-full hover:bg-white/5 transition-colors max-w-full pr-4 pl-0.5 py-0.5">

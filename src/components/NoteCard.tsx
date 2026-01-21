@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck, Copy, 
-  Image as ImageIcon, Download, Pin, Forward, CheckCircle, ChevronDown, ChevronUp 
+  Image as ImageIcon, Download, Pin, Forward, CheckCircle, ChevronDown, ChevronUp, FileText 
 } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig } from '../types';
 import { getUserColor } from '../utils';
@@ -123,7 +123,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; window.speechSynthesis.speak(utterance); } };
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
 
-  // --- RESTORED COPY IMAGE LOGIC (Writes to Clipboard) ---
+  // --- COPY IMAGE LOGIC ---
   const handleCopyImage = async () => {
     if (!note.imageUrl) return;
     setContextMenu(null);
@@ -156,7 +156,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     }
   };
 
-  // --- UPDATED SAVE IMAGE LOGIC (Smart Platform Detection) ---
+  // --- SAVE IMAGE LOGIC ---
   const handleSaveImage = async () => {
     if (!note.imageUrl) return;
     setContextMenu(null); 
@@ -168,14 +168,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         const blob = await response.blob();
         const file = new File([blob], "image.png", { type: blob.type });
         
-        // DETECT MOBILE: Only share on mobile devices
+        // DETECT MOBILE
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
         if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({ files: [file] });
         } 
         else {
-            // DESKTOP: Force direct download to avoid Windows Share UI
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = `vibe_image_${Date.now()}.png`;
@@ -185,7 +184,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         }
     } catch (e) {
         console.error("Save failed", e);
-        // Fallback
         window.open(note.imageUrl, '_blank');
     }
   };
@@ -422,14 +420,19 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   
                   <ContextMenuItem icon={Pin} label="Pin" onClick={() => { if(onPin && note.id) onPin(note.id); setContextMenu(null); }} />
 
-                  {/* SHOW COPY IMAGE *AND* SAVE FOR IMAGES */}
-                  {hasImage ? (
-                      <>
-                        <ContextMenuItem icon={Copy} label="Copy Image" onClick={() => { handleCopyImage(); }} />
-                        <ContextMenuItem icon={Download} label="Save to Gallery" onClick={() => { handleSaveImage(); }} />
-                      </>
-                  ) : (
-                      <ContextMenuItem icon={Copy} label="Copy Text" onClick={() => { handleCopy(); setContextMenu(null); }} />
+                  {/* IMAGES: Show Copy Image & Save Image */}
+                  {hasImage && (
+                      <ContextMenuItem icon={Copy} label="Copy Image" onClick={() => { handleCopyImage(); }} />
+                  )}
+
+                  {/* TEXT: Show Copy Text (if there is text) */}
+                  {safeText && safeText.trim().length > 0 && (
+                      <ContextMenuItem icon={FileText} label="Copy Text" onClick={() => { handleCopy(); setContextMenu(null); }} />
+                  )}
+
+                  {/* IMAGES: Save Image (Renamed from Gallery) */}
+                  {hasImage && (
+                      <ContextMenuItem icon={Download} label="Save Image" onClick={() => { handleSaveImage(); }} />
                   )}
 
                   <ContextMenuItem icon={Forward} label="Forward" onClick={() => { setContextMenu(null); }} />

@@ -321,6 +321,7 @@ function App() {
   const [replyingTo, setReplyingTo] = useState<any>(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [dateHeaderState, setDateHeaderState] = useState<'visible' | 'blinking' | 'hidden'>('hidden');
+  const [visibleDate, setVisibleDate] = useState('');
   const dateHeaderTimeoutRef = useRef<any>(null);
 
   const [reactions, setReactions] = useState(() => {
@@ -669,36 +670,48 @@ const toggleGroupMember = (uid: string) => {
     if (listRef.current) {
         const { scrollTop, scrollHeight, clientHeight } = listRef.current;
         
-        // Header Transparency Logic (Trigger after 10px scroll)
+        // Header Transparency Logic
         setIsTopScrolled(scrollTop > 10);
 
+        // Bottom Button Logic
         const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
         setShowScrollButton(!isNearBottom);
         setIsChatScrolled(!isNearBottom);
         
+        // Back Button Logic
         setShowBackButton(false);
         if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
         scrollTimeoutRef.current = setTimeout(() => {
             setShowBackButton(true);
         }, 1000);
 
-        // --- NEW DATE HEADER ANIMATION LOGIC ---
-        // 1. Ensure visible while scrolling
-        if (dateHeaderState !== 'visible') setDateHeaderState('visible');
+        // --- NEW DATE HEADER LOGIC ---
+        // 1. Detect which date is currently visible
+        // We look for elements with data-date attribute
+        const dateGroups = listRef.current.querySelectorAll('[data-date]');
+        let foundDate = '';
+        const searchOffset = 150; // Offset from top of screen to detect date
+        
+        for (let i = 0; i < dateGroups.length; i++) {
+            const group = dateGroups[i] as HTMLElement;
+            // Since listRef is relative, we check offsetTop against scrollTop
+            if ((group.offsetTop + group.offsetHeight) > (scrollTop + searchOffset)) {
+                foundDate = group.getAttribute('data-date') || '';
+                break;
+            }
+        }
+        if (foundDate && foundDate !== visibleDate) setVisibleDate(foundDate);
 
-        // 2. Reset timer
+        // 2. Handle Animation (Show -> Blink -> Hide)
+        if (dateHeaderState !== 'visible') setDateHeaderState('visible');
         if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
 
-        // 3. Set timer for when scrolling stops
         dateHeaderTimeoutRef.current = setTimeout(() => {
-            // Stage 1: Blink Orange
-            setDateHeaderState('blinking');
-            
-            // Stage 2: Fade Out after 300ms
+            setDateHeaderState('blinking'); // Blink Orange
             setTimeout(() => {
-                setDateHeaderState('hidden');
+                setDateHeaderState('hidden'); // Then Hide
             }, 300); 
-        }, 1000); // 1 second after scroll stops
+        }, 1000); 
     }
   };
   
@@ -1426,6 +1439,18 @@ const handleLogout = async () => {
             </div>
 
             {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}
+            {/* FLOATING DATE HEADER (Animation Only) */}
+            <div className={`fixed top-20 left-0 right-0 z-30 flex justify-center pointer-events-none transition-all duration-500 ease-out ${
+                dateHeaderState === 'hidden' || !visibleDate ? 'opacity-0 -translate-y-4' : 'opacity-100 translate-y-0'
+            }`}>
+                <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-xl transition-all duration-200 ${
+                    dateHeaderState === 'blinking' 
+                        ? 'bg-[#DA7756] text-white border border-[#DA7756] scale-110 shadow-[#DA7756]/40' 
+                        : 'bg-black/60 backdrop-blur-md border border-white/10 text-white/90 shadow-black/50'
+                }`}>
+                    {visibleDate}
+                </span>
+            </div>
 
 {/* SCROLL DOWN BUTTON */}
 <div className="fixed bottom-24 left-0 w-full z-40 pointer-events-none">
@@ -1443,16 +1468,10 @@ const handleLogout = async () => {
                 
    {activeChatId === 'saved_messages' ? (
                     groupItemsByDate(filteredNotes).map((group) => (
-                        <div key={group.date} className="relative w-full">
-                            {/* STICKY DATE HEADER */}
-                            <div className={`sticky top-20 z-30 flex justify-center py-4 pointer-events-none transition-all duration-500 ease-out ${
-                                dateHeaderState === 'hidden' ? 'opacity-0 -translate-y-4' : 'opacity-100 translate-y-0'
-                            }`}>
-                                <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-lg transition-all duration-200 ${
-                                    dateHeaderState === 'blinking' 
-                                        ? 'bg-[#DA7756] text-white border border-[#DA7756] scale-110 shadow-[#DA7756]/40' 
-                                        : 'bg-black/60 backdrop-blur-md border border-white/10 text-white/90 shadow-black/50'
-                                }`}>
+                        <div key={group.date} className="relative w-full" data-date={group.date}>
+                            {/* STATIC INLINE DATE SEPARATOR */}
+                            <div className="flex justify-center py-4 pointer-events-none">
+                                <span className="bg-black/20 backdrop-blur-sm border border-white/5 px-3 py-1 rounded-full text-zinc-400 text-[11px] font-bold uppercase tracking-widest">
                                     {group.date}
                                 </span>
                             </div>
@@ -1486,16 +1505,10 @@ const handleLogout = async () => {
                     ))
                 ) : (
                     groupItemsByDate([...activeMessages].sort((a, b) => normalizeDate(a.timestamp) - normalizeDate(b.timestamp))).map((group) => (
-                        <div key={group.date} className="relative w-full">
-                            {/* STICKY DATE HEADER */}
-                            <div className={`sticky top-20 z-30 flex justify-center py-4 pointer-events-none transition-all duration-500 ease-out ${
-                                dateHeaderState === 'hidden' ? 'opacity-0 -translate-y-4' : 'opacity-100 translate-y-0'
-                            }`}>
-                                <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-lg transition-all duration-200 ${
-                                    dateHeaderState === 'blinking' 
-                                        ? 'bg-[#DA7756] text-white border border-[#DA7756] scale-110 shadow-[#DA7756]/40' 
-                                        : 'bg-black/60 backdrop-blur-md border border-white/10 text-white/90 shadow-black/50'
-                                }`}>
+                        <div key={group.date} className="relative w-full" data-date={group.date}>
+                            {/* STATIC INLINE DATE SEPARATOR */}
+                            <div className="flex justify-center py-4 pointer-events-none">
+                                <span className="bg-black/20 backdrop-blur-sm border border-white/5 px-3 py-1 rounded-full text-zinc-400 text-[11px] font-bold uppercase tracking-widest">
                                     {group.date}
                                 </span>
                             </div>

@@ -322,11 +322,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
               return (
                   <div 
-                    onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
-                    // mx-[1px] and mt-[1px] ensures the top margin matches the side margin perfectly
-                    // mb-0.5 gives a tight 2px gap instead of 0
-                    className={`mx-[1px] mt-[1px] mb-0.5 rounded-[8px] ${replyBg} flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer transition-colors hover:opacity-80`}
-                    style={preventSelectStyle}
+                   onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
+                   // Conditional MT: 1px for 1:1 chats (tight), 1 (4px) for group chats (spacing from name)
+                   // mx-0 (no side gap), mb-0.5 (tight bottom)
+                   className={`mx-0 ${(variant === 'received' && opponentName && opponentName !== 'OPP') ? 'mt-1' : 'mt-[1px]'} mb-0.5 rounded-[8px] ${replyBg} flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer transition-colors hover:opacity-80`}
+                   style={preventSelectStyle}
                   >
                       <div className="flex-1 min-w-0 py-2 px-2.5 flex flex-col justify-center gap-0.5">
                           <div className={`text-[12px] font-bold ${replyTextColor} leading-snug truncate`}>

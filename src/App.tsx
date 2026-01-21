@@ -637,7 +637,13 @@ const toggleGroupMember = (uid: string) => {
     return () => { clearInterval(interval); window.removeEventListener('resize', handleResize); };
   }, [showSecretAnim, currentView]);
 
-  useEffect(() => { if (currentView === 'room') scrollToBottom(); }, [activeMessages, notes, currentView]);
+  useEffect(() => { 
+    if (currentView === 'room') {
+        scrollToBottom(); 
+        // Force a scroll check after render to set correct date header immediately
+        setTimeout(handleScroll, 100); 
+    }
+}, [activeMessages, notes, currentView]);
   useEffect(() => { return () => { if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); } }; }, []);
   
   useEffect(() => { 
@@ -671,8 +677,9 @@ const toggleGroupMember = (uid: string) => {
   const handleScroll = () => {
     if (!listRef.current) return;
 
-    // 1. Standard UI Logic
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
+    
+    // 1. Standard UI Logic
     const isScrolled = scrollTop > 10;
     if (isScrolled !== isTopScrolled) setIsTopScrolled(isScrolled);
 
@@ -685,70 +692,58 @@ const toggleGroupMember = (uid: string) => {
     scrollTimeoutRef.current = setTimeout(() => setShowBackButton(true), 1000);
 
     // 2. High-Performance Date Header Logic
-    requestAnimationFrame(() => {
-        if (!listRef.current) return;
-        
-        const HEADER_OFFSET = 80; // The visual "sticky" line (approx top-20)
-        const HEADER_HEIGHT = 40; // Height of bubble + margin
-        
-        const dateGroups = listRef.current.querySelectorAll('[data-date]');
-        let activeDate = '';
-        let pushOffset = 0;
+    const HEADER_OFFSET = 80; 
+    const HEADER_HEIGHT = 40; 
+    
+    const dateGroups = listRef.current.querySelectorAll('[data-date]');
+    let activeDate = '';
+    let pushOffset = 0;
 
-        // Iterate through groups to find the one currently "holding" the sticky position
-        for (let i = 0; i < dateGroups.length; i++) {
-            const group = dateGroups[i] as HTMLElement;
-            const rect = group.getBoundingClientRect();
+    for (let i = 0; i < dateGroups.length; i++) {
+        const group = dateGroups[i] as HTMLElement;
+        const rect = group.getBoundingClientRect();
+        
+        // Use a small buffer (+1px) to handle sub-pixel rendering differences
+        if (rect.top <= HEADER_OFFSET + 1) {
+            activeDate = group.getAttribute('data-date') || '';
             
-            // The group must have started (top is above/at the offset) to be considered active
-            if (rect.top <= HEADER_OFFSET) {
-                activeDate = group.getAttribute('data-date') || '';
-                
-                // Check if the NEXT group is pushing this one up
-                const nextGroup = dateGroups[i + 1] as HTMLElement;
-                if (nextGroup) {
-                    const nextRect = nextGroup.getBoundingClientRect();
-                    // If next header is entering the collision zone
-                    if (nextRect.top < HEADER_OFFSET + HEADER_HEIGHT) {
-                        pushOffset = nextRect.top - (HEADER_OFFSET + HEADER_HEIGHT);
-                    } else {
-                        pushOffset = 0;
-                    }
+            const nextGroup = dateGroups[i + 1] as HTMLElement;
+            if (nextGroup) {
+                const nextRect = nextGroup.getBoundingClientRect();
+                if (nextRect.top < HEADER_OFFSET + HEADER_HEIGHT) {
+                    pushOffset = nextRect.top - (HEADER_OFFSET + HEADER_HEIGHT);
+                } else {
+                    pushOffset = 0;
                 }
             } else {
-                // If we hit a group that starts BELOW the offset, we stop.
-                // The previous iteration's activeDate (if any) is the correct one.
-                break;
-            }
-        }
-
-        // 3. Apply Updates
-        // A. Text Content
-        if (activeDate !== visibleDate) setVisibleDate(activeDate);
-
-        // B. Physical Movement (Direct DOM)
-        if (floatingBubbleRef.current) {
-            floatingBubbleRef.current.style.transform = `translateY(${pushOffset}px)`;
-        }
-
-        // C. Visibility Timer
-        // Only show if we have a valid date active
-        if (activeDate) {
-            if (dateHeaderState !== 'visible') setDateHeaderState('visible');
-            if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
-
-            // If we are fully resting (no bump), start the fade timer
-            if (pushOffset === 0) {
-                dateHeaderTimeoutRef.current = setTimeout(() => {
-                    setDateHeaderState('blinking'); 
-                    setTimeout(() => setDateHeaderState('hidden'), 300); 
-                }, 1000);
+                pushOffset = 0;
             }
         } else {
-            // If no date is active (scrolled to very top), hide immediately
-            if (dateHeaderState !== 'hidden') setDateHeaderState('hidden');
+            break;
         }
-    });
+    }
+
+    // 3. Apply Updates
+    if (activeDate !== visibleDate) setVisibleDate(activeDate);
+
+    if (floatingBubbleRef.current) {
+        floatingBubbleRef.current.style.transform = `translateY(${pushOffset}px)`;
+    }
+
+    // Only show if we have a valid active date
+    if (activeDate) {
+        if (dateHeaderState !== 'visible') setDateHeaderState('visible');
+        if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
+
+        if (pushOffset === 0) {
+            dateHeaderTimeoutRef.current = setTimeout(() => {
+                setDateHeaderState('blinking'); 
+                setTimeout(() => setDateHeaderState('hidden'), 300); 
+            }, 1000);
+        }
+    } else {
+        if (dateHeaderState !== 'hidden') setDateHeaderState('hidden');
+    }
   };
   
   const handleRollDice = async () => {
@@ -1478,7 +1473,7 @@ const handleLogout = async () => {
             {/* FLOATING DATE HEADER (Animation Only) */}
             <div 
                 ref={floatingBubbleRef}
-                className={`fixed top-20 left-0 right-0 z-30 flex justify-center pointer-events-none transition-opacity duration-300 ease-out ${
+                className={`fixed top-20 left-0 right-0 z-50 flex justify-center pointer-events-none transition-opacity duration-300 ease-out ${
                     dateHeaderState === 'hidden' || !visibleDate ? 'opacity-0' : 'opacity-100'
                 }`}
             >

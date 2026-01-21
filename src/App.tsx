@@ -324,7 +324,8 @@ function App() {
   const [visibleDate, setVisibleDate] = useState('');
   const [headerOffset, setHeaderOffset] = useState(0);
   const dateHeaderTimeoutRef = useRef<any>(null);
-  const floatingBubbleRef = useRef<HTMLDivElement>(null); // <--- NEW REF
+  const floatingBubbleRef = useRef<HTMLDivElement>(null); 
+  const lastHiddenHeaderRef = useRef<HTMLElement | null>(null); // <--- ADD THIS
 
   const [reactions, setReactions] = useState(() => {
       try { return JSON.parse(localStorage.getItem('vibenotes_reactions') || '{}'); } catch { return {}; }
@@ -677,80 +678,95 @@ const toggleGroupMember = (uid: string) => {
   const handleScroll = () => {
     if (!listRef.current) return;
 
+    // --- PHASE 1: READ (Get all measurements first) ---
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
     
-    // 1. Standard UI Logic
-    const isScrolled = scrollTop > 10;
-    if (isScrolled !== isTopScrolled) setIsTopScrolled(isScrolled);
-
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
-    setShowScrollButton(!isNearBottom);
-    setIsChatScrolled(!isNearBottom);
-    
-    setShowBackButton(false);
-    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-    scrollTimeoutRef.current = setTimeout(() => setShowBackButton(true), 1000);
-
-    // 2. Date Header Logic
+    // Config
     const HEADER_OFFSET = 75; 
     const HEADER_HEIGHT = 45; 
-    
+
+    // Standard UI State checks
+    const isScrolled = scrollTop > 10;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
+
+    // Find Active Date Logic
     const dateGroups = listRef.current.querySelectorAll('[data-date]');
     let activeDate = '';
     let pushOffset = 0;
+    let activeHeaderElement: HTMLElement | null = null;
 
-    // A. Detect Active Date & Bump
     for (let i = 0; i < dateGroups.length; i++) {
         const group = dateGroups[i] as HTMLElement;
         const rect = group.getBoundingClientRect();
 
-        if (rect.top <= HEADER_OFFSET + 10 && rect.bottom > HEADER_OFFSET) {
+        // Check if this group is the "Sticky" one (Starts above the line, ends below it)
+        // We add a generous buffer (2px) to prevent flickering at boundaries
+        if (rect.top <= HEADER_OFFSET + 2 && rect.bottom > HEADER_OFFSET) {
             activeDate = group.getAttribute('data-date') || '';
+            activeHeaderElement = group.querySelector('.static-date-header');
             
+            // Check Collision with NEXT group (The "Bump")
             const nextGroup = dateGroups[i + 1] as HTMLElement;
             if (nextGroup) {
                 const nextRect = nextGroup.getBoundingClientRect();
+                // If next group is entering the sticky zone
                 if (nextRect.top < HEADER_OFFSET + HEADER_HEIGHT) {
                     pushOffset = nextRect.top - (HEADER_OFFSET + HEADER_HEIGHT);
                 }
             }
-            break;
+            break; 
         }
     }
 
-    // B. FORCE CLEAR AT TOP (Prevents floating header at very top)
+    // Force clear if at very top
     if (scrollTop < 50) {
         activeDate = '';
         pushOffset = 0;
+        activeHeaderElement = null;
     }
 
-    // C. Sync Visibility
-    dateGroups.forEach((group) => {
-        const header = group.querySelector('.static-date-header') as HTMLElement;
-        if (header) {
-            const date = group.getAttribute('data-date');
-            // Hide static header if it matches the active floating one
-            if (date === activeDate && activeDate !== '') {
-                header.style.opacity = '0';
-            } else {
-                header.style.opacity = '1';
-            }
-        }
-    });
+    // --- PHASE 2: WRITE (Apply all changes together) ---
+    
+    // 1. Update UI States
+    if (isScrolled !== isTopScrolled) setIsTopScrolled(isScrolled);
+    setShowScrollButton(!isNearBottom);
+    setIsChatScrolled(!isNearBottom);
 
-    // 3. Apply Updates
+    setShowBackButton(false);
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => setShowBackButton(true), 1000);
+
+    // 2. Update Date Text
     if (activeDate !== visibleDate) setVisibleDate(activeDate);
 
+    // 3. Move Floater (Direct DOM for 60fps)
     if (floatingBubbleRef.current) {
-        floatingBubbleRef.current.style.transform = `translateY(${pushOffset}px)`;
+        floatingBubbleRef.current.style.transform = `translate3d(0, ${pushOffset}px, 0)`; // translate3d forces GPU acceleration
     }
 
-    // 4. Timer Logic
-    // Only run if we actually have an active date (scrolled down)
+    // 4. Handle Static Header Visibility (The "Doubles" Fix)
+    // If we have a new active header, hide it.
+    if (activeHeaderElement && activeHeaderElement !== lastHiddenHeaderRef.current) {
+        // Restore previous
+        if (lastHiddenHeaderRef.current) {
+            lastHiddenHeaderRef.current.style.opacity = '1';
+        }
+        // Hide new
+        activeHeaderElement.style.opacity = '0';
+        lastHiddenHeaderRef.current = activeHeaderElement;
+    } 
+    // If we have NO active header (e.g. at top), ensure last hidden is shown
+    else if (!activeHeaderElement && lastHiddenHeaderRef.current) {
+        lastHiddenHeaderRef.current.style.opacity = '1';
+        lastHiddenHeaderRef.current = null;
+    }
+
+    // 5. Visibility Timer Logic
     if (activeDate) {
         if (dateHeaderState !== 'visible') setDateHeaderState('visible');
         if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
 
+        // Only fade out if not currently bumping
         if (pushOffset === 0) {
             dateHeaderTimeoutRef.current = setTimeout(() => {
                 setDateHeaderState('blinking'); 
@@ -758,7 +774,6 @@ const toggleGroupMember = (uid: string) => {
             }, 1000);
         }
     } else {
-        // If no active date (top of screen), hide immediately
         if (dateHeaderState !== 'hidden') setDateHeaderState('hidden');
     }
   };
@@ -1490,16 +1505,14 @@ const handleLogout = async () => {
             {/* FLOATING DATE HEADER (Animation Only) */}
             <div 
                 ref={floatingBubbleRef}
-                className={`fixed top-[75px] left-0 right-0 z-50 flex justify-center pointer-events-none transition-opacity duration-200 ease-out ${
-                    !isTopScrolled ? 'duration-0' : 'duration-200'
-                } ${
+                className={`fixed top-[75px] left-0 right-0 z-50 flex justify-center pointer-events-none will-change-transform transition-opacity duration-200 ease-out ${
                     dateHeaderState === 'hidden' || !visibleDate || !isTopScrolled ? 'opacity-0' : 'opacity-100'
                 }`}
             >
-                <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-[0_1px_1px_rgba(0,0,0,0.3)] transition-all duration-200 ${
+                <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-lg transition-all duration-200 ${
                     dateHeaderState === 'blinking' 
                         ? 'bg-[#DA7756] text-white border border-[#DA7756] scale-110 shadow-[#DA7756]/40' 
-                        : 'bg-black/60 backdrop-blur-md border border-white/10 text-white/90'
+                        : 'bg-black/60 backdrop-blur-md border border-white/10 text-white/90 shadow-black/50'
                 }`}>
                     {visibleDate}
                 </span>

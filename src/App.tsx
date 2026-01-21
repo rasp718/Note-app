@@ -1504,7 +1504,11 @@ const handleLogout = async () => {
                         </div>
                     ))
                 ) : (
-                    groupItemsByDate([...activeMessages].sort((a, b) => normalizeDate(a.timestamp) - normalizeDate(b.timestamp))).map((group) => (
+                    groupItemsByDate([...activeMessages].sort((a: any, b: any) => {
+                        // Robust sort: handle Firestore objects, seconds, or plain numbers
+                        const getT = (t: any) => t?.seconds ? t.seconds * 1000 : (t?.toMillis ? t.toMillis() : (Number(t) || 0));
+                        return getT(a.timestamp) - getT(b.timestamp);
+                    })).map((group) => (
                         <div key={group.date} className="relative w-full" data-date={group.date}>
                             {/* STATIC INLINE DATE SEPARATOR */}
                             <div className="flex justify-center py-4 pointer-events-none">

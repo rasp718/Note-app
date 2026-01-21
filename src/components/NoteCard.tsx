@@ -307,8 +307,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
              </div>
           )}
 
-          {variant === 'received' && opponentName && opponentName !== 'OPP' && (
-              <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
+{variant === 'received' && opponentName && opponentName !== 'OPP' && (
+              <div className={`px-2 pt-1 pb-1 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}
 
           {/* --- REPLY LOGIC --- */}
@@ -321,13 +321,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               const replySubText = isLightBubble ? 'text-zinc-600' : 'text-zinc-300'; 
 
               return (
-                  <div 
-                   onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
-                   // Conditional MT: 1px for 1:1 chats (tight), 1 (4px) for group chats (spacing from name)
-                   // mx-0 (no side gap), mb-0.5 (tight bottom)
-                   className={`mx-0 ${(variant === 'received' && opponentName && opponentName !== 'OPP') ? 'mt-1' : 'mt-[1px]'} mb-0.5 rounded-[8px] ${replyBg} flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer transition-colors hover:opacity-80`}
-                   style={preventSelectStyle}
-                  >
+                <div 
+                onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
+                // Conditional MT: 1px for 1:1 chats (tight), 1 (4px) for group chats (spacing from name)
+                // mb-0.5 (tight bottom to pull text closer)
+                className={`mx-0 ${(variant === 'received' && opponentName && opponentName !== 'OPP') ? 'mt-1' : 'mt-[1px]'} mb-0.5 rounded-[8px] ${replyBg} flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer transition-colors hover:opacity-80`}
+                style={preventSelectStyle}
+              >
                       <div className="flex-1 min-w-0 py-2 px-2.5 flex flex-col justify-center gap-0.5">
                           <div className={`text-[12px] font-bold ${replyTextColor} leading-snug truncate`}>
                               {replyData.sender}
@@ -383,13 +383,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 </div>
             </div>
           ) : (
-             <div className="flex flex-col min-w-[80px]">
-               {/* Reduced top padding from pt-1 to pt-0.5 to tighten layout */}
-               <div className={`block w-full px-2 pb-1 pt-1`}>
-                   {safeText && (<span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>)}
-                   <div className="float-right ml-3 mt-1.5 flex items-center gap-1 align-bottom h-4 select-none">
-                   {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#ffffff'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}
-                       <span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>
+            <div className="flex flex-col min-w-[80px]">
+              {/* Reduced top padding to pt-0.5 */}
+              <div className={`block w-full px-2 pb-1 pt-0.5`}>
+                  {safeText && (<span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>)}
                        {variant === 'sent' && <div className="ml-0.5"><StatusIcon /></div>}
                    </div>
                </div>

@@ -307,8 +307,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
              </div>
           )}
 
-{variant === 'received' && opponentName && opponentName !== 'OPP' && (
-              <div className={`px-2 pt-1 pb-1 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
+          {variant === 'received' && opponentName && opponentName !== 'OPP' && (
+              <div className={`px-2 pt-1 pb-[2px] text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}
 
           {/* --- REPLY LOGIC --- */}
@@ -384,14 +384,20 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             </div>
           ) : (
             <div className="flex flex-col min-w-[80px]">
-              <div className="block w-full px-2 pb-1 pt-0.5 relative">
-                  {safeText && (<span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>)}
-                       <span className="float-right ml-2 mt-[6px] flex items-center gap-1 h-4 align-bottom select-none">
-                            <span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>
-                            {variant === 'sent' && <StatusIcon />}
-                       </span>
-                   </div>
-               </div>
+              {/* Text Layout: Use block+float to wrap status icon naturally at bottom right */}
+              <div className={`block w-full px-2 pb-1 pt-0.5 relative`}>
+                  {safeText && (
+                      <span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor}`}>
+                          {safeText}
+                      </span>
+                  )}
+                  {/* Float Right Metadata (Time + Icon) */}
+                  <span className="float-right ml-2 mt-1.5 flex items-center gap-1 h-3 align-bottom select-none">
+                      <span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>
+                      {variant === 'sent' && <StatusIcon />}
+                  </span>
+              </div>
+            </div>
           )}
 
           {currentReaction && (

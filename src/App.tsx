@@ -703,13 +703,16 @@ const toggleGroupMember = (uid: string) => {
         const group = dateGroups[i] as HTMLElement;
         const rect = group.getBoundingClientRect();
         
-        // Use a small buffer (+1px) to handle sub-pixel rendering differences
-        if (rect.top <= HEADER_OFFSET + 1) {
+        // KEY FIX: Only make a group "sticky" if it has passed halfway up the sticky slot.
+        // If it's just arriving (e.g. top is 80px), we treat it as the "pusher" for the previous group.
+        if (rect.top <= HEADER_OFFSET - (HEADER_HEIGHT / 2)) {
             activeDate = group.getAttribute('data-date') || '';
             
             const nextGroup = dateGroups[i + 1] as HTMLElement;
             if (nextGroup) {
                 const nextRect = nextGroup.getBoundingClientRect();
+                
+                // Calculate collision: If next group is entering the sticky zone
                 if (nextRect.top < HEADER_OFFSET + HEADER_HEIGHT) {
                     pushOffset = nextRect.top - (HEADER_OFFSET + HEADER_HEIGHT);
                 } else {
@@ -719,6 +722,8 @@ const toggleGroupMember = (uid: string) => {
                 pushOffset = 0;
             }
         } else {
+            // If this group hasn't passed the threshold, the *previous* group remains active.
+            // This loop breaks, keeping 'activeDate' from the previous iteration.
             break;
         }
     }
@@ -735,6 +740,7 @@ const toggleGroupMember = (uid: string) => {
         if (dateHeaderState !== 'visible') setDateHeaderState('visible');
         if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
 
+        // If we are fully resting (no bump), start the fade timer
         if (pushOffset === 0) {
             dateHeaderTimeoutRef.current = setTimeout(() => {
                 setDateHeaderState('blinking'); 

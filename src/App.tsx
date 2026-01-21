@@ -1425,7 +1425,7 @@ const handleLogout = async () => {
                     <div className={`flex-none pointer-events-auto transition-all duration-1000 ease-in-out ${showBackButton ? 'translate-x-0 opacity-100' : '-translate-x-[200%] opacity-0'}`}>
                         <button 
                             onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
-                            className="w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all shadow-lg shadow-black/50 active:scale-90"
+                            className="w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90"
                         >
                             <ChevronLeft size={24} className="-ml-0.5" />
                         </button>
@@ -1433,7 +1433,7 @@ const handleLogout = async () => {
 
                     {/* CENTER PILL: CONTEXT INFO (Slides Up on Scroll) */}
                     <div className={`flex-1 min-w-0 pointer-events-auto flex justify-center z-10 transition-all duration-1000 ease-in-out ${showBackButton ? 'translate-y-0 opacity-100' : '-translate-y-[200%] opacity-0'}`}>
-                        <div className="bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-lg shadow-black/50 h-11 flex items-center min-w-0 w-fit max-w-full px-1.5 transition-all duration-300">
+                        <div className="bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.3)] h-11 flex items-center min-w-0 w-fit max-w-full px-1.5 transition-all duration-300">
                             {activeChatId !== 'saved_messages' ? (
                                <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 cursor-pointer group rounded-full hover:bg-white/5 transition-colors max-w-full pr-4 pl-0.5 py-0.5">
                                    {/* AVATAR */}
@@ -1491,13 +1491,15 @@ const handleLogout = async () => {
             <div 
                 ref={floatingBubbleRef}
                 className={`fixed top-[75px] left-0 right-0 z-50 flex justify-center pointer-events-none transition-opacity duration-200 ease-out ${
-                    dateHeaderState === 'hidden' || !visibleDate ? 'opacity-0' : 'opacity-100'
+                    !isTopScrolled ? 'duration-0' : 'duration-200'
+                } ${
+                    dateHeaderState === 'hidden' || !visibleDate || !isTopScrolled ? 'opacity-0' : 'opacity-100'
                 }`}
             >
-                <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-lg transition-all duration-200 ${
+                <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-[0_1px_1px_rgba(0,0,0,0.3)] transition-all duration-200 ${
                     dateHeaderState === 'blinking' 
                         ? 'bg-[#DA7756] text-white border border-[#DA7756] scale-110 shadow-[#DA7756]/40' 
-                        : 'bg-black/60 backdrop-blur-md border border-white/10 text-white/90 shadow-black/50'
+                        : 'bg-black/60 backdrop-blur-md border border-white/10 text-white/90'
                 }`}>
                     {visibleDate}
                 </span>
@@ -1507,7 +1509,7 @@ const handleLogout = async () => {
 <div className="fixed bottom-24 left-0 w-full z-40 pointer-events-none">
                 <div className="max-w-2xl mx-auto px-4 relative">
                     <div className={`absolute right-4 bottom-0 transition-all duration-300 ${showScrollButton ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-                        <button onClick={() => scrollToBottom()} className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10 text-white shadow-xl shadow-black/50 flex items-center justify-center hover:bg-zinc-700 active:scale-95 transition-all backdrop-blur-md">
+                    <button onClick={() => scrollToBottom()} className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10 text-white shadow-[0_1px_1px_rgba(0,0,0,0.3)] flex items-center justify-center hover:bg-zinc-700 active:scale-95 transition-all backdrop-blur-md">
                             <ChevronDown size={24} strokeWidth={2} />
                         </button>
                     </div>

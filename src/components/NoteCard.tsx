@@ -131,25 +131,35 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; window.speechSynthesis.speak(utterance); } };
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
 
+  // --- UPDATED SAVE IMAGE LOGIC ---
   const handleSaveImage = async () => {
     if (!note.imageUrl) return;
+    setContextMenu(null); // Close menu first
+    
     try {
         const response = await fetch(note.imageUrl, { mode: 'cors' });
+        if (!response.ok) throw new Error("Fetch failed");
+        
         const blob = await response.blob();
         const file = new File([blob], "image.png", { type: blob.type });
+
+        // Try Native Share (Mobile)
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({ files: [file] });
-        } else {
+        } 
+        // Try Direct Download (Desktop)
+        else {
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = "download.png";
+            a.download = `vibe_image_${Date.now()}.png`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
         }
     } catch (e) {
-        console.error("Save failed", e);
-        alert("Could not save image.");
+        console.error("Save failed, using fallback", e);
+        // FALLBACK: Open in new tab (The "Pop Up" behavior)
+        window.open(note.imageUrl, '_blank');
     }
   };
   
@@ -260,14 +270,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}
 
-          {/* --- REPLY LOGIC (Updated for Light Theme) --- */}
+          {/* --- REPLY LOGIC --- */}
           {replyData && (() => {
               const [replyTextColor, replyBorderColor] = getUserColor(replyData.sender, replyTheme).split(' ');
               const hasThumb = !!replyData.imageUrl;
               
-              // Conditional Reply Styles
-              const replyBg = isLightBubble ? 'bg-black/5' : 'bg-black/20'; // Light grey on white, dark grey on dark
-              const replySubText = isLightBubble ? 'text-zinc-600' : 'text-zinc-300'; // Darker text on white
+              const replyBg = isLightBubble ? 'bg-black/5' : 'bg-black/20'; 
+              const replySubText = isLightBubble ? 'text-zinc-600' : 'text-zinc-300'; 
 
               return (
                   <div 
@@ -348,7 +357,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         </div>
       </div>
       
-      {/* MENU PORTAL */}
+      {/* TELEGRAM-STYLE MENU PORTAL */}
       {contextMenu && typeof document !== 'undefined' && document.body && createPortal(
         <div className="fixed inset-0 z-[9999]" onClick={() => setContextMenu(null)} onTouchStart={() => setContextMenu(null)}>
             <div 
@@ -387,7 +396,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   <ContextMenuItem icon={Pin} label="Pin" onClick={() => { if(onPin && note.id) onPin(note.id); setContextMenu(null); }} />
 
                   {hasImage ? (
-                      <ContextMenuItem icon={Download} label="Save to Gallery" onClick={() => { handleSaveImage(); setContextMenu(null); }} />
+                      <ContextMenuItem icon={Download} label="Save to Gallery" onClick={() => { handleSaveImage(); }} />
                   ) : (
                       <ContextMenuItem icon={Copy} label="Copy Text" onClick={() => { handleCopy(); setContextMenu(null); }} />
                   )}

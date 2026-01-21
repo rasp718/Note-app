@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck, Copy, Image as ImageIcon } from 'lucide-react';
+import { 
+  Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck, Copy, 
+  Image as ImageIcon, Download, Pin, Forward, CheckCircle, ChevronDown, ChevronUp 
+} from 'lucide-react';
 import { Note, CategoryId, CategoryConfig } from '../types';
 import { getUserColor } from '../utils';
 import { AudioPlayer } from './AudioPlayer';
@@ -37,29 +40,17 @@ const triggerHaptic = (pattern: number | number[] = 15) => {
   } 
 };
 
-// Component: Context Menu Item
-const ContextMenuItem = ({ icon: Icon, label, onClick, accentColor }: any) => {
-  const [isHovered, setIsHovered] = useState(false);
-  
-  const handleAction = (e: any) => { 
-      e.preventDefault();
-      e.stopPropagation();
-      triggerHaptic(); 
-      onClick(); 
-  };
-
+// --- UPDATED CONTEXT MENU ITEM ---
+const ContextMenuItem = ({ icon: Icon, label, onClick, isDestructive = false }: any) => {
   return (
     <button 
         type="button" 
-        onPointerDown={handleAction}
-        onClick={handleAction} 
-        onMouseEnter={() => setIsHovered(true)} 
-        onMouseLeave={() => setIsHovered(false)} 
-        className="w-full flex items-center gap-3 px-3 py-3 text-sm transition-colors duration-150 cursor-pointer select-none active:bg-white/10" 
-        style={{ backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent' }}
+        onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); triggerHaptic(); onClick(); }}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClick(); }}
+        className="w-full flex items-center justify-between px-4 py-3 text-[15px] transition-colors duration-150 cursor-pointer select-none active:bg-white/10 group" 
     >
-      <Icon size={18} style={{ color: isHovered ? '#ffffff' : '#a1a1aa' }} />
-      <span className="font-medium" style={{ color: isHovered ? '#ffffff' : '#f4f4f5' }}>{label}</span>
+      <span className={`font-medium ${isDestructive ? 'text-red-500' : 'text-white'}`}>{label}</span>
+      <Icon size={18} className={isDestructive ? 'text-red-500' : 'text-zinc-400 group-hover:text-white'} />
     </button>
   );
 };
@@ -85,6 +76,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   const [isExiting, setIsExiting] = useState(false); 
+  const [showMoreEmojis, setShowMoreEmojis] = useState(false); // For expandable emoji menu
   
   // --- Refs ---
   const touchStartX = useRef<number | null>(null);
@@ -133,7 +125,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   };
 
   useEffect(() => {
-    const closeMenu = (e: any) => { if (e.type === 'scroll') return; setContextMenu(null); };
+    const closeMenu = (e: any) => { if (e.type === 'scroll') return; setContextMenu(null); setShowMoreEmojis(false); };
     if (contextMenu) { setTimeout(() => { window.addEventListener('click', closeMenu); window.addEventListener('touchstart', closeMenu); window.addEventListener('scroll', closeMenu, { capture: true }); window.addEventListener('resize', closeMenu); }, 200); }
     return () => { window.removeEventListener('click', closeMenu); window.removeEventListener('touchstart', closeMenu); window.removeEventListener('scroll', closeMenu, { capture: true }); window.removeEventListener('resize', closeMenu); };
   }, [contextMenu]);
@@ -141,44 +133,34 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; window.speechSynthesis.speak(utterance); } };
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
 
-  const handleCopyImage = async () => {
+  const handleSaveImage = async () => {
     if (!note.imageUrl) return;
-    setContextMenu(null);
+    // Logic to save/share image (same as previous handleCopyImage)
     try {
-        const img = new Image();
-        img.crossOrigin = "anonymous"; 
-        img.src = note.imageUrl;
-        await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error("Canvas context blocked");
-        ctx.drawImage(img, 0, 0);
-        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-        if (!blob) throw new Error("Blob creation failed");
-        const data = [new ClipboardItem({ 'image/png': blob })];
-        await navigator.clipboard.write(data);
-        triggerHaptic(50);
+        const response = await fetch(note.imageUrl, { mode: 'cors' });
+        const blob = await response.blob();
+        const file = new File([blob], "image.png", { type: blob.type });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+        } else {
+            // Fallback for desktop
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = "download.png";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
     } catch (e) {
-        console.error("Clipboard API failed, trying fallback", e);
-        try {
-            const response = await fetch(note.imageUrl, { mode: 'cors' });
-            const blob = await response.blob();
-            const file = new File([blob], "image.png", { type: blob.type });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({ files: [file] });
-            } else {
-                await navigator.clipboard.writeText(note.imageUrl);
-            }
-        } catch (err) { console.error("Share failed", err); }
+        console.error("Save failed", e);
+        alert("Could not save image.");
     }
   };
   
   const openMenu = (clientX: number, clientY: number) => { 
       triggerHaptic(); 
-      const menuW = 200; 
-      const menuH = 300; 
+      const menuW = 240; // Wider menu for Telegram style
+      const menuH = 400; 
       let x = clientX; 
       let y = clientY; 
       if (typeof window !== 'undefined') { 
@@ -280,7 +262,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}
 
-          {/* --- REPLY LOGIC --- */}
           {replyData && (() => {
               const [replyTextColor, replyBorderColor] = getUserColor(replyData.sender, replyTheme).split(' ');
               const hasThumb = !!replyData.imageUrl;
@@ -288,12 +269,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               return (
                   <div 
                     onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
-                    // REVERTED to border-l-4 (thick color bar)
-                    // CHANGED mx-1 to mx-[1px] (thin side margin)
                     className={`mx-0 mt-1 mb-2 rounded-[8px] bg-black/20 flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}
                     style={preventSelectStyle}
                   >
-                      {/* TEXT CONTENT */}
                       <div className="flex-1 min-w-0 py-2 px-2.5 flex flex-col justify-center gap-0.5">
                           <div className={`text-[12px] font-bold ${replyTextColor} leading-snug truncate`}>
                               {replyData.sender}
@@ -305,8 +283,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                                </span>
                           </div>
                       </div>
-
-                      {/* IMAGE THUMBNAIL (70x70) */}
                       {hasThumb && (
                           <div className="w-[70px] min-h-[70px] relative bg-zinc-900 select-none">
                                 <img 
@@ -320,7 +296,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   </div>
               );
           })()}
-          {/* ------------------------------------- */}
 
           {audioUrl ? (
              <div className="flex flex-col gap-1 min-w-[200px]">
@@ -370,22 +345,64 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         </div>
       </div>
       
-      {/* MENU PORTAL */}
+      {/* TELEGRAM-STYLE MENU PORTAL */}
       {contextMenu && typeof document !== 'undefined' && document.body && createPortal(
         <div className="fixed inset-0 z-[9999]" onClick={() => setContextMenu(null)} onTouchStart={() => setContextMenu(null)}>
-            <div className="absolute z-[10000] min-w-[190px] backdrop-blur-md rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-left flex flex-col py-1.5 overflow-hidden ring-1 ring-white/10" style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'rgba(24, 24, 27, 0.95)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}> 
+            <div 
+                className="absolute z-[10000] min-w-[240px] bg-[#1e1e1e]/95 backdrop-blur-xl rounded-[16px] shadow-2xl animate-in fade-in zoom-in-95 duration-150 origin-top-left flex flex-col overflow-hidden ring-1 ring-white/10" 
+                style={{ top: contextMenu.y, left: contextMenu.x, boxShadow: '0 20px 60px -10px rgba(0,0,0,0.8)' }} 
+                onClick={(e) => e.stopPropagation()} 
+                onTouchStart={(e) => e.stopPropagation()}
+            > 
+              {/* REACTION ROW */}
               {onReact && (
-                  <div className="flex justify-between px-2 py-2 mb-1 border-b border-white/10 gap-1 select-none">
-                      {['👍', '❤️', '😂', '😮', '😢', '🔥'].map(emoji => (
-                          <button key={emoji} type="button" onPointerDown={(e) => e.preventDefault()} onClick={() => { triggerHaptic(); onReact(emoji); setContextMenu(null); }} className={`w-8 h-8 flex-1 flex items-center justify-center text-lg rounded-full transition-all active:scale-90 select-none touch-manipulation ${currentReaction === emoji ? 'bg-white/20' : 'hover:bg-white/10'}`}>{emoji}</button>
-                      ))}
-                  </div>
+                <div className="flex flex-col border-b border-white/5 bg-[#2c2c2c]/50">
+                    <div className="flex justify-between px-2 py-2 gap-1 select-none">
+                        {['👍', '❤️', '😂', '😮', '😢', '🔥'].map(emoji => (
+                            <button key={emoji} type="button" onPointerDown={(e) => e.preventDefault()} onClick={() => { triggerHaptic(); onReact(emoji); setContextMenu(null); }} className={`w-9 h-9 flex-1 flex items-center justify-center text-xl rounded-lg transition-all active:scale-90 select-none touch-manipulation ${currentReaction === emoji ? 'bg-white/20' : 'hover:bg-white/10'}`}>{emoji}</button>
+                        ))}
+                         <button onClick={() => setShowMoreEmojis(!showMoreEmojis)} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 text-zinc-400">
+                             {showMoreEmojis ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                         </button>
+                    </div>
+                    {/* EXPANDED EMOJIS */}
+                    {showMoreEmojis && (
+                        <div className="flex justify-between px-2 pb-2 gap-1 select-none animate-in slide-in-from-top-2 duration-150">
+                            {['🎉', '🤔', '👀', '💩', '🤝', '⚡'].map(emoji => (
+                                <button key={emoji} type="button" onPointerDown={(e) => e.preventDefault()} onClick={() => { triggerHaptic(); onReact(emoji); setContextMenu(null); }} className={`w-9 h-9 flex-1 flex items-center justify-center text-xl rounded-lg transition-all active:scale-90 select-none touch-manipulation ${currentReaction === emoji ? 'bg-white/20' : 'hover:bg-white/10'}`}>{emoji}</button>
+                            ))}
+                        </div>
+                    )}
+                </div>
               )}
-              <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { if(onReply) onReply(note); else handleCopy(); setContextMenu(null); }} accentColor={'#da7756'} /> 
-              {hasImage && <ContextMenuItem icon={Copy} label="Copy Image" onClick={handleCopyImage} accentColor={'#da7756'} />}
-              {variant === 'default' && (<ContextMenuItem icon={Volume2} label="Play" onClick={() => { handleSpeakNote(); setContextMenu(null); }} accentColor={'#da7756'} />)} 
-              {onEdit && (<ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} accentColor={'#da7756'} />)} 
-              {(variant === 'default' || variant === 'sent') && (<> <div className="h-px bg-white/10 mx-3 my-1" /> <ContextMenuItem icon={Trash2} label="Delete" onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} accentColor={'#da7756'} /> </>)} 
+
+              {/* MENU ACTIONS */}
+              <div className="py-1">
+                  <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { if(onReply) onReply(note); else handleCopy(); setContextMenu(null); }} /> 
+                  
+                  {variant !== 'received' && onEdit && !hasImage && (
+                      <ContextMenuItem icon={Edit2} label="Edit" onClick={() => { onEdit(); setContextMenu(null); }} />
+                  )}
+                  
+                  <ContextMenuItem icon={Pin} label="Pin" onClick={() => { if(onPin && note.id) onPin(note.id); setContextMenu(null); }} />
+
+                  {/* DYNAMIC: COPY TEXT or SAVE IMAGE */}
+                  {hasImage ? (
+                      <ContextMenuItem icon={Download} label="Save to Gallery" onClick={() => { handleSaveImage(); setContextMenu(null); }} />
+                  ) : (
+                      <ContextMenuItem icon={Copy} label="Copy Text" onClick={() => { handleCopy(); setContextMenu(null); }} />
+                  )}
+
+                  <ContextMenuItem icon={Forward} label="Forward" onClick={() => { setContextMenu(null); }} />
+                  <ContextMenuItem icon={CheckCircle} label="Select" onClick={() => { setContextMenu(null); }} />
+
+                  {(variant === 'default' || variant === 'sent') && (
+                    <> 
+                      <div className="h-px bg-white/5 my-1 mx-4" /> 
+                      <ContextMenuItem icon={Trash2} label="Delete" isDestructive={true} onClick={() => { if(onDelete) onDelete(note.id); setContextMenu(null); }} /> 
+                    </>
+                  )}
+              </div>
             </div>
         </div>, document.body 
       )}

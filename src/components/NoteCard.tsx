@@ -155,12 +155,20 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                     triggerHaptic(50);
                 } catch (err) {
                     console.error("Clipboard write failed", err);
-                    alert("Failed to copy image.");
+                    
+                    // FALLBACK: If clipboard fails (common on mobile), try Share Sheet
+                    const file = new File([blob], "image.png", { type: 'image/png' });
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file] });
+                    } else {
+                        alert("Failed to copy image. Try saving it instead.");
+                    }
                 }
             }
         }, 'image/png');
     } catch (e) {
         console.error("Copy failed", e);
+        alert("Failed to load image.");
     }
   };
 

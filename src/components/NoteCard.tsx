@@ -280,7 +280,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}
 
-          {/* --- REPLY LOGIC --- */}
+          {/* --- REPLY LOGIC (SQUARE THUMBNAIL) --- */}
           {replyData && (() => {
               const [replyTextColor, replyBorderColor] = getUserColor(replyData.sender, replyTheme).split(' ');
               const hasThumb = !!replyData.imageUrl;
@@ -304,12 +304,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                           </div>
                       </div>
 
-                      {/* IMAGE THUMBNAIL (With webkit-touch-callout: none) */}
+                      {/* IMAGE THUMBNAIL (70x70 Square for better crop) */}
                       {hasThumb && (
-                          <div className="w-[84px] min-h-[72px] relative bg-zinc-900 select-none">
+                          <div className="w-[70px] min-h-[70px] relative bg-zinc-900 select-none">
                                 <img 
                                     src={replyData.imageUrl} 
-                                    className="absolute inset-0 w-full h-full object-cover select-none" 
+                                    className="absolute inset-0 w-full h-full object-cover object-center select-none" 
                                     alt="reply-thumb"
                                     style={preventSelectStyle}
                                 />

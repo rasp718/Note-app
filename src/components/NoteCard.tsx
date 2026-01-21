@@ -280,7 +280,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}
 
-          {/* --- REPLY LOGIC (SQUARE THUMBNAIL) --- */}
+          {/* --- REPLY LOGIC (THIN BORDER) --- */}
           {replyData && (() => {
               const [replyTextColor, replyBorderColor] = getUserColor(replyData.sender, replyTheme).split(' ');
               const hasThumb = !!replyData.imageUrl;
@@ -288,7 +288,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               return (
                   <div 
                     onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
-                    className={`mx-1 mt-1 mb-2 rounded-[8px] bg-black/20 flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}
+                    // Changed border-l-4 to border-l-[3px] here
+                    className={`mx-1 mt-1 mb-2 rounded-[8px] bg-black/20 flex border-l-[3px] ${replyBorderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}
                     style={preventSelectStyle}
                   >
                       {/* TEXT CONTENT */}
@@ -304,7 +305,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                           </div>
                       </div>
 
-                      {/* IMAGE THUMBNAIL (70x70 Square for better crop) */}
+                      {/* IMAGE THUMBNAIL */}
                       {hasThumb && (
                           <div className="w-[70px] min-h-[70px] relative bg-zinc-900 select-none">
                                 <img 

@@ -253,15 +253,18 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     return <Check size={14} className={colorClass} strokeWidth={2} />;
   };
 
+  // Common styles to prevent system menu
+  const preventSelectStyle = { WebkitTouchCallout: 'none', userSelect: 'none' } as React.CSSProperties;
+
   return (
     <>
       <div 
-        className={`relative ${outerWidthClass} overflow-visible group`} 
+        className={`relative ${outerWidthClass} overflow-visible group select-none`} 
         onContextMenu={handleContextMenu} 
         onDoubleClick={handleDoubleTap}
       >
         <div 
-            className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${innerWidthClass} ${shadowClass} relative transition-all duration-300 ease-out`} 
+            className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${innerWidthClass} ${shadowClass} relative transition-all duration-300 ease-out select-none`} 
             style={{ transform: `translateX(${swipeOffset}px)`, opacity: isExiting ? 0 : 1 }} 
             onTouchStart={handleTouchStart} 
             onTouchMove={handleTouchMove} 
@@ -277,7 +280,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}
 
-          {/* --- UPDATED WHATSAPP STYLE REPLY LOGIC --- */}
+          {/* --- REPLY LOGIC --- */}
           {replyData && (() => {
               const [replyTextColor, replyBorderColor] = getUserColor(replyData.sender, replyTheme).split(' ');
               const hasThumb = !!replyData.imageUrl;
@@ -286,14 +289,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   <div 
                     onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
                     className={`mx-1 mt-1 mb-2 rounded-[8px] bg-black/20 flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}
+                    style={preventSelectStyle}
                   >
-                      {/* TEXT CONTENT (Moves to Left) */}
+                      {/* TEXT CONTENT */}
                       <div className="flex-1 min-w-0 py-2 px-2.5 flex flex-col justify-center gap-0.5">
                           <div className={`text-[12px] font-bold ${replyTextColor} leading-snug truncate`}>
                               {replyData.sender}
                           </div>
                           <div className="text-[13px] text-zinc-300 line-clamp-2 leading-tight truncate flex items-center gap-1.5 opacity-90">
-                               {/* Icon always visible if thumb exists, like WhatsApp */}
                                {hasThumb && <ImageIcon size={11} className="flex-shrink-0" />}
                                <span className="truncate">
                                    {replyData.text || (hasThumb ? 'Photo' : 'Message')}
@@ -301,13 +304,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                           </div>
                       </div>
 
-                      {/* IMAGE THUMBNAIL (Significantly Bigger) */}
+                      {/* IMAGE THUMBNAIL (With webkit-touch-callout: none) */}
                       {hasThumb && (
-                          <div className="w-[84px] min-h-[72px] relative bg-zinc-900">
+                          <div className="w-[84px] min-h-[72px] relative bg-zinc-900 select-none">
                                 <img 
                                     src={replyData.imageUrl} 
-                                    className="absolute inset-0 w-full h-full object-cover" 
+                                    className="absolute inset-0 w-full h-full object-cover select-none" 
                                     alt="reply-thumb"
+                                    style={preventSelectStyle}
                                 />
                           </div>
                       )}
@@ -327,9 +331,19 @@ export const NoteCard: React.FC<NoteCardProps> = ({
              </div>
           ) : hasImage ? (
             <div className="relative">
-                <div onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} className="rounded-xl overflow-hidden border-none bg-black flex justify-center items-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative min-w-[120px] min-h-[120px]">
-                <img src={note.imageUrl} alt="Attachment" crossOrigin="anonymous" className="block max-w-full max-h-[320px] w-auto h-auto object-contain" />
-                    <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1.5 shadow-sm border border-white/10">
+                <div 
+                    onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} 
+                    className="rounded-xl overflow-hidden border-none bg-black flex justify-center items-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative min-w-[120px] min-h-[120px] select-none"
+                    style={preventSelectStyle}
+                >
+                    <img 
+                        src={note.imageUrl} 
+                        alt="Attachment" 
+                        crossOrigin="anonymous" 
+                        className="block max-w-full max-h-[320px] w-auto h-auto object-contain select-none" 
+                        style={preventSelectStyle}
+                    />
+                    <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1.5 shadow-sm border border-white/10 pointer-events-none">
                         <span className="text-[10px] font-medium text-white/90">{formatTime(note.date)}</span>
                         {variant === 'sent' && <StatusIcon isOverlay={true} />}
                     </div>

@@ -55,6 +55,14 @@ const ContextMenuItem = ({ icon: Icon, label, onClick, isDestructive = false }: 
   );
 };
 
+// Component: Inline Action Button (Restored!)
+const InlineActionButton = ({ onClick, icon: Icon, accentColor, iconColor }: any) => {
+  const [isHovered, setIsHovered] = useState(false);
+  return (
+    <button type="button" onClick={(e) => { e.stopPropagation(); triggerHaptic(); onClick(e); }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="p-1 rounded-full transition-colors active:scale-90 align-middle" style={{ color: isHovered ? accentColor : (iconColor || '#71717a') }}><Icon size={12} /></button>
+  );
+};
+
 export const NoteCard: React.FC<NoteCardProps> = ({ 
   note, categories, selectedVoice, onDelete, onPin, onCategoryClick, onEdit, onUpdate, onToggleExpand, onImageClick, onReply,
   currentReaction, onReact, 

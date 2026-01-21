@@ -692,54 +692,59 @@ const toggleGroupMember = (uid: string) => {
     scrollTimeoutRef.current = setTimeout(() => setShowBackButton(true), 1000);
 
     // 2. High-Performance Date Header Logic
-    const HEADER_OFFSET = 80; 
-    const HEADER_HEIGHT = 40; 
+    // We use a specific offset to align the floating header exactly with where the static one sits
+    const HEADER_OFFSET = 80; // Top position (fixed top-20 = 80px)
+    const HEADER_HEIGHT = 45; // Height of the visual element including margins
     
     const dateGroups = listRef.current.querySelectorAll('[data-date]');
     let activeDate = '';
     let pushOffset = 0;
 
-    // Loop through all groups to find the "break point"
     for (let i = 0; i < dateGroups.length; i++) {
         const group = dateGroups[i] as HTMLElement;
         const rect = group.getBoundingClientRect();
 
-        // If this group starts BELOW the sticky line, it is NOT the sticky one.
-        // It is actually the one *pushing* the previous sticky one out.
-        if (rect.top > HEADER_OFFSET) {
-            // The active date is the PREVIOUS group (if it exists)
-            if (i > 0) {
-                const prevGroup = dateGroups[i - 1] as HTMLElement;
-                activeDate = prevGroup.getAttribute('data-date') || '';
-
-                // Calculate the "Bump": Is this incoming group hitting the header?
-                if (rect.top < HEADER_OFFSET + HEADER_HEIGHT) {
-                    pushOffset = rect.top - (HEADER_OFFSET + HEADER_HEIGHT);
+        // Standard Sticky Logic:
+        // We want the header of the group that has *started* scrolling (top <= offset)
+        // But hasn't finished (bottom > offset)
+        
+        if (rect.top <= HEADER_OFFSET) {
+            // This group is valid for sticking
+            activeDate = group.getAttribute('data-date') || '';
+            
+            // Look ahead to the NEXT group to see if it's bumping us out
+            const nextGroup = dateGroups[i + 1] as HTMLElement;
+            if (nextGroup) {
+                const nextRect = nextGroup.getBoundingClientRect();
+                // If the next group's top is entering the space of our header
+                if (nextRect.top < HEADER_OFFSET + HEADER_HEIGHT) {
+                    // Push up by the difference
+                    pushOffset = nextRect.top - (HEADER_OFFSET + HEADER_HEIGHT);
                 }
             }
-            // We found the boundary, so stop looking.
+        } else {
+            // Since we loop top-down, if we hit a group starting below the line,
+            // we stop. The 'activeDate' from the previous iteration remains.
             break;
-        }
-
-        // If we are at the very last group and it's still above the line, it's active.
-        if (i === dateGroups.length - 1) {
-            activeDate = group.getAttribute('data-date') || '';
         }
     }
 
     // 3. Apply Updates
     if (activeDate !== visibleDate) setVisibleDate(activeDate);
 
+    // Instant DOM update for smoothness
     if (floatingBubbleRef.current) {
         floatingBubbleRef.current.style.transform = `translateY(${pushOffset}px)`;
     }
 
-    // Only show if we have a valid active date
+    // 4. Visibility Timer (Telegram Style)
+    // If we have an active date, show it.
     if (activeDate) {
         if (dateHeaderState !== 'visible') setDateHeaderState('visible');
         if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
 
-        // If we are fully resting (no bump), start the fade timer
+        // Only start fading out if we are NOT currently bumping.
+        // If we are bumping, the user is likely reading the transition, so keep it visible.
         if (pushOffset === 0) {
             dateHeaderTimeoutRef.current = setTimeout(() => {
                 setDateHeaderState('blinking'); 
@@ -747,6 +752,7 @@ const toggleGroupMember = (uid: string) => {
             }, 1000);
         }
     } else {
+        // Scrolled to absolute top (no groups above line)
         if (dateHeaderState !== 'hidden') setDateHeaderState('hidden');
     }
   };
@@ -1510,7 +1516,7 @@ const handleLogout = async () => {
                         <div key={group.date} className="relative w-full" data-date={group.date}>
                             {/* STATIC INLINE DATE SEPARATOR */}
                             <div className="flex justify-center py-4 pointer-events-none">
-                                <span className="bg-black/20 backdrop-blur-sm border border-white/5 px-3 py-1 rounded-full text-zinc-400 text-[11px] font-bold uppercase tracking-widest">
+                            <span className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-sm">
                                     {group.date}
                                 </span>
                             </div>

@@ -1297,30 +1297,27 @@ const handleLogout = async () => {
       {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
 
-            {/* OPTION 2: FLOATING HUD HEADER */}
+            {/* OPTION 3: 3-PILL FLOATING HEADER */}
             <div className="fixed top-0 left-0 right-0 z-40 pointer-events-none">
-                <div className="max-w-2xl mx-auto px-3 pt-2">
-                    <header className="bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl shadow-black/80 flex items-center justify-between pl-1 pr-2 py-1.5 pointer-events-auto relative z-50 transition-all duration-300">
-                        
-                        {/* LEFT: BACK BUTTON */}
-                        <div className="flex items-center">
-                            <button 
-                                onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
-                                className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-90"
-                            >
-                                <ChevronLeft size={24} className="-ml-0.5" />
-                            </button>
+                <div className="max-w-2xl mx-auto px-4 pt-3 flex items-center justify-between gap-3">
+                    
+                    {/* LEFT PILL: BACK BUTTON */}
+                    <div className="flex-none pointer-events-auto">
+                        <button 
+                            onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
+                            className="w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all shadow-lg shadow-black/50 active:scale-90"
+                        >
+                            <ChevronLeft size={24} className="-ml-0.5" />
+                        </button>
+                    </div>
 
-                            {/* DIVIDER */}
-                            <div className="h-6 w-px bg-white/10 mx-1"></div>
-                        </div>
-
-                        {/* MIDDLE: CONTEXT INFO */}
-                        <div className="flex-1 min-w-0 flex justify-center">
+                    {/* CENTER PILL: CONTEXT INFO */}
+                    <div className="flex-1 min-w-0 max-w-[70%] pointer-events-auto flex justify-center">
+                        <div className="bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-lg shadow-black/50 h-11 px-1.5 flex items-center justify-center min-w-0 w-full">
                             {activeChatId !== 'saved_messages' ? (
-                               <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 cursor-pointer group px-2 py-1 rounded-full hover:bg-white/5 transition-colors max-w-full">
+                               <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 cursor-pointer group px-1 py-1 rounded-full hover:bg-white/5 transition-colors w-full justify-center">
                                    {/* AVATAR */}
-                                   <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-white/10 relative flex-shrink-0">
+                                   <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-white/10 relative flex-shrink-0 shadow-sm">
                                    {currentChatObject?.type === 'group' ? (
                                           currentChatObject.photoURL ? (
                                               <img src={currentChatObject.photoURL} className="w-full h-full object-cover" />
@@ -1336,8 +1333,8 @@ const handleLogout = async () => {
                                    </div>
                                    
                                    {/* TEXT */}
-                                   <div className="flex flex-col items-start overflow-hidden">
-                                        <h3 className="text-white text-sm font-bold leading-none truncate w-full">
+                                   <div className="flex flex-col items-start overflow-hidden min-w-0 pr-2">
+                                        <h3 className="text-white text-sm font-bold leading-none truncate w-full text-left">
                                             {currentChatObject?.type === 'group' ? currentChatObject.displayName : (otherChatUser?.displayName || 'Unknown')}
                                         </h3>
                                         <p className={`text-[10px] font-mono uppercase tracking-widest truncate leading-tight ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>
@@ -1346,30 +1343,26 @@ const handleLogout = async () => {
                                    </div>
                                </div>
                             ) : (
-                               <div onClick={handleSecretTrigger} className="flex items-center gap-2 cursor-pointer select-none px-4 py-1">
+                               <div onClick={handleSecretTrigger} className="flex items-center gap-2 cursor-pointer select-none px-4 w-full justify-center">
                                     {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={16} />) : (<div className="w-2 h-2 rounded-full" style={{ backgroundColor: accentColor, boxShadow: `0 0 8px ${accentColor}` }} />)}
                                     <span className="font-bold text-white text-sm tracking-widest uppercase">My Notes</span>
                                </div>
                             )}
                         </div>
+                    </div>
 
-                        {/* RIGHT: ACTIONS */}
-                        <div className="flex items-center gap-1">
-                             <div className="relative flex items-center h-10">
-                                <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-9 h-9 flex items-center justify-center text-zinc-400 transition-all active:scale-95 rounded-full hover:bg-white/5 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={18} /></button>
-                                
-                                {/* FLOATING SEARCH INPUT */}
-                                <div className={`absolute right-0 bg-[#1c1c1d] border border-white/20 shadow-xl rounded-full flex items-center px-3 h-9 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[240px] opacity-100 z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
-                                    <input ref={searchInputRef} type="text" placeholder={TRANSLATIONS.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
-                                    <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
-                                </div>
-                            </div>
+                    {/* RIGHT PILL: SEARCH */}
+                    <div className="flex-none pointer-events-auto relative">
+                         <div className="flex items-center h-11">
+                            <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all shadow-lg shadow-black/50 active:scale-90 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={20} /></button>
                             
-                            {activeChatId !== 'saved_messages' && (
-                                <button className="w-9 h-9 flex items-center justify-center text-zinc-400 rounded-full hover:bg-white/5 hover:text-white transition-colors"><Phone size={18} /></button>
-                            )}
+                            {/* FLOATING SEARCH INPUT */}
+                            <div className={`absolute right-0 bg-[#1c1c1d] border border-white/20 shadow-2xl rounded-full flex items-center px-3 h-11 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[260px] opacity-100 z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
+                                <input ref={searchInputRef} type="text" placeholder={TRANSLATIONS.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
+                                <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={16} /></button>
+                            </div>
                         </div>
-                    </header>
+                    </div>
                 </div>
             </div>
 

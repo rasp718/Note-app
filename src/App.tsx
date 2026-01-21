@@ -699,32 +699,31 @@ const toggleGroupMember = (uid: string) => {
     let activeDate = '';
     let pushOffset = 0;
 
+    // Loop through all groups to find the "break point"
     for (let i = 0; i < dateGroups.length; i++) {
         const group = dateGroups[i] as HTMLElement;
         const rect = group.getBoundingClientRect();
-        
-        // KEY FIX: Only make a group "sticky" if it has passed halfway up the sticky slot.
-        // If it's just arriving (e.g. top is 80px), we treat it as the "pusher" for the previous group.
-        if (rect.top <= HEADER_OFFSET - (HEADER_HEIGHT / 2)) {
-            activeDate = group.getAttribute('data-date') || '';
-            
-            const nextGroup = dateGroups[i + 1] as HTMLElement;
-            if (nextGroup) {
-                const nextRect = nextGroup.getBoundingClientRect();
-                
-                // Calculate collision: If next group is entering the sticky zone
-                if (nextRect.top < HEADER_OFFSET + HEADER_HEIGHT) {
-                    pushOffset = nextRect.top - (HEADER_OFFSET + HEADER_HEIGHT);
-                } else {
-                    pushOffset = 0;
+
+        // If this group starts BELOW the sticky line, it is NOT the sticky one.
+        // It is actually the one *pushing* the previous sticky one out.
+        if (rect.top > HEADER_OFFSET) {
+            // The active date is the PREVIOUS group (if it exists)
+            if (i > 0) {
+                const prevGroup = dateGroups[i - 1] as HTMLElement;
+                activeDate = prevGroup.getAttribute('data-date') || '';
+
+                // Calculate the "Bump": Is this incoming group hitting the header?
+                if (rect.top < HEADER_OFFSET + HEADER_HEIGHT) {
+                    pushOffset = rect.top - (HEADER_OFFSET + HEADER_HEIGHT);
                 }
-            } else {
-                pushOffset = 0;
             }
-        } else {
-            // If this group hasn't passed the threshold, the *previous* group remains active.
-            // This loop breaks, keeping 'activeDate' from the previous iteration.
+            // We found the boundary, so stop looking.
             break;
+        }
+
+        // If we are at the very last group and it's still above the line, it's active.
+        if (i === dateGroups.length - 1) {
+            activeDate = group.getAttribute('data-date') || '';
         }
     }
 

@@ -1297,77 +1297,80 @@ const handleLogout = async () => {
       {currentView === 'room' && (
         <div className="flex-1 flex flex-col h-full z-10 animate-in slide-in-from-right-10 fade-in duration-300">
 
-            {/* SCROLL-AWARE HEADER CONTAINER */}
-            <div className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ease-out ${isTopScrolled ? 'bg-black/80 backdrop-blur-2xl border-b border-white/5 shadow-2xl shadow-black/50 pt-2 pb-2' : 'bg-transparent pt-5 pb-3'}`}>
-                <header className="max-w-2xl mx-auto flex items-center justify-center px-4 relative z-50">
-                    <div className="w-full relative flex items-center justify-center">
-                        {/* BACK BUTTON (Nudged down 2px for alignment) */}
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 mt-[2px] flex items-center z-50">
+            {/* OPTION 2: FLOATING HUD HEADER */}
+            <div className="fixed top-0 left-0 right-0 z-40 pointer-events-none">
+                <div className="max-w-2xl mx-auto px-3 pt-2">
+                    <header className="bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl shadow-black/80 flex items-center justify-between pl-1 pr-2 py-1.5 pointer-events-auto relative z-50 transition-all duration-300">
+                        
+                        {/* LEFT: BACK BUTTON */}
+                        <div className="flex items-center">
                             <button 
                                 onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
                                 className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-90"
                             >
-                                <ChevronLeft size={26} strokeWidth={2.5} />
+                                <ChevronLeft size={24} className="-ml-0.5" />
                             </button>
+
+                            {/* DIVIDER */}
+                            <div className="h-6 w-px bg-white/10 mx-1"></div>
                         </div>
 
-                        {activeChatId !== 'saved_messages' ? (
-                           <div onClick={() => setCurrentView('profile')} className="flex items-center justify-center cursor-pointer hover:bg-white/5 p-2 rounded-xl transition-all duration-300 group flex-row gap-3 h-auto">
-                               {/* HEADER IMAGE */}
-                               <div className="w-10 h-10 rounded-xl shadow-lg shadow-black/60 flex-shrink-0 bg-zinc-800 overflow-hidden border border-white/5 relative group-hover:border-white/20 transition-all duration-300 flex items-center justify-center">
-                               {currentChatObject?.type === 'group' ? (
-                                      currentChatObject.photoURL ? (
-                                          <img src={currentChatObject.photoURL} className="w-full h-full object-cover" />
+                        {/* MIDDLE: CONTEXT INFO */}
+                        <div className="flex-1 min-w-0 flex justify-center">
+                            {activeChatId !== 'saved_messages' ? (
+                               <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 cursor-pointer group px-2 py-1 rounded-full hover:bg-white/5 transition-colors max-w-full">
+                                   {/* AVATAR */}
+                                   <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-white/10 relative flex-shrink-0">
+                                   {currentChatObject?.type === 'group' ? (
+                                          currentChatObject.photoURL ? (
+                                              <img src={currentChatObject.photoURL} className="w-full h-full object-cover" />
+                                          ) : (
+                                              <div className="w-full h-full flex items-center justify-center"><Users size={14} className="text-zinc-400" /></div>
+                                          )
+                                      ) : otherChatUser?.photoURL ? (
+                                          <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
                                       ) : (
-                                          <Users size={18} className="text-zinc-400 transition-all duration-300" />
-                                      )
-                                  ) : otherChatUser?.photoURL ? (
-                                      <img src={otherChatUser.photoURL} className="w-full h-full object-cover" />
-                                  ) : (
-                                      <div className="w-full h-full flex items-center justify-center font-black text-zinc-500 transition-all duration-300 text-lg">{otherChatUser?.displayName?.[0] || '?'}</div>
-                                  )}
-                               </div>
-                               
-                               <div className="flex flex-col items-start text-left justify-center transition-all duration-300 min-w-0">
-                                   <div className="transition-all duration-300">
-                                        <h3 className="text-white leading-none truncate tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] font-bold text-lg">
+                                          <div className="w-full h-full flex items-center justify-center font-bold text-zinc-500 text-xs">{otherChatUser?.displayName?.[0] || '?'}</div>
+                                      )}
+                                      {otherChatUser?.isOnline && currentChatObject?.type !== 'group' && <div className="absolute inset-0 border-2 border-green-500/50 rounded-full animate-pulse"></div>}
+                                   </div>
+                                   
+                                   {/* TEXT */}
+                                   <div className="flex flex-col items-start overflow-hidden">
+                                        <h3 className="text-white text-sm font-bold leading-none truncate w-full">
                                             {currentChatObject?.type === 'group' ? currentChatObject.displayName : (otherChatUser?.displayName || 'Unknown')}
                                         </h3>
-                                        <div className="flex items-center gap-1.5 transition-all duration-300 opacity-80 scale-95 origin-left justify-start">
-                                            {otherChatUser?.isOnline && currentChatObject?.type !== 'group' && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}
-                                            <p className={`text-xs font-mono uppercase tracking-widest truncate drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-400'}`}>
-                                                {currentChatObject?.type === 'group' ? `${currentChatObject.participants?.length || 0} members` : (otherChatUser?.isOnline ? 'Online' : 'Last seen recently')}
-                                            </p>
-                                        </div>
+                                        <p className={`text-[10px] font-mono uppercase tracking-widest truncate leading-tight ${otherChatUser?.isOnline ? 'text-green-500' : 'text-zinc-500'}`}>
+                                            {currentChatObject?.type === 'group' ? `${currentChatObject.participants?.length} MBRS` : (otherChatUser?.isOnline ? 'ONLINE' : 'OFFLINE')}
+                                        </p>
                                    </div>
                                </div>
-                           </div>
-                        ) : (
-                           <div onClick={handleSecretTrigger} className="flex items-center gap-3 cursor-pointer select-none justify-center">
-                                <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden">
-                                     {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={20} />) : (<div className="w-4 h-4 rounded-sm" style={{ backgroundColor: accentColor }} />)}
-                                </div>
-                                <div className="animate-in fade-in duration-300">
-                                    <h3 className="font-bold text-white text-lg leading-tight">Notes</h3>
-                                    <p className="text-zinc-500 text-xs font-mono uppercase tracking-widest">Personal</p>
-                                </div>
-                           </div>
-                        )}
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            ) : (
+                               <div onClick={handleSecretTrigger} className="flex items-center gap-2 cursor-pointer select-none px-4 py-1">
+                                    {activeFilter === 'secret' ? (<Terminal className="text-green-500" size={16} />) : (<div className="w-2 h-2 rounded-full" style={{ backgroundColor: accentColor, boxShadow: `0 0 8px ${accentColor}` }} />)}
+                                    <span className="font-bold text-white text-sm tracking-widest uppercase">My Notes</span>
+                               </div>
+                            )}
+                        </div>
+
+                        {/* RIGHT: ACTIONS */}
+                        <div className="flex items-center gap-1">
                              <div className="relative flex items-center h-10">
-                                <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-10 h-10 flex items-center justify-center text-zinc-400 transition-all active:scale-95 rounded-full hover:bg-white/5 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={22} /></button>
-                                <div className={`absolute right-0 bg-zinc-900 border border-zinc-800 focus-within:border-white/50 rounded-full flex items-center px-3 h-10 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[200px] opacity-100 shadow-lg z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
-                                    <Search className="text-zinc-500 mr-2 flex-shrink-0" size={16} />
-                                    <input ref={searchInputRef} type="text" placeholder={TRANSLATIONS.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-base md:text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
+                                <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-9 h-9 flex items-center justify-center text-zinc-400 transition-all active:scale-95 rounded-full hover:bg-white/5 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={18} /></button>
+                                
+                                {/* FLOATING SEARCH INPUT */}
+                                <div className={`absolute right-0 bg-[#1c1c1d] border border-white/20 shadow-xl rounded-full flex items-center px-3 h-9 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[240px] opacity-100 z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
+                                    <input ref={searchInputRef} type="text" placeholder={TRANSLATIONS.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
                                     <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={14} /></button>
                                 </div>
                             </div>
+                            
                             {activeChatId !== 'saved_messages' && (
-                                <button className="w-10 h-10 flex items-center justify-center text-zinc-400 rounded-full hover:bg-white/5"><Phone size={22} /></button>
+                                <button className="w-9 h-9 flex items-center justify-center text-zinc-400 rounded-full hover:bg-white/5 hover:text-white transition-colors"><Phone size={18} /></button>
                             )}
                         </div>
-                    </div>
-                </header>
+                    </header>
+                </div>
             </div>
 
             {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}

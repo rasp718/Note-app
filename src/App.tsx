@@ -671,7 +671,7 @@ const toggleGroupMember = (uid: string) => {
   const handleScroll = () => {
     if (!listRef.current) return;
 
-    // 1. Standard UI Logic (Back button, Scroll button, Header Transparency)
+    // 1. Standard UI Logic
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
     const isScrolled = scrollTop > 10;
     if (isScrolled !== isTopScrolled) setIsTopScrolled(isScrolled);
@@ -685,57 +685,70 @@ const toggleGroupMember = (uid: string) => {
     scrollTimeoutRef.current = setTimeout(() => setShowBackButton(true), 1000);
 
     // 2. High-Performance Date Header Logic
-    // We do NOT wait for requestAnimationFrame here to ensure instant sync with scroll
-    const HEADER_OFFSET = 80; // Top position of the floating bubble (approx top-20)
-    const HEADER_HEIGHT = 40; // Height of the bubble + spacing
-    
-    const dateGroups = listRef.current.querySelectorAll('[data-date]');
-    let activeDate = '';
-    let pushOffset = 0;
-
-    // Find which group is currently reading
-    for (let i = 0; i < dateGroups.length; i++) {
-        const group = dateGroups[i] as HTMLElement;
-        const rect = group.getBoundingClientRect();
+    requestAnimationFrame(() => {
+        if (!listRef.current) return;
         
-        // If this group is effectively "the one at the top"
-        if (rect.bottom > HEADER_OFFSET) {
-            activeDate = group.getAttribute('data-date') || '';
+        const HEADER_OFFSET = 80; // The visual "sticky" line (approx top-20)
+        const HEADER_HEIGHT = 40; // Height of bubble + margin
+        
+        const dateGroups = listRef.current.querySelectorAll('[data-date]');
+        let activeDate = '';
+        let pushOffset = 0;
+
+        // Iterate through groups to find the one currently "holding" the sticky position
+        for (let i = 0; i < dateGroups.length; i++) {
+            const group = dateGroups[i] as HTMLElement;
+            const rect = group.getBoundingClientRect();
             
-            // CHECK FOR COLLISION:
-            // Look at the NEXT group's header to see if it's pushing us up
-            const nextGroup = dateGroups[i + 1] as HTMLElement;
-            if (nextGroup) {
-                const nextRect = nextGroup.getBoundingClientRect();
-                // If the top of the next group is entering our space
-                if (nextRect.top < HEADER_OFFSET + HEADER_HEIGHT) {
-                    pushOffset = nextRect.top - (HEADER_OFFSET + HEADER_HEIGHT);
+            // The group must have started (top is above/at the offset) to be considered active
+            if (rect.top <= HEADER_OFFSET) {
+                activeDate = group.getAttribute('data-date') || '';
+                
+                // Check if the NEXT group is pushing this one up
+                const nextGroup = dateGroups[i + 1] as HTMLElement;
+                if (nextGroup) {
+                    const nextRect = nextGroup.getBoundingClientRect();
+                    // If next header is entering the collision zone
+                    if (nextRect.top < HEADER_OFFSET + HEADER_HEIGHT) {
+                        pushOffset = nextRect.top - (HEADER_OFFSET + HEADER_HEIGHT);
+                    } else {
+                        pushOffset = 0;
+                    }
                 }
+            } else {
+                // If we hit a group that starts BELOW the offset, we stop.
+                // The previous iteration's activeDate (if any) is the correct one.
+                break;
             }
-            break; 
         }
-    }
 
-    // 3. Apply Updates
-    // A. Text Content (React State - Batch updates naturally)
-    if (activeDate && activeDate !== visibleDate) setVisibleDate(activeDate);
+        // 3. Apply Updates
+        // A. Text Content
+        if (activeDate !== visibleDate) setVisibleDate(activeDate);
 
-    // B. Physical Movement (Direct DOM - Instant)
-    if (floatingBubbleRef.current) {
-        floatingBubbleRef.current.style.transform = `translateY(${pushOffset}px)`;
-    }
+        // B. Physical Movement (Direct DOM)
+        if (floatingBubbleRef.current) {
+            floatingBubbleRef.current.style.transform = `translateY(${pushOffset}px)`;
+        }
 
-    // C. Visibility Timer
-    if (dateHeaderState !== 'visible') setDateHeaderState('visible');
-    if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
+        // C. Visibility Timer
+        // Only show if we have a valid date active
+        if (activeDate) {
+            if (dateHeaderState !== 'visible') setDateHeaderState('visible');
+            if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
 
-    // If we are being bumped, stay visible. If not, start fade timer.
-    if (pushOffset === 0) {
-        dateHeaderTimeoutRef.current = setTimeout(() => {
-            setDateHeaderState('blinking'); 
-            setTimeout(() => setDateHeaderState('hidden'), 300); 
-        }, 1000);
-    }
+            // If we are fully resting (no bump), start the fade timer
+            if (pushOffset === 0) {
+                dateHeaderTimeoutRef.current = setTimeout(() => {
+                    setDateHeaderState('blinking'); 
+                    setTimeout(() => setDateHeaderState('hidden'), 300); 
+                }, 1000);
+            }
+        } else {
+            // If no date is active (scrolled to very top), hide immediately
+            if (dateHeaderState !== 'hidden') setDateHeaderState('hidden');
+        }
+    });
   };
   
   const handleRollDice = async () => {

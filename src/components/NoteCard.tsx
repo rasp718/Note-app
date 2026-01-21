@@ -290,7 +290,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                     onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
                     // REVERTED to border-l-4 (thick color bar)
                     // CHANGED mx-1 to mx-[1px] (thin side margin)
-                    className={`mx-[1px] mt-1 mb-2 rounded-[8px] bg-black/20 flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}
+                    className={`mx-0 mt-1 mb-2 rounded-[8px] bg-black/20 flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}
                     style={preventSelectStyle}
                   >
                       {/* TEXT CONTENT */}

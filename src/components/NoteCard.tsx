@@ -301,9 +301,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                           </div>
                       </div>
 
-                      {/* IMAGE THUMBNAIL (Moves to Right & Bigger) */}
+                      {/* IMAGE THUMBNAIL (Bigger) */}
                       {hasThumb && (
-                          <div className="w-[56px] min-h-[50px] relative bg-zinc-900">
+                          <div className="w-[66px] min-h-[56px] relative bg-zinc-900">
                                 <img 
                                     src={replyData.imageUrl} 
                                     className="absolute inset-0 w-full h-full object-cover" 

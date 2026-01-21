@@ -322,6 +322,7 @@ function App() {
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [dateHeaderState, setDateHeaderState] = useState<'visible' | 'blinking' | 'hidden'>('hidden');
   const [visibleDate, setVisibleDate] = useState('');
+  const [headerOffset, setHeaderOffset] = useState(0);
   const dateHeaderTimeoutRef = useRef<any>(null);
 
   const [reactions, setReactions] = useState(() => {
@@ -667,11 +668,16 @@ const toggleGroupMember = (uid: string) => {
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
 
   const handleScroll = () => {
-    if (listRef.current) {
+    if (!listRef.current) return;
+
+    requestAnimationFrame(() => {
+        if (!listRef.current) return;
+        
         const { scrollTop, scrollHeight, clientHeight } = listRef.current;
         
         // Header Transparency Logic
-        setIsTopScrolled(scrollTop > 10);
+        const isScrolled = scrollTop > 10;
+        if (isScrolled !== isTopScrolled) setIsTopScrolled(isScrolled);
 
         // Bottom Button Logic
         const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
@@ -685,34 +691,54 @@ const toggleGroupMember = (uid: string) => {
             setShowBackButton(true);
         }, 1000);
 
-        // --- NEW DATE HEADER LOGIC ---
-        // 1. Detect which date is currently visible
-        // We look for elements with data-date attribute
+        // --- NEW DATE HEADER LOGIC (With Bump) ---
         const dateGroups = listRef.current.querySelectorAll('[data-date]');
-        let foundDate = '';
-        const searchOffset = 150; // Offset from top of screen to detect date
         
+        // Constants for header positioning (approx 80px top-20 + 32px height)
+        const HEADER_Y = 80; 
+        const HEADER_HEIGHT = 40; 
+        
+        let foundDate = '';
+        let newOffset = 0;
+
         for (let i = 0; i < dateGroups.length; i++) {
             const group = dateGroups[i] as HTMLElement;
-            // Since listRef is relative, we check offsetTop against scrollTop
-            if ((group.offsetTop + group.offsetHeight) > (scrollTop + searchOffset)) {
-                foundDate = group.getAttribute('data-date') || '';
-                break;
+            const rect = group.getBoundingClientRect();
+            
+            // 1. Detect active date (Active if group is covering the reading line)
+            // We use a slight offset (120px) to ensure we switch dates just as the new one arrives
+            if (rect.bottom > HEADER_Y + HEADER_HEIGHT) {
+                if (!foundDate) foundDate = group.getAttribute('data-date') || '';
+            }
+
+            // 2. Detect Collision (The "Bump" Effect)
+            // If the top of this group is entering the space where the floating header sits
+            if (rect.top > HEADER_Y && rect.top < (HEADER_Y + HEADER_HEIGHT)) {
+                // Calculate how much to push up (negative value)
+                newOffset = rect.top - (HEADER_Y + HEADER_HEIGHT);
             }
         }
+        
+        // Update State
         if (foundDate && foundDate !== visibleDate) setVisibleDate(foundDate);
+        setHeaderOffset(newOffset);
 
-        // 2. Handle Animation (Show -> Blink -> Hide)
+        // 3. Handle Animation (Show -> Wait -> Blink -> Hide)
         if (dateHeaderState !== 'visible') setDateHeaderState('visible');
         if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
 
-        dateHeaderTimeoutRef.current = setTimeout(() => {
-            setDateHeaderState('blinking'); // Blink Orange
-            setTimeout(() => {
-                setDateHeaderState('hidden'); // Then Hide
-            }, 300); 
-        }, 1000); 
-    }
+        // If we are currently "bumping" (offset != 0), keep it visible
+        if (newOffset !== 0) {
+             setDateHeaderState('visible');
+        } else {
+            dateHeaderTimeoutRef.current = setTimeout(() => {
+                setDateHeaderState('blinking'); 
+                setTimeout(() => {
+                    setDateHeaderState('hidden');
+                }, 300); 
+            }, 1000);
+        }
+    });
   };
   
   const handleRollDice = async () => {
@@ -1440,9 +1466,12 @@ const handleLogout = async () => {
 
             {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}
             {/* FLOATING DATE HEADER (Animation Only) */}
-            <div className={`fixed top-20 left-0 right-0 z-30 flex justify-center pointer-events-none transition-all duration-500 ease-out ${
-                dateHeaderState === 'hidden' || !visibleDate ? 'opacity-0 -translate-y-4' : 'opacity-100 translate-y-0'
-            }`}>
+            <div 
+                className={`fixed top-20 left-0 right-0 z-30 flex justify-center pointer-events-none transition-opacity duration-500 ease-out ${
+                    dateHeaderState === 'hidden' || !visibleDate ? 'opacity-0' : 'opacity-100'
+                }`}
+                style={{ transform: `translateY(${headerOffset}px)` }}
+            >
                 <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-xl transition-all duration-200 ${
                     dateHeaderState === 'blinking' 
                         ? 'bg-[#DA7756] text-white border border-[#DA7756] scale-110 shadow-[#DA7756]/40' 

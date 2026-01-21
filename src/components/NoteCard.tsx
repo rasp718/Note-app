@@ -325,7 +325,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
                 // Conditional MT: 1px for 1:1 chats (tight), 1 (4px) for group chats (spacing from name)
                 // mb-0.5 (tight bottom to pull text closer)
-                className={`mx-0 ${(variant === 'received' && opponentName && opponentName !== 'OPP') ? 'mt-1' : 'mt-[1px]'} mb-0.5 rounded-[8px] ${replyBg} flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer transition-colors hover:opacity-80`}
+                className={`mx-0 mt-[1px] mb-0.5 rounded-[8px] ${replyBg} flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer transition-colors hover:opacity-80`}
                 style={preventSelectStyle}
               >
                       <div className="flex-1 min-w-0 py-2 px-2.5 flex flex-col justify-center gap-0.5">
@@ -363,7 +363,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                  <StreetDiceGame dataStr={gameData} onSave={handleGameUpdate} myId={currentUserId || 'unknown'} oppName={opponentName} oppAvatar={opponentAvatar} />
              </div>
           ) : hasImage ? (
-            <div className={`relative ${(variant === 'received' && opponentName && opponentName !== 'OPP') ? 'mt-1' : ''}`}>
+            <div className="relative">
                 <div 
                     onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(note.imageUrl!); }} 
                     className="rounded-xl overflow-hidden border-none bg-black flex justify-center items-center max-w-full cursor-zoom-in active:scale-95 transition-transform relative min-w-[120px] min-h-[120px] select-none"
@@ -384,10 +384,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             </div>
           ) : (
             <div className="flex flex-col min-w-[80px]">
-              {/* Reduced top padding to pt-0.5 */}
-              <div className={`block w-full px-2 pb-1 pt-0.5`}>
+              <div className="block w-full px-2 pb-1 pt-0.5 relative">
                   {safeText && (<span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>)}
-                       {variant === 'sent' && <div className="ml-0.5"><StatusIcon /></div>}
+                       <span className="float-right ml-2 mt-[6px] flex items-center gap-1 h-4 align-bottom select-none">
+                            <span className={`text-[10px] font-medium ${subtextColor}`}>{formatTime(note.date)}</span>
+                            {variant === 'sent' && <StatusIcon />}
+                       </span>
                    </div>
                </div>
           )}

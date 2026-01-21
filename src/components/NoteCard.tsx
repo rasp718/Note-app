@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck, Copy } from 'lucide-react';
+import { Trash2, Volume2, Edit2, CornerUpRight, Check, CheckCheck, Copy, Image as ImageIcon } from 'lucide-react';
 import { Note, CategoryId, CategoryConfig } from '../types';
 import { getUserColor } from '../utils';
 import { AudioPlayer } from './AudioPlayer';
@@ -97,7 +97,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const rawText = String(note.text || '');
   const REPLY_SEPARATOR = "|||RPLY|||";
   
-  let replyData = null;
+  let replyData: any = null;
   let safeText = rawText;
 
   if (rawText.includes(REPLY_SEPARATOR)) {
@@ -141,61 +141,37 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const handleSpeakNote = (e?: any) => { e?.stopPropagation(); if (typeof window !== 'undefined' && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(safeText); if (selectedVoice) utterance.voice = selectedVoice; window.speechSynthesis.speak(utterance); } };
   const handleCopy = async () => { try { await navigator.clipboard.writeText(safeText); } catch (err) {} };
 
-  // --- FIX: ROBUST IMAGE COPY HANDLER ---
   const handleCopyImage = async () => {
     if (!note.imageUrl) return;
     setContextMenu(null);
-
     try {
-        // 1. Load the image into a standard HTML Image Element
-        // This handles cross-origin credentials and decoding automatically
         const img = new Image();
         img.crossOrigin = "anonymous"; 
         img.src = note.imageUrl;
-
-        await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-        });
-
-        // 2. Draw to Canvas (This converts WebP/JPEG/Avif to a standard bitmap)
+        await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
         const canvas = document.createElement('canvas');
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error("Canvas context blocked");
         ctx.drawImage(img, 0, 0);
-
-        // 3. Export as PNG Blob (PNG is the only format safely supported by all browsers)
         const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
         if (!blob) throw new Error("Blob creation failed");
-
-        // 4. Write to Clipboard
-        // Using strict 'image/png' type is required for iOS Safari
         const data = [new ClipboardItem({ 'image/png': blob })];
         await navigator.clipboard.write(data);
         triggerHaptic(50);
-        
-        // Optional: You could show a "Copied" toast here
     } catch (e) {
         console.error("Clipboard API failed, trying fallback", e);
-        
-        // 5. Fallback: Mobile Share Sheet (If Clipboard API fails on mobile)
         try {
             const response = await fetch(note.imageUrl, { mode: 'cors' });
             const blob = await response.blob();
-            // Try to share as a file
             const file = new File([blob], "image.png", { type: blob.type });
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({ files: [file] });
             } else {
-                // Final Fallback: Copy URL as text
                 await navigator.clipboard.writeText(note.imageUrl);
-                alert("Image URL copied to clipboard.");
             }
-        } catch (err) {
-            console.error("Share failed", err);
-        }
+        } catch (err) { console.error("Share failed", err); }
     }
   };
   
@@ -223,7 +199,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   const formatTime = (timestamp: any) => { try { const t = Number(timestamp); if (isNaN(t) || t === 0) return ''; return new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } };
 
-  // --- Touch Logic ---
   const handleTouchStart = (e: any) => { 
       if (e.targetTouches.length !== 1) return; 
       touchStartX.current = e.targetTouches[0].clientX; touchStartY.current = e.targetTouches[0].clientY; touchStartTime.current = Date.now(); setIsSwiping(false); isLongPress.current = false; 
@@ -292,7 +267,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             onTouchMove={handleTouchMove} 
             onTouchEnd={handleTouchEnd}
         >
-          {/* CATEGORY BADGE (Feed Only) - Top Right */}
           {variant === 'default' && categoryEmoji && (
              <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#1c1c1d] border border-white/10 flex items-center justify-center text-[12px] shadow-md z-20 select-none animate-in zoom-in duration-200">
                 {categoryEmoji}
@@ -303,16 +277,38 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}
 
+          {/* --- UPDATED REPLY RENDERING LOGIC --- */}
           {replyData && (() => {
-              // FORCE REPLY THEME HERE
-              const [textColor, borderColor] = getUserColor(replyData.sender, replyTheme).split(' ');
+              const [replyTextColor, replyBorderColor] = getUserColor(replyData.sender, replyTheme).split(' ');
+              const hasThumb = !!replyData.imageUrl;
+              
               return (
-                  <div className={`mx-1 mt-1 mb-2 p-2 rounded-[8px] bg-black/20 flex flex-col gap-0.5 border-l-4 ${borderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}>
-                      <div className={`text-[12px] font-bold ${textColor} leading-snug mb-0.5`}>{replyData.sender}</div>
-                      <div className="text-[13px] text-zinc-300 line-clamp-3 leading-tight">{replyData.text}</div>
+                  <div 
+                    onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
+                    className={`mx-1 mt-1 mb-2 rounded-[8px] bg-black/20 flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}
+                  >
+                      {hasThumb && (
+                          <div className="w-[42px] relative border-r border-white/5 bg-zinc-900">
+                                <img 
+                                    src={replyData.imageUrl} 
+                                    className="absolute inset-0 w-full h-full object-cover opacity-90" 
+                                    alt="reply-thumb"
+                                />
+                          </div>
+                      )}
+                      <div className="flex-1 min-w-0 py-1.5 px-2 flex flex-col justify-center gap-0.5">
+                          <div className={`text-[12px] font-bold ${replyTextColor} leading-snug truncate`}>
+                              {replyData.sender}
+                          </div>
+                          <div className="text-[13px] text-zinc-300 line-clamp-2 leading-tight truncate flex items-center gap-1">
+                               {hasThumb && !replyData.text && <ImageIcon size={10} className="inline opacity-70" />}
+                               {replyData.text || (hasThumb ? 'Photo' : 'Message')}
+                          </div>
+                      </div>
                   </div>
               );
           })()}
+          {/* ------------------------------------- */}
 
           {audioUrl ? (
              <div className="flex flex-col gap-1 min-w-[200px]">

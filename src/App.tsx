@@ -704,11 +704,9 @@ const toggleGroupMember = (uid: string) => {
         const group = dateGroups[i] as HTMLElement;
         const rect = group.getBoundingClientRect();
 
-        // If the group is covering the top area
         if (rect.top <= HEADER_OFFSET + 10 && rect.bottom > HEADER_OFFSET) {
             activeDate = group.getAttribute('data-date') || '';
             
-            // Check Collision with NEXT group
             const nextGroup = dateGroups[i + 1] as HTMLElement;
             if (nextGroup) {
                 const nextRect = nextGroup.getBoundingClientRect();
@@ -720,13 +718,19 @@ const toggleGroupMember = (uid: string) => {
         }
     }
 
-    // B. Sync Visibility (THE FIX)
+    // B. FORCE CLEAR AT TOP (Prevents floating header at very top)
+    if (scrollTop < 50) {
+        activeDate = '';
+        pushOffset = 0;
+    }
+
+    // C. Sync Visibility
     dateGroups.forEach((group) => {
         const header = group.querySelector('.static-date-header') as HTMLElement;
         if (header) {
             const date = group.getAttribute('data-date');
-            // If this is the active date, HIDE the static version (opacity 0)
-            if (date === activeDate && scrollTop > 50) {
+            // Hide static header if it matches the active floating one
+            if (date === activeDate && activeDate !== '') {
                 header.style.opacity = '0';
             } else {
                 header.style.opacity = '1';
@@ -742,7 +746,8 @@ const toggleGroupMember = (uid: string) => {
     }
 
     // 4. Timer Logic
-    if (activeDate && scrollTop > 50) {
+    // Only run if we actually have an active date (scrolled down)
+    if (activeDate) {
         if (dateHeaderState !== 'visible') setDateHeaderState('visible');
         if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
 
@@ -753,6 +758,7 @@ const toggleGroupMember = (uid: string) => {
             }, 1000);
         }
     } else {
+        // If no active date (top of screen), hide immediately
         if (dateHeaderState !== 'hidden') setDateHeaderState('hidden');
     }
   };

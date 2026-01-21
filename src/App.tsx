@@ -976,7 +976,7 @@ const handleLogout = async () => {
   );
 
   return (
-    <div className={`fixed top-0 left-0 w-full h-[100dvh] bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
+    <div className={`fixed top-0 left-0 w-full h-screen bg-black text-zinc-100 font-sans ${currentTheme.selection} flex flex-col overflow-hidden ${currentTheme.font}`}>
       {/* OVERLAY: ZOOM */}
       {zoomedImage && (
           <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-in fade-in duration-200" onClick={() => setZoomedImage(null)}>
@@ -1170,8 +1170,15 @@ const handleLogout = async () => {
                                    )}
                                </div>
                                <div className="flex-1 min-w-0 space-y-1">
-                                   {isEditingProfile ? (<input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-xl font-bold w-full focus:outline-none focus:border-white py-1" placeholder="Display Name"/>) : (<h2 className="text-2xl font-black tracking-tight text-white truncate">{profileName}</h2>)}
-                                   {isEditingProfile ? (<div className="flex items-center gap-1 text-zinc-500"><AtSign size={12} /><input type="text" value={profileHandle} onChange={(e) => setProfileHandle(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-sm font-mono w-full focus:outline-none focus:border-white" placeholder="handle"/></div>) : (<p className="text-zinc-400 text-xs font-mono tracking-wide">{profileHandle}</p>)}
+                               {isEditingProfile ? (<input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} className="bg-transparent border-b border-white/20 text-white text-xl font-bold w-full focus:outline-none focus:border-white py-1" placeholder="Display Name"/>) : (<h2 className="text-2xl font-black tracking-tight text-white truncate">{profileName}</h2>)}
+                                   
+                                   {/* Handle is now read-only in edit mode */}
+                                   <div className="flex items-center gap-1 text-zinc-500">
+                                       <AtSign size={12} />
+                                       <p className={`text-xs font-mono tracking-wide ${isEditingProfile ? 'text-zinc-500 opacity-50 cursor-not-allowed select-none' : 'text-zinc-400'}`}>
+                                           {profileHandle.replace('@', '')}
+                                       </p>
+                                   </div>
                                </div>
                            </div>
                            {isEditingProfile && showAvatarSelector && (

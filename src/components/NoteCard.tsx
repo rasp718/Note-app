@@ -40,7 +40,7 @@ const triggerHaptic = (pattern: number | number[] = 15) => {
   } 
 };
 
-// --- UPDATED CONTEXT MENU ITEM ---
+// Component: Context Menu Item
 const ContextMenuItem = ({ icon: Icon, label, onClick, isDestructive = false }: any) => {
   return (
     <button 
@@ -76,7 +76,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   const [isExiting, setIsExiting] = useState(false); 
-  const [showMoreEmojis, setShowMoreEmojis] = useState(false); // For expandable emoji menu
+  const [showMoreEmojis, setShowMoreEmojis] = useState(false); 
   
   // --- Refs ---
   const touchStartX = useRef<number | null>(null);
@@ -112,11 +112,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
       if (parts.length > 1) gameData = parts[1];
   }
 
-  // --- Resolve Category Emoji ---
   const categoryConfig = categories.find(c => c.id === note.category);
   const categoryEmoji = categoryConfig ? categoryConfig.emoji : null;
 
-  // --- Handlers ---
   const handleGameUpdate = (newJson: string) => {
       if (onUpdate && note.id) {
           const newText = `🎲 STREET_DICE_GAME|||${newJson}`;
@@ -135,7 +133,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   const handleSaveImage = async () => {
     if (!note.imageUrl) return;
-    // Logic to save/share image (same as previous handleCopyImage)
     try {
         const response = await fetch(note.imageUrl, { mode: 'cors' });
         const blob = await response.blob();
@@ -143,7 +140,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({ files: [file] });
         } else {
-            // Fallback for desktop
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = "download.png";
@@ -159,7 +155,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   
   const openMenu = (clientX: number, clientY: number) => { 
       triggerHaptic(); 
-      const menuW = 240; // Wider menu for Telegram style
+      const menuW = 240; 
       const menuH = 400; 
       let x = clientX; 
       let y = clientY; 
@@ -224,6 +220,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   const audioBarColor = customColors?.bg?.includes('green') ? '#166534' : (customColors?.bg?.includes('blue') ? '#1e3a8a' : '#da7756');
 
+  // Detect Light Mode Bubble (e.g. White or Light Slate)
+  const isLightBubble = customColors?.bg?.includes('white') || customColors?.bg?.includes('slate-200') || customColors?.text?.includes('black');
+
   const StatusIcon = ({ isOverlay = false }: { isOverlay?: boolean }) => {
     if (variant !== 'sent') return null;
     const defaultColor = customColors?.bg?.includes('white') ? 'text-blue-500' : 'text-blue-400';
@@ -235,7 +234,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     return <Check size={14} className={colorClass} strokeWidth={2} />;
   };
 
-  // Common styles to prevent system menu
   const preventSelectStyle = { WebkitTouchCallout: 'none', userSelect: 'none' } as React.CSSProperties;
 
   return (
@@ -262,21 +260,26 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               <div className={`px-2 pt-1 pb-0.5 text-[12px] font-bold leading-none ${getUserColor(opponentName, replyTheme).split(' ')[0]}`}>{opponentName}</div>
           )}
 
+          {/* --- REPLY LOGIC (Updated for Light Theme) --- */}
           {replyData && (() => {
               const [replyTextColor, replyBorderColor] = getUserColor(replyData.sender, replyTheme).split(' ');
               const hasThumb = !!replyData.imageUrl;
               
+              // Conditional Reply Styles
+              const replyBg = isLightBubble ? 'bg-black/5' : 'bg-black/20'; // Light grey on white, dark grey on dark
+              const replySubText = isLightBubble ? 'text-zinc-600' : 'text-zinc-300'; // Darker text on white
+
               return (
                   <div 
                     onClick={(e) => { e.stopPropagation(); if (onImageClick && hasThumb) onImageClick(replyData.imageUrl); }}
-                    className={`mx-0 mt-1 mb-2 rounded-[8px] bg-black/20 flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer hover:bg-black/30 transition-colors`}
+                    className={`mx-0 mt-1 mb-2 rounded-[8px] ${replyBg} flex border-l-4 ${replyBorderColor} relative overflow-hidden select-none cursor-pointer transition-colors hover:opacity-80`}
                     style={preventSelectStyle}
                   >
                       <div className="flex-1 min-w-0 py-2 px-2.5 flex flex-col justify-center gap-0.5">
                           <div className={`text-[12px] font-bold ${replyTextColor} leading-snug truncate`}>
                               {replyData.sender}
                           </div>
-                          <div className="text-[13px] text-zinc-300 line-clamp-2 leading-tight truncate flex items-center gap-1.5 opacity-90">
+                          <div className={`text-[13px] ${replySubText} line-clamp-2 leading-tight truncate flex items-center gap-1.5 opacity-90`}>
                                {hasThumb && <ImageIcon size={11} className="flex-shrink-0" />}
                                <span className="truncate">
                                    {replyData.text || (hasThumb ? 'Photo' : 'Message')}
@@ -345,7 +348,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         </div>
       </div>
       
-      {/* TELEGRAM-STYLE MENU PORTAL */}
+      {/* MENU PORTAL */}
       {contextMenu && typeof document !== 'undefined' && document.body && createPortal(
         <div className="fixed inset-0 z-[9999]" onClick={() => setContextMenu(null)} onTouchStart={() => setContextMenu(null)}>
             <div 
@@ -354,7 +357,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 onClick={(e) => e.stopPropagation()} 
                 onTouchStart={(e) => e.stopPropagation()}
             > 
-              {/* REACTION ROW */}
               {onReact && (
                 <div className="flex flex-col border-b border-white/5 bg-[#2c2c2c]/50">
                     <div className="flex justify-between px-2 py-2 gap-1 select-none">
@@ -365,7 +367,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                              {showMoreEmojis ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                          </button>
                     </div>
-                    {/* EXPANDED EMOJIS */}
                     {showMoreEmojis && (
                         <div className="flex justify-between px-2 pb-2 gap-1 select-none animate-in slide-in-from-top-2 duration-150">
                             {['🎉', '🤔', '👀', '💩', '🤝', '⚡'].map(emoji => (
@@ -376,7 +377,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 </div>
               )}
 
-              {/* MENU ACTIONS */}
               <div className="py-1">
                   <ContextMenuItem icon={CornerUpRight} label="Reply" onClick={() => { if(onReply) onReply(note); else handleCopy(); setContextMenu(null); }} /> 
                   
@@ -386,7 +386,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   
                   <ContextMenuItem icon={Pin} label="Pin" onClick={() => { if(onPin && note.id) onPin(note.id); setContextMenu(null); }} />
 
-                  {/* DYNAMIC: COPY TEXT or SAVE IMAGE */}
                   {hasImage ? (
                       <ContextMenuItem icon={Download} label="Save to Gallery" onClick={() => { handleSaveImage(); setContextMenu(null); }} />
                   ) : (

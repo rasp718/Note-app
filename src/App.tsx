@@ -320,6 +320,8 @@ function App() {
   const [showBackButton, setShowBackButton] = useState(true);
   const [replyingTo, setReplyingTo] = useState<any>(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [dateHeaderState, setDateHeaderState] = useState<'visible' | 'blinking' | 'hidden'>('hidden');
+  const dateHeaderTimeoutRef = useRef<any>(null);
 
   const [reactions, setReactions] = useState(() => {
       try { return JSON.parse(localStorage.getItem('vibenotes_reactions') || '{}'); } catch { return {}; }
@@ -679,6 +681,24 @@ const toggleGroupMember = (uid: string) => {
         scrollTimeoutRef.current = setTimeout(() => {
             setShowBackButton(true);
         }, 1000);
+
+        // --- NEW DATE HEADER ANIMATION LOGIC ---
+        // 1. Ensure visible while scrolling
+        if (dateHeaderState !== 'visible') setDateHeaderState('visible');
+
+        // 2. Reset timer
+        if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
+
+        // 3. Set timer for when scrolling stops
+        dateHeaderTimeoutRef.current = setTimeout(() => {
+            // Stage 1: Blink Orange
+            setDateHeaderState('blinking');
+            
+            // Stage 2: Fade Out after 300ms
+            setTimeout(() => {
+                setDateHeaderState('hidden');
+            }, 300); 
+        }, 1000); // 1 second after scroll stops
     }
   };
   
@@ -1425,8 +1445,14 @@ const handleLogout = async () => {
                     groupItemsByDate(filteredNotes).map((group) => (
                         <div key={group.date} className="relative w-full">
                             {/* STICKY DATE HEADER */}
-                            <div className="sticky top-20 z-30 flex justify-center py-4 pointer-events-none">
-                                <span className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-black/50">
+                            <div className={`sticky top-20 z-30 flex justify-center py-4 pointer-events-none transition-all duration-500 ease-out ${
+                                dateHeaderState === 'hidden' ? 'opacity-0 -translate-y-4' : 'opacity-100 translate-y-0'
+                            }`}>
+                                <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-lg transition-all duration-200 ${
+                                    dateHeaderState === 'blinking' 
+                                        ? 'bg-[#DA7756] text-white border border-[#DA7756] scale-110 shadow-[#DA7756]/40' 
+                                        : 'bg-black/60 backdrop-blur-md border border-white/10 text-white/90 shadow-black/50'
+                                }`}>
                                     {group.date}
                                 </span>
                             </div>
@@ -1462,8 +1488,14 @@ const handleLogout = async () => {
                     groupItemsByDate([...activeMessages].sort((a, b) => normalizeDate(a.timestamp) - normalizeDate(b.timestamp))).map((group) => (
                         <div key={group.date} className="relative w-full">
                             {/* STICKY DATE HEADER */}
-                            <div className="sticky top-20 z-30 flex justify-center py-4 pointer-events-none">
-                                <span className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-black/50">
+                            <div className={`sticky top-20 z-30 flex justify-center py-4 pointer-events-none transition-all duration-500 ease-out ${
+                                dateHeaderState === 'hidden' ? 'opacity-0 -translate-y-4' : 'opacity-100 translate-y-0'
+                            }`}>
+                                <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-lg transition-all duration-200 ${
+                                    dateHeaderState === 'blinking' 
+                                        ? 'bg-[#DA7756] text-white border border-[#DA7756] scale-110 shadow-[#DA7756]/40' 
+                                        : 'bg-black/60 backdrop-blur-md border border-white/10 text-white/90 shadow-black/50'
+                                }`}>
                                     {group.date}
                                 </span>
                             </div>

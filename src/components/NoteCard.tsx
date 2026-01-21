@@ -385,7 +385,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           ) : (
              <div className="flex flex-col min-w-[80px]">
                {/* Reduced top padding from pt-1 to pt-0.5 to tighten layout */}
-               <div className={`block w-full px-2 pb-1 pt-0.5`}>
+               <div className={`block w-full px-2 pb-1 pt-1`}>
                    {safeText && (<span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor}`}>{safeText}</span>)}
                    <div className="float-right ml-3 mt-1.5 flex items-center gap-1 align-bottom h-4 select-none">
                    {onEdit && <InlineActionButton onClick={onEdit} icon={Edit2} accentColor={'#ffffff'} iconColor={subtextColor.includes('zinc-400') ? '#71717a' : 'currentColor'} />}

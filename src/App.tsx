@@ -1095,7 +1095,7 @@ const handleLogout = async () => {
   if (!user) return <Auth />;
 
   const BottomTabBar = () => (
-      <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-2xl border border-white/5 rounded-full shadow-2xl shadow-black/50 p-1.5 flex gap-1 z-50">
+    <div className="flex-none fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-2xl border border-white/5 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.3)] p-1.5 flex gap-1 z-50">
          <button onClick={() => setActiveTab('contacts')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Globe size={22} className={`transition-all duration-300 ${activeTab === 'contacts' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'contacts' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
          <button onClick={() => setActiveTab('calls')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><Zap size={22} className={`transition-all duration-300 ${activeTab === 'calls' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'calls' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
          <button onClick={() => setActiveTab('chats')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group"><MessageSquareDashed size={22} className={`transition-all duration-300 ${activeTab === 'chats' ? '' : 'text-zinc-500 group-hover:text-zinc-300'}`} style={activeTab === 'chats' ? { color: navAccentColor, filter: `drop-shadow(0 0 8px ${navAccentColor}60)` } : {}}/></button>
@@ -1284,7 +1284,7 @@ const handleLogout = async () => {
                      <div className="p-4 space-y-6 animate-in slide-in-from-bottom-4 fade-in duration-300">
                         
                         {/* PROFILE CARD */}
-                        <div className="relative overflow-hidden bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col gap-6 backdrop-blur-xl group">
+                        <div className="relative overflow-hidden bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col gap-6 backdrop-blur-xl group shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
                            <div className="absolute top-4 right-4">
                                 {isEditingProfile ? (<button onClick={handleProfileSave} className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center"><Check size={16} strokeWidth={3} /></button>) : (<button onClick={() => setIsEditingProfile(true)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 hover:text-white"><Edit size={14} /></button>)}
                            </div>
@@ -1321,7 +1321,7 @@ const handleLogout = async () => {
                         </div>
 
                         {/* INTERFACE SETTINGS */}
-                        <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6">
+                        <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-6 shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><SlidersHorizontal size={14}/> Interface</h3>
                             
                             {/* BUBBLE STYLES */}
@@ -1396,7 +1396,7 @@ const handleLogout = async () => {
                         </div>
 
                         {/* BACKGROUND GRID */}
-                        <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 space-y-4 shadow-2xl relative">
+                        <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 space-y-4 shadow-[0_1px_1px_rgba(0,0,0,0.3)] relative">
                              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
                              <div className="relative group/scroll">
                                 <button onClick={() => scrollContainer(bgListRef, 'left')} className="absolute left-0 top-0 bottom-2 w-10 bg-gradient-to-r from-zinc-900 to-transparent z-20 flex items-center justify-start pl-1 cursor-pointer hover:bg-black/10 transition-colors"><ChevronLeft size={20} className="text-white drop-shadow-lg" /></button>
@@ -1416,7 +1416,7 @@ const handleLogout = async () => {
                         </div>
 
                         {/* LOGOUT BUTTON */}
-                        <button onClick={handleLogout} className="w-full py-4 bg-white/5 border border-white/5 rounded-3xl text-red-500 font-bold text-center hover:bg-red-500/10 transition-colors shadow-lg">
+                        <button onClick={handleLogout} className="w-full py-4 bg-white/5 border border-white/5 rounded-3xl text-red-500 font-bold text-center hover:bg-red-500/10 transition-colors shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
                             Log Out
                         </button>
                      </div>

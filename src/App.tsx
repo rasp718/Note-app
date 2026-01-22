@@ -146,7 +146,7 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
         <React.Fragment key={msg.id}>
             <div 
                 style={{ zIndex: 1 }}
-                className={`flex w-full ${reactions[msg.id] ? 'mb-3' : 'mb-1'} items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
+                className={`flex w-full ${isLastInGroup ? 'mb-4' : (reactions[msg.id] ? 'mb-3' : 'mb-1')} items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
             >
                 {!isMe && (
                     <div className="flex-shrink-0 w-8 h-8 relative z-10 mb-1">
@@ -327,6 +327,7 @@ function App() {
   const dateHeaderTimeoutRef = useRef<any>(null);
   const floatingBubbleRef = useRef<HTMLDivElement>(null); 
   const lastHiddenHeaderRef = useRef<HTMLElement | null>(null); // <--- ADD THIS
+  const userInteractionRef = useRef(false); // <--- ADD THIS
 
   const [reactions, setReactions] = useState(() => {
       try { return JSON.parse(localStorage.getItem('vibenotes_reactions') || '{}'); } catch { return {}; }
@@ -674,12 +675,15 @@ const toggleGroupMember = (uid: string) => {
   // ============================================================================
   // SECTION: ACTIONS & HANDLERS
   // ============================================================================
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); };
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => { 
+    userInteractionRef.current = false; // Disable animations for auto-scroll
+    setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior, block: "end" }); }, 100); 
+};
 
-  const handleScroll = () => {
+const handleScroll = () => {
     if (!listRef.current) return;
 
-    // --- PHASE 1: READ (Get all measurements first) ---
+    // --- PHASE 1: READ ---
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
     
     // Config
@@ -700,12 +704,10 @@ const toggleGroupMember = (uid: string) => {
         const group = dateGroups[i] as HTMLElement;
         const rect = group.getBoundingClientRect();
 
-        // Check if this group is the "Sticky" one
         if (rect.top <= HEADER_OFFSET + 2 && rect.bottom > HEADER_OFFSET) {
             activeDate = group.getAttribute('data-date') || '';
             activeHeaderElement = group.querySelector('.static-date-header');
             
-            // Check Collision with NEXT group (The "Bump")
             const nextGroup = dateGroups[i + 1] as HTMLElement;
             if (nextGroup) {
                 const nextRect = nextGroup.getBoundingClientRect();
@@ -717,50 +719,54 @@ const toggleGroupMember = (uid: string) => {
         }
     }
 
-    // Force clear if at very top
     if (scrollTop < 50) {
         activeDate = '';
         pushOffset = 0;
         activeHeaderElement = null;
     }
 
-    // --- PHASE 2: WRITE (Apply all changes together) ---
+    // --- PHASE 2: WRITE ---
     
-    // 1. Update UI States
+    // 1. Update UI States (Always run these)
     if (isScrolled !== isTopScrolled) setIsTopScrolled(isScrolled);
     setShowScrollButton(!isNearBottom);
     setIsChatScrolled(!isNearBottom);
 
-    // FIXED: Keep Header Visible (Prevent it from moving/hiding on scroll)
     setShowBackButton(true);
 
     // 2. Update Date Text
     if (activeDate !== visibleDate) setVisibleDate(activeDate);
 
-    // 3. Move Floater (Direct DOM for 60fps)
+    // 3. Move Floater
     if (floatingBubbleRef.current) {
         floatingBubbleRef.current.style.transform = `translate3d(0, ${pushOffset}px, 0)`;
     }
 
-    // 4. Handle Static Header Visibility (The "Doubles" Fix)
-    if (activeHeaderElement && activeHeaderElement !== lastHiddenHeaderRef.current) {
+    // 4. Handle Static Header Visibility (ONLY IF USER IS SCROLLING)
+    // If system is scrolling, we keep static headers visible and ignore this block
+    if (userInteractionRef.current) {
+        if (activeHeaderElement && activeHeaderElement !== lastHiddenHeaderRef.current) {
+            if (lastHiddenHeaderRef.current) lastHiddenHeaderRef.current.style.opacity = '1';
+            activeHeaderElement.style.opacity = '0';
+            lastHiddenHeaderRef.current = activeHeaderElement;
+        } 
+        else if (!activeHeaderElement && lastHiddenHeaderRef.current) {
+            lastHiddenHeaderRef.current.style.opacity = '1';
+            lastHiddenHeaderRef.current = null;
+        }
+    } else {
+        // Reset static visibility if auto-scrolling
         if (lastHiddenHeaderRef.current) {
             lastHiddenHeaderRef.current.style.opacity = '1';
+            lastHiddenHeaderRef.current = null;
         }
-        activeHeaderElement.style.opacity = '0';
-        lastHiddenHeaderRef.current = activeHeaderElement;
-    } 
-    else if (!activeHeaderElement && lastHiddenHeaderRef.current) {
-        lastHiddenHeaderRef.current.style.opacity = '1';
-        lastHiddenHeaderRef.current = null;
     }
 
-    // 5. Visibility Timer Logic
-    if (activeDate) {
+    // 5. Visibility Timer Logic (ONLY IF USER IS SCROLLING)
+    if (activeDate && userInteractionRef.current) {
         if (dateHeaderState !== 'visible') setDateHeaderState('visible');
         if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
 
-        // Only fade out if not currently bumping
         if (pushOffset === 0) {
             dateHeaderTimeoutRef.current = setTimeout(() => {
                 setDateHeaderState('blinking'); 
@@ -768,6 +774,7 @@ const toggleGroupMember = (uid: string) => {
             }, 1000);
         }
     } else {
+        // If not user interaction, keep hidden
         if (dateHeaderState !== 'hidden') setDateHeaderState('hidden');
     }
   };
@@ -1527,7 +1534,16 @@ const handleLogout = async () => {
                 </div>
            </div>
 
-           <div ref={listRef} onScroll={handleScroll} onClick={() => editingNote && handleCancelEdit()} className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}>
+           <div 
+                ref={listRef} 
+                onScroll={handleScroll} 
+                onTouchStart={() => userInteractionRef.current = true}
+                onMouseDown={() => userInteractionRef.current = true}
+                onWheel={() => userInteractionRef.current = true}
+                onKeyDown={() => userInteractionRef.current = true}
+                onClick={() => editingNote && handleCancelEdit()} 
+                className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}
+           >
    <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-1 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
    {activeChatId === 'saved_messages' ? (

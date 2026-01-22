@@ -320,6 +320,7 @@ function App() {
   const [showBackButton, setShowBackButton] = useState(true);
   const [replyingTo, setReplyingTo] = useState<any>(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [isSendingAnim, setIsSendingAnim] = useState(false); // <--- ADD THIS
   const [dateHeaderState, setDateHeaderState] = useState<'visible' | 'blinking' | 'hidden'>('hidden');
   const [visibleDate, setVisibleDate] = useState('');
   const [headerOffset, setHeaderOffset] = useState(0);
@@ -797,6 +798,10 @@ const toggleGroupMember = (uid: string) => {
     if (!transcript.trim() && !imageUrl) return;
     if (activeFilter === 'all' && !editingNote && activeChatId === 'saved_messages') return; 
     
+    // TRIGGER COOL BLINK ANIMATION
+    setIsSendingAnim(true);
+    setTimeout(() => setIsSendingAnim(false), 200);
+
     if (activeChatId && currentChatObject?.type === 'group' && currentChatObject.mutedParticipants?.includes(user.uid)) {
         alert("You have been muted by an admin.");
         return;
@@ -1673,12 +1678,23 @@ const handleLogout = async () => {
                         </div>
 
                         <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-[20px] flex items-end px-4 py-2 focus-within:border-zinc-700 transition-colors gap-2 min-h-[44px]">
-                            <textarea 
+                        <textarea 
                                 ref={textareaRef} 
                                 value={transcript} 
                                 onChange={(e) => setTranscript(e.target.value)} 
                                 onPaste={(e) => handlePaste(e)} 
                                 onFocus={() => scrollToBottom('auto')} 
+                                onKeyDown={(e) => {
+                                    // If Enter is pressed without Shift
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        // If NOT in Notes (Saved Messages), Send.
+                                        if (activeChatId !== 'saved_messages') {
+                                            e.preventDefault(); // Stop new line
+                                            handleMainAction(); 
+                                        }
+                                        // If in Notes, do nothing (allows default new line)
+                                    }
+                                }}
                                 placeholder={editingNote ? "Edit message..." : "Message"} 
                                 rows={1} 
                                 className={`flex-1 bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-[16px] resize-none max-h-24 py-1 leading-relaxed no-scrollbar ${isHackerMode ? 'font-mono' : ''}`} 
@@ -1698,7 +1714,11 @@ const handleLogout = async () => {
                         
                         <div className="pb-0 animate-in fade-in zoom-in duration-200">
                              {(transcript.trim() || imageUrl || editingNote) ? (
-                                <button onClick={handleMainAction} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg active:scale-95 bg-[#DA7756] text-white hover:bg-[#c46243]">
+                                <button onClick={handleMainAction} className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${
+                                    isSendingAnim 
+                                        ? 'scale-110 bg-white text-[#DA7756] shadow-[#DA7756]/50' // The Flash Effect
+                                        : 'active:scale-95 bg-[#DA7756] text-white hover:bg-[#c46243]'
+                                }`}>
                                     {editingNote ? <Check size={20} strokeWidth={3} /> : <ArrowUp size={24} strokeWidth={3} />}
                                 </button>
                              ) : (

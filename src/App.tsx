@@ -146,7 +146,7 @@ const MessageItem = ({ msg, prevMsg, nextMsg, user, isGroup, reactions, onReact,
         <React.Fragment key={msg.id}>
             <div 
                 style={{ zIndex: 1 }}
-                className={`flex w-full ${isLastInGroup ? 'mb-4' : (reactions[msg.id] ? 'mb-3' : 'mb-1')} items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
+                className={`flex w-full ${isLastInGroup ? 'mb-2' : (reactions[msg.id] ? 'mb-3' : 'mb-1')} items-end relative ${isMe ? 'justify-end message-row-sent' : 'justify-start gap-2 message-row-received'}`}
             >
                 {!isMe && (
                     <div className="flex-shrink-0 w-8 h-8 relative z-10 mb-1">
@@ -1558,7 +1558,7 @@ const handleLogout = async () => {
                 onClick={() => editingNote && handleCancelEdit()} 
                 className={`flex-1 overflow-y-auto relative z-10 w-full no-scrollbar`}
            >
-   <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-1 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
+   <div className={`min-h-full max-w-2xl mx-auto flex flex-col justify-end gap-0.5 pt-20 pb-0 px-4 ${activeChatId === 'saved_messages' ? getAlignmentClass() : 'items-stretch'}`}>
                 
    {activeChatId === 'saved_messages' ? (
                     groupItemsByDate(filteredNotes).map((group) => (
@@ -1637,7 +1637,7 @@ const handleLogout = async () => {
               </div>
            </div>
 
-           <div className="flex-none w-full p-2 bg-black/80 backdrop-blur-2xl z-50 border-t border-white/5">
+           <div className="flex-none w-full px-2 py-1.5 bg-black/80 backdrop-blur-2xl z-50 border-t border-white/5">
              {/* REPLY PREVIEW BAR */}
              {replyingTo && (() => {
                  const senderName = replyingTo.displayName || (replyingTo.senderId === user?.uid ? 'You' : 'Unknown');
@@ -1676,31 +1676,32 @@ const handleLogout = async () => {
              <div className="max-w-2xl mx-auto flex items-end gap-2">
                  
                  {isRecording ? (
-                    <div className="flex-1 flex items-center gap-2 animate-in slide-in-from-bottom-2 fade-in duration-200 h-[48px]">
-                        <button onClick={cancelRecording} className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-red-500 transition-colors"> <Trash2 size={24} /> </button>
+                    <div className="flex-1 flex items-center gap-2 animate-in slide-in-from-bottom-2 fade-in duration-200 h-[40px]">
+                        <button onClick={cancelRecording} className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-400 hover:text-red-500 transition-colors"> <Trash2 size={20} /> </button>
                         <div className="flex-1 bg-zinc-900/80 rounded-full h-full flex items-center px-2 gap-3 border border-white/10 relative overflow-hidden">
                             <div className="flex items-center gap-2 z-10 pl-2"> <div className={`w-2.5 h-2.5 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-red-500 animate-pulse'}`} /> <span className="text-white font-mono font-medium text-sm">{formatDuration(recordingDuration)}</span> </div>
                             <div className="flex-1 flex items-center justify-center gap-0.5 h-4 opacity-50 overflow-hidden"> {!isPaused && [...Array(12)].map((_, i) => ( <div key={i} className="w-1 rounded-full animate-pulse bg-white" style={{ height: `${Math.random() * 100}%`, animationDuration: '0.4s', animationDelay: `${i * 0.05}s` }} /> ))} </div>
                             <button onClick={togglePause} className="z-20 w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-zinc-800 text-white hover:bg-zinc-700"> {isPaused ? <Play size={12} fill="white" /> : <Pause size={12} fill="white" />} </button>
                         </div>
-                        <button onClick={finishRecording} className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full bg-[#DA7756] text-white shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"> <ArrowUp size={24} strokeWidth={3} /> </button>
+                        <button onClick={finishRecording} className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full bg-[#DA7756] text-white shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"> <ArrowUp size={20} strokeWidth={3} /> </button>
                     </div>
                  ) : (
                     <>
-                        <div className="flex items-end gap-1 pb-1">
+                        <div className="flex items-end gap-1 pb-[1px]">
                             {activeChatId === 'saved_messages' ? (
-                                <button onClick={cycleFilter} className="w-10 h-10 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">
-                                    {activeFilter === 'all' ? <LayoutGrid size={24} /> : <span className="text-xl leading-none">{currentConfig?.emoji}</span>}
+                                <button onClick={cycleFilter} className="w-9 h-9 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors">
+                                    {activeFilter === 'all' ? <LayoutGrid size={22} /> : <span className="text-xl leading-none">{currentConfig?.emoji}</span>}
                                 </button>
                             ) : (
-                                <label className="w-10 h-10 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer active:scale-95">
-                                    <ImageIcon size={26} strokeWidth={1.5} />
+                                <label className="w-9 h-9 rounded-full text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer active:scale-95">
+                                    <ImageIcon size={22} strokeWidth={1.5} />
                                     <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} />
                                 </label>
                             )}
                         </div>
 
-                        <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-[20px] flex items-end px-4 py-2 focus-within:border-zinc-700 transition-colors gap-2 min-h-[44px]">
+                        {/* COMPACT INPUT FIELD */}
+                        <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-[20px] flex items-end px-3 py-1.5 focus-within:border-zinc-700 transition-colors gap-2 min-h-[36px]">
                         <textarea 
                                 ref={textareaRef} 
                                 value={transcript} 
@@ -1708,46 +1709,43 @@ const handleLogout = async () => {
                                 onPaste={(e) => handlePaste(e)} 
                                 onFocus={() => scrollToBottom('auto')} 
                                 onKeyDown={(e) => {
-                                    // If Enter is pressed without Shift
                                     if (e.key === 'Enter' && !e.shiftKey) {
-                                        // If NOT in Notes (Saved Messages), Send.
                                         if (activeChatId !== 'saved_messages') {
-                                            e.preventDefault(); // Stop new line
+                                            e.preventDefault(); 
                                             handleMainAction(); 
                                         }
-                                        // If in Notes, do nothing (allows default new line)
                                     }
                                 }}
                                 placeholder={editingNote ? "Edit message..." : "Message"} 
                                 rows={1} 
-                                className={`flex-1 bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-[16px] resize-none max-h-24 py-1 leading-relaxed no-scrollbar ${isHackerMode ? 'font-mono' : ''}`} 
+                                className={`flex-1 bg-transparent border-none text-white placeholder:text-zinc-500 focus:outline-none text-[16px] resize-none max-h-24 py-0.5 leading-relaxed no-scrollbar ${isHackerMode ? 'font-mono' : ''}`} 
                                 style={isHackerMode ? { color: HACKER_GREEN } : undefined} 
                             />
                             {editingNote && (
-                                <button onClick={handleCancelEdit} className="text-zinc-500 hover:text-white transition-colors pb-1.5 active:scale-95 flex-shrink-0">
-                                     <X size={22} strokeWidth={1.5} />
+                                <button onClick={handleCancelEdit} className="text-zinc-500 hover:text-white transition-colors pb-1 active:scale-95 flex-shrink-0">
+                                     <X size={20} strokeWidth={1.5} />
                                 </button>
                             )}
                             {activeChatId !== 'saved_messages' && !editingNote && (
-                                <button onClick={handleRollDice} className="text-zinc-500 hover:text-white transition-colors pb-1.5 active:scale-95 flex-shrink-0" title="Roll Dice">
-                                     <Dices size={22} strokeWidth={1.5} />
+                                <button onClick={handleRollDice} className="text-zinc-500 hover:text-white transition-colors pb-1 active:scale-95 flex-shrink-0" title="Roll Dice">
+                                     <Dices size={20} strokeWidth={1.5} />
                                 </button>
                             )}
                         </div>
                         
                         <div className="pb-0 animate-in fade-in zoom-in duration-200">
                              {(transcript.trim() || imageUrl || editingNote) ? (
-                                <button onClick={handleMainAction} className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${
+                                <button onClick={handleMainAction} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${
                                     isSendingAnim 
-                                        ? 'scale-110 bg-white text-[#DA7756] shadow-[#DA7756]/50' // The Flash Effect
+                                        ? 'scale-110 bg-white text-[#DA7756] shadow-[#DA7756]/50' 
                                         : 'active:scale-95 bg-[#DA7756] text-white hover:bg-[#c46243]'
                                 }`}>
-                                    {editingNote ? <Check size={20} strokeWidth={3} /> : <ArrowUp size={24} strokeWidth={3} />}
+                                    {editingNote ? <Check size={18} strokeWidth={3} /> : <ArrowUp size={22} strokeWidth={3} />}
                                 </button>
                              ) : (
                                 activeChatId !== 'saved_messages' && (
-                                    <button onClick={startRecording} className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-white active:scale-95"> 
-                                        <Mic size={24} /> 
+                                    <button onClick={startRecording} className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 text-white active:scale-95"> 
+                                        <Mic size={22} /> 
                                     </button>
                                 )
                              )}

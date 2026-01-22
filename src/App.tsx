@@ -1525,7 +1525,7 @@ const handleLogout = async () => {
             <div 
                 ref={floatingBubbleRef}
                 className={`fixed top-[75px] left-0 right-0 z-50 flex justify-center pointer-events-none will-change-transform transition-opacity duration-200 ease-out ${
-                    dateHeaderState === 'hidden' || !visibleDate || !isTopScrolled ? 'opacity-0' : 'opacity-100'
+                    dateHeaderState === 'hidden' || !visibleDate ? 'opacity-0' : 'opacity-100'
                 }`}
             >
                 <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-[0_1px_1px_rgba(0,0,0,0.3)] transition-all duration-200 ${

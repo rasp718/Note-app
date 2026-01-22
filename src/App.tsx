@@ -727,10 +727,22 @@ const handleScroll = () => {
 
     // --- PHASE 2: WRITE ---
     
-    // 1. Update UI States
-    // FIX: Only toggle header animation if USER is interacting
+    // 1. Update UI States (Header Animation Logic)
     if (userInteractionRef.current) {
-        if (isScrolled !== isTopScrolled) setIsTopScrolled(isScrolled);
+        if (isScrolled) {
+            // Hide header immediately when scrolling starts/continues
+            setIsTopScrolled(true);
+            
+            // Reset timer to Slide Back In after 900ms of inactivity
+            if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+            scrollTimeoutRef.current = setTimeout(() => {
+                setIsTopScrolled(false);
+            }, 900);
+        } else {
+            // We are at the very top, show immediately and clear timer
+            setIsTopScrolled(false);
+            if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+        }
     } else {
         // If system is scrolling (load/send), ensure header stays visible
         if (isTopScrolled) setIsTopScrolled(false);

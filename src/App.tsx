@@ -224,7 +224,7 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
                 </div>
             )}
             <div className="w-14 h-14 flex-shrink-0 relative group/icon">
-                <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center overflow-hidden shadow-lg shadow-black/50 relative">
+            <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center overflow-hidden shadow-[0_1px_1px_rgba(0,0,0,0.3)] relative">
                     {photoURL ? (
                         <img src={photoURL} className="w-full h-full object-cover transition-transform duration-500 group-hover/icon:scale-110" alt="avatar" />
                     ) : (
@@ -1171,7 +1171,7 @@ const handleLogout = async () => {
                    {activeTab === 'chats' && (
                      <>
                         <div className="px-4 mb-4">
-                           <div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-white/50">
+                           <div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-white/50 shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
                               <Search size={16} className="text-zinc-500" />
                               <input type="text" placeholder="Search frequency..." className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-medium"/>
                            </div>
@@ -1179,7 +1179,7 @@ const handleLogout = async () => {
 
                         <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-left-8 fade-in duration-500`}>
                             <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
-                                <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50">
+                                <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
                                     {activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
                                 </div>
                             </div>
@@ -1509,7 +1509,7 @@ const handleLogout = async () => {
                     dateHeaderState === 'hidden' || !visibleDate || !isTopScrolled ? 'opacity-0' : 'opacity-100'
                 }`}
             >
-                <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-lg transition-all duration-200 ${
+                <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-[0_1px_1px_rgba(0,0,0,0.3)] transition-all duration-200 ${
                     dateHeaderState === 'blinking' 
                         ? 'bg-[#DA7756] text-white border border-[#DA7756] scale-110 shadow-[#DA7756]/40' 
                         : 'bg-black/60 backdrop-blur-md border border-white/10 text-white/90 shadow-black/50'
@@ -1537,7 +1537,7 @@ const handleLogout = async () => {
                         <div key={group.date} className="relative w-full" data-date={group.date}>
                             {/* STATIC INLINE DATE SEPARATOR */}
                             <div className="flex justify-center py-4 pointer-events-none">
-                            <span className="static-date-header transition-opacity duration-0 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-sm">
+                            <span className="static-date-header transition-opacity duration-0 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
                                     {group.date}
                                 </span>
                             </div>
@@ -1578,7 +1578,7 @@ const handleLogout = async () => {
                         <div key={group.date} className="relative w-full" data-date={group.date}>
                             {/* STATIC INLINE DATE SEPARATOR */}
                             <div className="flex justify-center py-4 pointer-events-none">
-                                <span className="static-date-header transition-opacity duration-0 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-sm">
+                            <span className="static-date-header transition-opacity duration-0 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
                                     {group.date}
                                 </span>
                             </div>

@@ -786,7 +786,7 @@ const handleScroll = () => {
             dateHeaderTimeoutRef.current = setTimeout(() => {
                 setDateHeaderState('blinking'); 
                 setTimeout(() => setDateHeaderState('hidden'), 300); 
-            }, 900);
+            }, 1000);
         }
     } else {
         if (dateHeaderState !== 'hidden') setDateHeaderState('hidden');
@@ -795,7 +795,7 @@ const handleScroll = () => {
   
   const handleRollDice = async () => {
     if (!user || !activeChatId) return;
-    const diceMsg = `🎲 STREET_DICE_GAME|||{"p1Score":0,"p2Score":0,"turn":"p1","dice":[4,5,6],"message":"FIRST TO 5","msgColor":"text-zinc-500"}`;
+    const diceMsg = `🎲🎲🎲 STREET_DICE_GAME|||{"p1Score":0,"p2Score":0,"turn":"p1","dice":[4,5,6],"message":"FIRST TO 5","msgColor":"text-zinc-500"}`;
     try { await sendMessage(diceMsg, null, null, user.uid); scrollToBottom(); if (navigator.vibrate) navigator.vibrate(50); } catch (e) { console.error(e); }
   };
 

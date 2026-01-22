@@ -786,7 +786,7 @@ const handleScroll = () => {
             dateHeaderTimeoutRef.current = setTimeout(() => {
                 setDateHeaderState('blinking'); 
                 setTimeout(() => setDateHeaderState('hidden'), 300); 
-            }, 1000);
+            }, 900);
         }
     } else {
         if (dateHeaderState !== 'hidden') setDateHeaderState('hidden');

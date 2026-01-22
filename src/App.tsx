@@ -727,12 +727,17 @@ const handleScroll = () => {
 
     // --- PHASE 2: WRITE ---
     
-    // 1. Update UI States (Always run these)
-    if (isScrolled !== isTopScrolled) setIsTopScrolled(isScrolled);
+    // 1. Update UI States
+    // FIX: Only toggle header animation if USER is interacting
+    if (userInteractionRef.current) {
+        if (isScrolled !== isTopScrolled) setIsTopScrolled(isScrolled);
+    } else {
+        // If system is scrolling (load/send), ensure header stays visible
+        if (isTopScrolled) setIsTopScrolled(false);
+    }
+    
     setShowScrollButton(!isNearBottom);
     setIsChatScrolled(!isNearBottom);
-
-    setShowBackButton(true);
 
     // 2. Update Date Text
     if (activeDate !== visibleDate) setVisibleDate(activeDate);
@@ -743,7 +748,6 @@ const handleScroll = () => {
     }
 
     // 4. Handle Static Header Visibility (ONLY IF USER IS SCROLLING)
-    // If system is scrolling, we keep static headers visible and ignore this block
     if (userInteractionRef.current) {
         if (activeHeaderElement && activeHeaderElement !== lastHiddenHeaderRef.current) {
             if (lastHiddenHeaderRef.current) lastHiddenHeaderRef.current.style.opacity = '1';
@@ -755,7 +759,6 @@ const handleScroll = () => {
             lastHiddenHeaderRef.current = null;
         }
     } else {
-        // Reset static visibility if auto-scrolling
         if (lastHiddenHeaderRef.current) {
             lastHiddenHeaderRef.current.style.opacity = '1';
             lastHiddenHeaderRef.current = null;
@@ -774,7 +777,6 @@ const handleScroll = () => {
             }, 1000);
         }
     } else {
-        // If not user interaction, keep hidden
         if (dateHeaderState !== 'hidden') setDateHeaderState('hidden');
     }
   };
@@ -1442,7 +1444,7 @@ const handleLogout = async () => {
                 <div className="max-w-2xl mx-auto px-4 pt-3 flex items-center justify-between gap-3 relative">
                     
                     {/* LEFT PILL: BACK BUTTON (Slides Left on Scroll) */}
-                    <div className={`flex-none pointer-events-auto transition-all duration-1000 ease-in-out ${showBackButton ? 'translate-x-0 opacity-100' : '-translate-x-[200%] opacity-0'}`}>
+                    <div className={`flex-none pointer-events-auto transition-all duration-1000 ease-in-out ${!isTopScrolled ? 'translate-x-0 opacity-100' : '-translate-x-[200%] opacity-0'}`}>
                         <button 
                             onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
                             className="w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90"
@@ -1452,7 +1454,7 @@ const handleLogout = async () => {
                     </div>
 
                     {/* CENTER PILL: CONTEXT INFO (Slides Up on Scroll) */}
-                    <div className={`flex-1 min-w-0 pointer-events-auto flex justify-center z-10 transition-all duration-1000 ease-in-out ${showBackButton ? 'translate-y-0 opacity-100' : '-translate-y-[200%] opacity-0'}`}>
+                    <div className={`flex-1 min-w-0 pointer-events-auto flex justify-center z-10 transition-all duration-1000 ease-in-out ${!isTopScrolled ? 'translate-y-0 opacity-100' : '-translate-y-[200%] opacity-0'}`}>
                         <div className="bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.3)] h-11 flex items-center min-w-0 w-fit max-w-full px-1.5 transition-all duration-300">
                             {activeChatId !== 'saved_messages' ? (
                                <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 cursor-pointer group rounded-full hover:bg-white/5 transition-colors max-w-full pr-4 pl-0.5 py-0.5">
@@ -1492,7 +1494,7 @@ const handleLogout = async () => {
                     </div>
 
                     {/* RIGHT PILL: SEARCH (Slides Right on Scroll) */}
-                    <div className={`flex-none pointer-events-auto relative transition-all duration-1000 ease-in-out ${showBackButton ? 'translate-x-0 opacity-100' : 'translate-x-[200%] opacity-0'}`}>
+                    <div className={`flex-none pointer-events-auto relative transition-all duration-1000 ease-in-out ${!isTopScrolled ? 'translate-x-0 opacity-100' : 'translate-x-[200%] opacity-0'}`}>
                          <div className="flex items-center h-11">
                          <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={20} /></button>
                             

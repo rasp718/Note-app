@@ -1331,19 +1331,19 @@ const handleLogout = async () => {
                                     <button onClick={() => scrollContainer(bubbleListRef, 'left')} className="absolute left-0 top-0 bottom-2 w-12 bg-gradient-to-r from-[#1c1c1d] to-transparent z-20 flex items-center justify-start pl-2 cursor-pointer"><ChevronLeft size={20} className="text-white drop-shadow-md" /></button>
                                     <div ref={bubbleListRef} className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
                                         {[
-                                            { id: 'minimal_solid', label: 'Minimal', bg: 'bg-white', text: 'text-black', border: 'border-white' },
-                                            { id: 'midnight', label: 'Midnight', bg: 'bg-[#172554]', text: 'text-white', border: 'border-blue-900' },
-                                            { id: 'slate', label: 'Slate', bg: 'bg-[#475569]', text: 'text-white', border: 'border-slate-600' },
-                                            { id: 'solid_gray', label: 'Solid Gray', bg: 'bg-zinc-700', text: 'text-white', border: 'border-zinc-400' },
-                                            { id: 'whatsapp', label: 'Forest', bg: 'bg-[#005c4b]', text: 'text-white', border: 'border-[#25D366]' },
-                                            { id: 'telegram', label: 'Ocean', bg: 'bg-[#2b5278]', text: 'text-white', border: 'border-[#2AABEE]' },
-                                            { id: 'purple', label: 'Royal', bg: 'bg-[#6d28d9]', text: 'text-white', border: 'border-purple-500' },
-                                            { id: 'blue_gradient', label: 'Blue', bg: 'bg-gradient-to-br from-blue-500 to-blue-600', text: 'text-white', border: 'border-blue-500' },
+                                            { id: 'minimal_solid', label: 'Minimal', bg: 'bg-white', text: 'text-black' },
+                                            { id: 'midnight', label: 'Midnight', bg: 'bg-[#172554]', text: 'text-white' },
+                                            { id: 'slate', label: 'Slate', bg: 'bg-[#475569]', text: 'text-white' },
+                                            { id: 'solid_gray', label: 'Solid Gray', bg: 'bg-zinc-700', text: 'text-white' },
+                                            { id: 'whatsapp', label: 'Forest', bg: 'bg-[#005c4b]', text: 'text-white' },
+                                            { id: 'telegram', label: 'Ocean', bg: 'bg-[#2b5278]', text: 'text-white' },
+                                            { id: 'purple', label: 'Royal', bg: 'bg-[#6d28d9]', text: 'text-white' },
+                                            { id: 'blue_gradient', label: 'Blue', bg: 'bg-gradient-to-br from-blue-500 to-blue-600', text: 'text-white' },
                                         ].map((style) => (
                                             <button 
                                                 key={style.id} 
                                                 onClick={() => changeBubbleStyle(style.id)} 
-                                                className={`flex-shrink-0 w-28 h-16 rounded-xl border-2 transition-all flex items-center justify-center relative overflow-hidden snap-center shadow-[0_1px_1px_rgba(0,0,0,0.3)] ${bubbleStyle === style.id ? `${style.border} ring-1 ring-white/50 scale-95` : 'border-white/5 hover:border-white/20'}`} 
+                                                className={`flex-shrink-0 w-32 h-14 rounded-lg border transition-all flex items-center justify-center relative overflow-hidden snap-center shadow-[0_1px_1px_rgba(0,0,0,0.3)] ${bubbleStyle === style.id ? 'border-white ring-1 ring-white/50 scale-95' : 'border-zinc-700 hover:border-zinc-500'}`} 
                                             >
                                                 <div className={`absolute inset-0 ${style.bg}`} />
                                                 <span className={`relative z-10 text-xs font-bold uppercase tracking-wider ${style.text}`}>{style.label}</span>

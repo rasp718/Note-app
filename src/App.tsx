@@ -700,8 +700,7 @@ const toggleGroupMember = (uid: string) => {
         const group = dateGroups[i] as HTMLElement;
         const rect = group.getBoundingClientRect();
 
-        // Check if this group is the "Sticky" one (Starts above the line, ends below it)
-        // We add a generous buffer (2px) to prevent flickering at boundaries
+        // Check if this group is the "Sticky" one
         if (rect.top <= HEADER_OFFSET + 2 && rect.bottom > HEADER_OFFSET) {
             activeDate = group.getAttribute('data-date') || '';
             activeHeaderElement = group.querySelector('.static-date-header');
@@ -710,7 +709,6 @@ const toggleGroupMember = (uid: string) => {
             const nextGroup = dateGroups[i + 1] as HTMLElement;
             if (nextGroup) {
                 const nextRect = nextGroup.getBoundingClientRect();
-                // If next group is entering the sticky zone
                 if (nextRect.top < HEADER_OFFSET + HEADER_HEIGHT) {
                     pushOffset = nextRect.top - (HEADER_OFFSET + HEADER_HEIGHT);
                 }
@@ -733,30 +731,25 @@ const toggleGroupMember = (uid: string) => {
     setShowScrollButton(!isNearBottom);
     setIsChatScrolled(!isNearBottom);
 
-    setShowBackButton(false);
-    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-    scrollTimeoutRef.current = setTimeout(() => setShowBackButton(true), 1000);
+    // FIXED: Keep Header Visible (Prevent it from moving/hiding on scroll)
+    setShowBackButton(true);
 
     // 2. Update Date Text
     if (activeDate !== visibleDate) setVisibleDate(activeDate);
 
     // 3. Move Floater (Direct DOM for 60fps)
     if (floatingBubbleRef.current) {
-        floatingBubbleRef.current.style.transform = `translate3d(0, ${pushOffset}px, 0)`; // translate3d forces GPU acceleration
+        floatingBubbleRef.current.style.transform = `translate3d(0, ${pushOffset}px, 0)`;
     }
 
     // 4. Handle Static Header Visibility (The "Doubles" Fix)
-    // If we have a new active header, hide it.
     if (activeHeaderElement && activeHeaderElement !== lastHiddenHeaderRef.current) {
-        // Restore previous
         if (lastHiddenHeaderRef.current) {
             lastHiddenHeaderRef.current.style.opacity = '1';
         }
-        // Hide new
         activeHeaderElement.style.opacity = '0';
         lastHiddenHeaderRef.current = activeHeaderElement;
     } 
-    // If we have NO active header (e.g. at top), ensure last hidden is shown
     else if (!activeHeaderElement && lastHiddenHeaderRef.current) {
         lastHiddenHeaderRef.current.style.opacity = '1';
         lastHiddenHeaderRef.current = null;

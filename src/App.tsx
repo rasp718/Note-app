@@ -246,9 +246,9 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
             <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
             <div className="flex justify-between items-baseline">
                     <h3 className="font-bold text-white text-base truncate tracking-tight">{displayName}</h3>
-                    <span className="text-[11px] text-zinc-500 font-mono">{timestamp}</span>
+                    <span className="text-[11px] text-[#DA7756] font-mono">{timestamp}</span>
                 </div>
-                <p className="text-zinc-400 text-sm truncate">{lastMsg}</p>
+                <p className="text-[#DA7756] text-sm truncate">{lastMsg}</p>
             </div>
         </div>
     );
@@ -1459,7 +1459,7 @@ const handleLogout = async () => {
                     <div className={`flex-none pointer-events-auto transition-all duration-1000 ease-in-out ${!isTopScrolled ? 'translate-x-0 opacity-100' : '-translate-x-[200%] opacity-0'}`}>
                         <button 
                             onClick={() => { setCurrentView('list'); setActiveChatId(null); }} 
-                            className="w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90"
+                            className="w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90"
                         >
                             <ChevronLeft size={24} className="-ml-0.5" strokeWidth={3} />
                         </button>
@@ -1508,7 +1508,7 @@ const handleLogout = async () => {
                     {/* RIGHT PILL: SEARCH (Slides Right on Scroll) */}
                     <div className={`flex-none pointer-events-auto relative transition-all duration-1000 ease-in-out ${!isTopScrolled ? 'translate-x-0 opacity-100' : 'translate-x-[200%] opacity-0'}`}>
                          <div className="flex items-center h-11">
-                         <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={20} strokeWidth={3} /></button>
+                         <button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={20} strokeWidth={3} /></button>
                             
                             {/* FLOATING SEARCH INPUT */}
                             <div className={`absolute right-0 bg-[#1c1c1d] border border-white/20 shadow-2xl rounded-full flex items-center px-3 h-11 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[260px] opacity-100 z-50' : 'w-0 opacity-0 pointer-events-none'}`}>

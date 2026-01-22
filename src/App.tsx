@@ -1290,7 +1290,7 @@ const handleLogout = async () => {
                            </div>
                            <div className="flex items-center gap-5">
                                <div className="relative">
-                                   <div className="w-20 h-20 rounded-2xl bg-zinc-800 flex items-center justify-center text-3xl shadow-xl overflow-hidden">
+                                   <div className="w-20 h-20 rounded-2xl bg-zinc-800 flex items-center justify-center text-3xl shadow-[0_1px_1px_rgba(0,0,0,0.3)] overflow-hidden">
                                        {profilePic ? (<img key={profilePic} src={profilePic} className="w-full h-full object-cover" />) : (<span>😎</span>)}
                                    </div>
                                    {isEditingProfile && (

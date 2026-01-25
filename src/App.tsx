@@ -685,16 +685,12 @@ const handleScroll = () => {
 
     // --- PHASE 1: READ ---
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
-    
-    // Config
     const HEADER_OFFSET = 75; 
     const HEADER_HEIGHT = 45; 
 
-    // Standard UI State checks
     const isScrolled = scrollTop > 10;
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
 
-    // Find Active Date Logic
     const dateGroups = listRef.current.querySelectorAll('[data-date]');
     let activeDate = '';
     let pushOffset = 0;
@@ -719,47 +715,31 @@ const handleScroll = () => {
         }
     }
 
-    if (scrollTop < 50) {
-        activeDate = '';
-        pushOffset = 0;
-        activeHeaderElement = null;
-    }
+    if (scrollTop < 50) { activeDate = ''; pushOffset = 0; activeHeaderElement = null; }
 
     // --- PHASE 2: WRITE ---
-    
-    // 1. Update UI States (Header Animation Logic)
     if (userInteractionRef.current) {
         if (isScrolled) {
-            // Hide header immediately when scrolling starts/continues
             setIsTopScrolled(true);
-            
-            // Reset timer to Slide Back In after 900ms of inactivity
             if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-            scrollTimeoutRef.current = setTimeout(() => {
-                setIsTopScrolled(false);
-            }, 900);
+            scrollTimeoutRef.current = setTimeout(() => { setIsTopScrolled(false); }, 900);
         } else {
-            // We are at the very top, show immediately and clear timer
             setIsTopScrolled(false);
             if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
         }
     } else {
-        // If system is scrolling (load/send), ensure header stays visible
         if (isTopScrolled) setIsTopScrolled(false);
     }
     
     setShowScrollButton(!isNearBottom);
     setIsChatScrolled(!isNearBottom);
 
-    // 2. Update Date Text
     if (activeDate !== visibleDate) setVisibleDate(activeDate);
 
-    // 3. Move Floater
     if (floatingBubbleRef.current) {
         floatingBubbleRef.current.style.transform = `translate3d(0, ${pushOffset}px, 0)`;
     }
 
-    // 4. Handle Static Header Visibility (ONLY IF USER IS SCROLLING)
     if (userInteractionRef.current) {
         if (activeHeaderElement && activeHeaderElement !== lastHiddenHeaderRef.current) {
             if (lastHiddenHeaderRef.current) lastHiddenHeaderRef.current.style.opacity = '1';
@@ -771,22 +751,19 @@ const handleScroll = () => {
             lastHiddenHeaderRef.current = null;
         }
     } else {
-        if (lastHiddenHeaderRef.current) {
-            lastHiddenHeaderRef.current.style.opacity = '1';
-            lastHiddenHeaderRef.current = null;
-        }
+        if (lastHiddenHeaderRef.current) { lastHiddenHeaderRef.current.style.opacity = '1'; lastHiddenHeaderRef.current = null; }
     }
 
-    // 5. Visibility Timer Logic (ONLY IF USER IS SCROLLING)
+    // --- ANIMATION TRIGGER LOGIC ---
     if (activeDate && userInteractionRef.current) {
         if (dateHeaderState !== 'visible') setDateHeaderState('visible');
         if (dateHeaderTimeoutRef.current) clearTimeout(dateHeaderTimeoutRef.current);
 
         if (pushOffset === 0) {
             dateHeaderTimeoutRef.current = setTimeout(() => {
-                setDateHeaderState('blinking'); 
-                setTimeout(() => setDateHeaderState('hidden'), 300); 
-            }, 1000);
+                setDateHeaderState('blinking'); // Turns ORANGE
+                setTimeout(() => setDateHeaderState('hidden'), 100); // Fades out after 200ms
+            }, 800);
         }
     } else {
         if (dateHeaderState !== 'hidden') setDateHeaderState('hidden');
@@ -1521,21 +1498,28 @@ const handleLogout = async () => {
             </div>
 
             {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}
-            {/* FLOATING DATE HEADER (Animation Only) */}
-            <div 
+            {/* FLOATING DATE HEADER (No Border, Clean Flash) */}
+            <div
                 ref={floatingBubbleRef}
-                className={`fixed top-[75px] left-0 right-0 z-50 flex justify-center pointer-events-none will-change-transform transition-opacity duration-200 ease-out ${
-                    dateHeaderState === 'hidden' || !visibleDate ? 'opacity-0' : 'opacity-100'
-                }`}
+                className={`
+                    fixed top-[75px] left-0 right-0 z-50 flex justify-center pointer-events-none
+                    will-change-transform transition-all duration-900 ease-out
+                    ${dateHeaderState === 'hidden' || !visibleDate ? 'opacity-0 scale-90 translate-y-2' : 'opacity-100 scale-100 translate-y-0'}
+                `}
             >
-                <span className={`px-3 py-1 rounded-full text-[10px] font-normal capitalized shadow-[0_1px_1px_rgba(0,0,0,0.3)] transition-all duration-200 ${
-                    dateHeaderState === 'blinking' 
-                        ? 'bg-[#DA7756] text-white border border-[#DA7756] scale-110 shadow-[#DA7756]/40' 
-                        : 'bg-black/60 backdrop-blur-md border border-gray-400/10 text-white-400/90 shadow-black/50'
-                }`}>
-                    {visibleDate}
-                </span>
+                <div className="relative transition-transform duration-900 ease-[cubic-bezier(0.34,1.56,0.64,1)] scale-100">
+                    <span className={`
+                        px-3 py-1.5 rounded-full text-[10px] font-bold capitalize tracking-wide shadow-lg
+                        transition-colors duration-400
+                        ${dateHeaderState === 'blinking'
+                            ? 'bg-[#DA7756] text-white shadow-[0_2px_15px_rgba(218,119,86,0.4)]' // Orange Flash (No Border, softer glow)
+                            : 'bg-black text-zinc-300 backdrop-blur-md'} // Dark Mode (No Border)
+                    `}>
+                        {visibleDate}
+                    </span>
+                </div>
             </div>
+
 
 {/* SCROLL DOWN BUTTON */}
 <div className="fixed bottom-24 left-0 w-full z-40 pointer-events-none">
@@ -1565,7 +1549,7 @@ const handleLogout = async () => {
                         <div key={group.date} className="relative w-full" data-date={group.date}>
                             {/* STATIC INLINE DATE SEPARATOR */}
                             <div className="flex justify-center py-4 pointer-events-none">
-                            <span className="static-date-header transition-opacity duration-0 bg-black backdrop-blur-md border border-gray-400/10 px-3 py-1 rounded-full text-white text-[10px] font-normal capitalized shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
+                            <span className="static-date-header bg-black backdrop-blur-md px-3 py-1 rounded-full text-white text-[10px] font-normal capitalize shadow-[0_1px_1px_rgba(0,0,0,0.3)] opacity-100">
                                     {group.date}
                                 </span>
                             </div>
@@ -1606,7 +1590,7 @@ const handleLogout = async () => {
                         <div key={group.date} className="relative w-full" data-date={group.date}>
                             {/* STATIC INLINE DATE SEPARATOR */}
                             <div className="flex justify-center py-4 pointer-events-none">
-                            <span className="static-date-header transition-opacity duration-0 bg-black backdrop-blur-md border border-gray-400/10 px-3 py-1 rounded-full text-white text-[10px] font-normal capitalize shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
+                            <span className="static-date-header transition-opacity duration-0 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-[10px] font-normal capitalize shadow-sm">
                                     {group.date}
                                 </span>
                             </div>
@@ -2276,6 +2260,24 @@ const handleLogout = async () => {
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; } 
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes pulse-glow {
+            0% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.2); }
+            100% { opacity: 0.4; transform: scale(1); }
+        }
+
+        @keyframes pulse-pill {
+            0% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+            100% { opacity: 0.3; transform: scale(1); }
+        }
       `}</style>
     </div>
   );

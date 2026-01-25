@@ -246,7 +246,7 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
             <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
             <div className="flex justify-between items-baseline">
                     <h3 className="font-bold text-white text-base truncate tracking-tight">{displayName}</h3>
-                    <span className="inline-block text-[11px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{timestamp}</span>
+                    <span className="inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{timestamp}</span>
                 </div>
                 <p className="text-gray-400 text-sm truncate">{lastMsg}</p>
             </div>
@@ -1204,10 +1204,10 @@ const handleLogout = async () => {
                             </div>
                             <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
                                 <div className="flex justify-between items-baseline">
-                                    <span className="font-bold text-white text-base tracking-tight">Notes</span>
+                                    <span className="font-bold text-gray-400 text-base tracking-tight">Notes</span>
                                     <span className="inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{notes.length > 0 ? getDateLabel(notes[0].date) : ''}</span>
                                 </div>
-                                <div className="text-zinc-400 text-sm truncate pr-4 flex items-center gap-1">
+                                <div className="text-gray-400 text-sm truncate pr-4 flex items-center gap-1">
                                    <span className="text-[10px] font-bold uppercase tracking-wider px-1 rounded bg-white/10" style={{ color: accentColor }}>You</span>
                                    <span className="truncate">{notes.length > 0 ? notes[0].text : 'No notes yet'}</span>
                                 </div>
@@ -1528,10 +1528,10 @@ const handleLogout = async () => {
                     dateHeaderState === 'hidden' || !visibleDate ? 'opacity-0' : 'opacity-100'
                 }`}
             >
-                <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-[0_1px_1px_rgba(0,0,0,0.3)] transition-all duration-200 ${
+                <span className={`px-3 py-1 rounded-full text-[10px] font-normal capitalized shadow-[0_1px_1px_rgba(0,0,0,0.3)] transition-all duration-200 ${
                     dateHeaderState === 'blinking' 
                         ? 'bg-[#DA7756] text-white border border-[#DA7756] scale-110 shadow-[#DA7756]/40' 
-                        : 'bg-black/60 backdrop-blur-md border border-white/10 text-white/90 shadow-black/50'
+                        : 'bg-black/60 backdrop-blur-md border border-gray-400/10 text-white-400/90 shadow-black/50'
                 }`}>
                     {visibleDate}
                 </span>
@@ -1565,7 +1565,7 @@ const handleLogout = async () => {
                         <div key={group.date} className="relative w-full" data-date={group.date}>
                             {/* STATIC INLINE DATE SEPARATOR */}
                             <div className="flex justify-center py-4 pointer-events-none">
-                            <span className="static-date-header transition-opacity duration-0 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
+                            <span className="static-date-header transition-opacity duration-0 bg-black backdrop-blur-md border border-gray-400/10 px-3 py-1 rounded-full text-white text-[10px] font-normal capitalized shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
                                     {group.date}
                                 </span>
                             </div>
@@ -1606,7 +1606,7 @@ const handleLogout = async () => {
                         <div key={group.date} className="relative w-full" data-date={group.date}>
                             {/* STATIC INLINE DATE SEPARATOR */}
                             <div className="flex justify-center py-4 pointer-events-none">
-                            <span className="static-date-header transition-opacity duration-0 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-white/90 text-[11px] font-bold uppercase tracking-widest shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
+                            <span className="static-date-header transition-opacity duration-0 bg-black backdrop-blur-md border border-gray-400/10 px-3 py-1 rounded-full text-white text-[10px] font-normal capitalize shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
                                     {group.date}
                                 </span>
                             </div>

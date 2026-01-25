@@ -1,0 +1,33 @@
+
+# 2026-01-25 15:58:07.127198
++y
+
+# 2026-01-25 15:59:29.625659
++/model openrouter/deepseek/deepseek-chat
+
+# 2026-01-25 16:04:19.054966
++fot the center note header pill, make the logo inside a circle pill centered left, My Notes to the Right of it and below it for the all section it should say All, for Ideas secion it should say Ideas, for Journal it should say Journal, for to do it should say To-Do. the categoy text should go below the white my notes text. The category text should be claude orand and smaller than the my notes text. pel
+
+# 2026-01-25 16:05:11.518845
++y
+
+# 2026-01-25 16:08:12.566006
++/undo
+
+# 2026-01-25 16:08:24.930568
++/drop src\components\NoteCard.tsx
+
+# 2026-01-25 16:08:39.192577
++/drop src\index.css
+
+# 2026-01-25 16:09:56.802398
++The changes were supposed to be to the center pill in the header. not on the note cards them selves. also please make sure the header doesnt lose the function to slide away as it oes now
+
+# 2026-01-25 16:14:05.066283
++/undo
+
+# 2026-01-25 16:17:05.914913
++that didnt seem to work. the purpose of this is so that when the user changes the section to write the note in he knows what section that is because it says it on the top in the flfloating center pill header. maybe we try it again? the logo that is in the pil should be in another circle pill centered left in the center pill. My Notes in white letter and below it the category section of the notes. when you switch sections the text in the center pill switches to correspond with it.  
+
+# 2026-01-25 16:32:22.669846
++/undo

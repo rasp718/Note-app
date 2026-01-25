@@ -246,9 +246,9 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
             <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
             <div className="flex justify-between items-baseline">
                     <h3 className="font-bold text-white text-base truncate tracking-tight">{displayName}</h3>
-                    <span className="text-[11px] text-[#DA7756] font-mono">{timestamp}</span>
+                    <span className="inline-block text-[11px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{timestamp}</span>
                 </div>
-                <p className="text-[#DA7756] text-sm truncate">{lastMsg}</p>
+                <p className="text-gray-400 text-sm truncate">{lastMsg}</p>
             </div>
         </div>
     );
@@ -1205,9 +1205,9 @@ const handleLogout = async () => {
                             <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
                                 <div className="flex justify-between items-baseline">
                                     <span className="font-bold text-white text-base tracking-tight">Notes</span>
-                                    <span className="text-[10px] text-zinc-500 font-mono">{notes.length > 0 ? getDateLabel(notes[0].date) : ''}</span>
+                                    <span className="inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{notes.length > 0 ? getDateLabel(notes[0].date) : ''}</span>
                                 </div>
-                                <div className="text-zinc-200 text-sm truncate pr-4 flex items-center gap-1">
+                                <div className="text-zinc-400 text-sm truncate pr-4 flex items-center gap-1">
                                    <span className="text-[10px] font-bold uppercase tracking-wider px-1 rounded bg-white/10" style={{ color: accentColor }}>You</span>
                                    <span className="truncate">{notes.length > 0 ? notes[0].text : 'No notes yet'}</span>
                                 </div>
@@ -1905,7 +1905,7 @@ const handleLogout = async () => {
                             
                             {currentChatObject?.type !== 'group' && (
                                 <div className="p-3 hover:bg-white/5 rounded-xl flex gap-4 transition-colors">
-                                    <div className="text-zinc-500 mt-0.5 flex-shrink-0"><AtSign size={20} /></div>
+                                    <div className="text-zinc-400 mt-0.5 flex-shrink-0"><AtSign size={20} /></div>
                                     <div className="flex-1 min-w-0 border-b border-white/5 pb-3">
                                         <p className="text-white text-[14px]">{otherChatUser?.handle || `@${otherChatUser?.displayName?.replace(/\s/g,'').toLowerCase()}`}</p>
                                         <p className="text-[12px] text-zinc-500 mt-0.5 uppercase tracking-wide font-bold">Username</p>
@@ -1914,7 +1914,7 @@ const handleLogout = async () => {
                             )}
 
                             <div className="p-3 hover:bg-white/5 rounded-xl flex gap-4 transition-colors cursor-pointer" onClick={toggleMute}>
-                                <div className="text-zinc-500 mt-0.5 flex-shrink-0"><Bell size={20} /></div>
+                                <div className="text-zinc-400 mt-0.5 flex-shrink-0"><Bell size={20} /></div>
                                 <div className="flex-1 min-w-0 flex items-center justify-between">
                                     <div>
                                         <p className="text-white text-[14px]">Notifications</p>

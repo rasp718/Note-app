@@ -37,8 +37,9 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-zinc-100 flex items-center justify-center p-4 font-sans">
-      <div className="w-full max-w-md">
+    // FIXED: Changed min-h-screen to fixed inset-0 to prevent layout shifting on mobile
+    <div className="fixed inset-0 bg-black text-zinc-100 flex items-center justify-center p-4 font-sans overflow-y-auto">
+      <div className="w-full max-w-md my-auto">
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <div className="w-16 h-16 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-2xl">
@@ -70,7 +71,8 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-black border border-zinc-800 rounded-lg pl-10 pr-4 py-3 text-zinc-300 text-sm focus:outline-none focus:border-orange-500 transition-colors placeholder:text-zinc-700"
+                  // FIXED: Changed text-sm to text-[16px] to prevent iOS zoom
+                  className="w-full bg-black border border-zinc-800 rounded-lg pl-10 pr-4 py-3 text-[16px] text-zinc-300 focus:outline-none focus:border-orange-500 transition-colors placeholder:text-zinc-700"
                   placeholder="you@example.com"
                   required
                 />
@@ -88,7 +90,8 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-black border border-zinc-800 rounded-lg pl-10 pr-4 py-3 text-zinc-300 text-sm focus:outline-none focus:border-orange-500 transition-colors placeholder:text-zinc-700"
+                  // FIXED: Changed text-sm to text-[16px] to prevent iOS zoom
+                  className="w-full bg-black border border-zinc-800 rounded-lg pl-10 pr-4 py-3 text-[16px] text-zinc-300 focus:outline-none focus:border-orange-500 transition-colors placeholder:text-zinc-700"
                   placeholder="••••••••"
                   required
                   minLength={6}
@@ -96,15 +99,17 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
               </div>
             </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-900/20 border border-red-900/50 rounded-lg p-3 flex items-start gap-2">
-                <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={16} />
-                <p className="text-red-400 text-xs leading-relaxed">
-                  {error.replace('Firebase: ', '').replace(/\(auth.*?\)\.?/g, '')}
-                </p>
-              </div>
-            )}
+            {/* Error Message Spacer - Prevents layout jumping */}
+            <div className="min-h-[52px] flex items-center">
+              {error && (
+                <div className="w-full bg-red-900/20 border border-red-900/50 rounded-lg p-3 flex items-start gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={16} />
+                  <p className="text-red-400 text-xs leading-relaxed">
+                    {error.replace('Firebase: ', '').replace(/\(auth.*?\)\.?/g, '')}
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Submit Button */}
             <button
@@ -138,7 +143,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
               setIsLogin(!isLogin);
               setError('');
             }}
-            className="text-zinc-500 hover:text-orange-500 text-xs font-medium transition-colors"
+            className="text-zinc-500 hover:text-orange-500 text-[13px] font-medium transition-colors p-2"
           >
             {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
           </button>

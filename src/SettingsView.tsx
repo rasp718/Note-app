@@ -32,7 +32,7 @@ interface SettingsViewProps {
   isAutoRedMode: boolean;
   onToggleRedMode: () => void;
   bgScale: number;
-  setBgScale: (val: number) => void;
+  setBgScale: (val: number) => void; // Keeping prop for compatibility, even if UI is removed
   bgOpacity: number;
   setBgOpacity: (val: number) => void;
   bgIndex: number;
@@ -87,7 +87,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Smooth Scroll Listener
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
-    // Animate over the first 150px of scrolling
     const progress = Math.min(scrollTop / 150, 1);
     setScrollProgress(progress);
   };
@@ -95,38 +94,42 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const isCollapsed = scrollProgress > 0.9;
 
   // --- ANIMATION CONSTANTS ---
-  const p = isEditingProfile ? 0 : scrollProgress; // Freeze animation if editing
+  const p = isEditingProfile ? 0 : scrollProgress;
   
-  // Header height
-  // 340px -> 80px (Reduced from 110px for tighter fit)
+  // Header height: 340px -> 80px
   const headerHeight = 340 - (p * 260); 
   
-  // AVATAR MATH (Centered & sliding up)
-  // Size: 150px -> 40px (Slightly smaller to fit in 80px header)
+  // Avatar Math
   const avatarSize = 150 - (p * 110); 
-  // Top: 40px -> 10px (Less padding at top)
   const avatarTop = 40 - (p * 30); 
 
-  // TEXT MATH (Centered & sliding up below avatar)
-  // Start: 210px (below large avatar) -> End: 52px (tightly tucked under small avatar)
+  // Text Math
   const textTop = 210 - (p * 158); 
-  
-  // Opacity for Name (Fades out completely)
   const nameOpacity = Math.max(0, 1 - (p * 1.5));
-  
-  // Opacity for Green Dot (Fades in ONLY when small)
-  // Starts fading in after 50% scroll
   const dotOpacity = p > 0.5 ? (p - 0.5) * 2 : 0;
-
-  // Opacity for Bio (Fades out quickly)
   const fadeOutOpacity = 1 - (p * 3); 
 
   return (
     <div className="flex-1 h-full relative overflow-hidden bg-black">
       
-      {/* 
-        1. FIXED HEADER
-      */}
+      {/* 0. BACKGROUND IMAGE LAYER */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div 
+          className="absolute inset-0 transition-all duration-500 ease-out will-change-transform"
+          style={{
+            opacity: bgOpacity, 
+            transform: `scale(${bgScale / 100})`, 
+          }}
+        >
+          <img 
+            src={`/bg${bgIndex}.jpg`} 
+            alt="background" 
+            className="w-full h-full object-cover"
+          />
+        </div>
+      </div>
+
+      {/* 1. FIXED HEADER */}
       <div 
         className="absolute top-0 left-0 right-0 z-50 overflow-hidden border-b transition-all duration-100 ease-out"
         style={{ 
@@ -138,14 +141,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       >
         <div className="relative w-full h-full max-w-2xl mx-auto">
           
-          {/* LEFT ACTION: QR CODE */}
+          {/* LEFT: QR CODE */}
           <div className="absolute top-5 left-4 z-50">
              <button onClick={onShowQRCode} className="w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors backdrop-blur-md active:scale-90">
                 <QrCode size={20} />
              </button>
           </div>
 
-          {/* RIGHT ACTION: EDIT / SAVE */}
+          {/* RIGHT: EDIT / SAVE */}
           <div className="absolute top-5 right-4 z-50">
              {isEditingProfile ? (
               <button onClick={onProfileSave} className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.3)] hover:scale-105 transition-transform active:scale-90">
@@ -158,7 +161,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             )}
           </div>
           
-          {/* AVATAR CONTAINER */}
+          {/* AVATAR */}
           <div 
             className="absolute z-20 will-change-transform left-1/2 -translate-x-1/2"
             style={{
@@ -167,14 +170,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               height: isEditingProfile ? '150px' : `${avatarSize}px`,
             }}
           >
-            {/* The Image */}
             <div className={`w-full h-full rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden shadow-2xl border border-white/10 relative transition-all duration-300 ${isCollapsed ? 'ring-0' : 'ring-4 ring-black/40'}`}>
               {profilePic ? (
                 <img src={profilePic} className="w-full h-full object-cover" />
               ) : (
                 <User className="text-zinc-500" size={isEditingProfile ? 50 : (avatarSize * 0.4)} />
               )}
-              
               {isEditingProfile && (
                 <label className="absolute inset-0 bg-black/60 flex items-center justify-center cursor-pointer hover:bg-black/70 transition-colors backdrop-blur-[2px]">
                   <Camera size={32} className="text-white drop-shadow-md" />
@@ -183,7 +184,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )}
             </div>
 
-            {/* Glowing Green Online Dot - ONLY VISIBLE WHEN SCROLLED */}
             {!isEditingProfile && (
               <div 
                 className="absolute bottom-[5%] right-[5%] bg-green-500 rounded-full border-2 border-black transition-all duration-300 shadow-[0_0_12px_rgba(34,197,94,0.8)]"
@@ -196,18 +196,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               />
             )}
 
-            {/* Grid Preset Button (Only editing) */}
             {isEditingProfile && (
-              <button 
-                onClick={() => setShowAvatarSelector(!showAvatarSelector)} 
-                className="absolute bottom-0 right-0 w-10 h-10 bg-zinc-800 rounded-full border border-white/20 flex items-center justify-center text-white hover:bg-zinc-700 transition-colors shadow-lg animate-in zoom-in"
-              >
+              <button onClick={() => setShowAvatarSelector(!showAvatarSelector)} className="absolute bottom-0 right-0 w-10 h-10 bg-zinc-800 rounded-full border border-white/20 flex items-center justify-center text-white hover:bg-zinc-700 transition-colors shadow-lg animate-in zoom-in">
                 <Grid size={18} />
               </button>
             )}
           </div>
 
-          {/* NAME & HANDLE */}
+          {/* NAME */}
           <div 
             className="absolute flex flex-col items-center justify-center min-w-0 will-change-transform left-1/2 -translate-x-1/2"
             style={{
@@ -216,7 +212,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               zIndex: 10
             }}
           >
-            {/* NAME - Fades out on scroll */}
             {isEditingProfile ? (
               <input 
                 type="text" 
@@ -232,7 +227,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   fontSize: '28px',
                   lineHeight: 1.1,
                   opacity: nameOpacity,
-                  height: `${nameOpacity * 30}px`, // Collapse height as it fades
+                  height: `${nameOpacity * 30}px`,
                   marginBottom: `${nameOpacity * 4}px`,
                   overflow: 'hidden'
                 }}
@@ -241,12 +236,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </h2>
             )}
             
-            {/* HANDLE - Stays visible */}
             <div 
               className="flex items-center gap-1 transition-all duration-300"
               style={{ 
                 opacity: 0.7,
-                transform: `scale(${1 - (p * 0.1)})` // Slight shrink
+                transform: `scale(${1 - (p * 0.1)})`
               }}
             >
               <p className="font-mono tracking-wide text-zinc-400 text-xs">
@@ -255,7 +249,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          {/* BIO (Fades out) */}
+          {/* BIO */}
           <div 
             className="absolute top-[280px] left-0 right-0 px-8 flex justify-center transition-all duration-0"
             style={{ 
@@ -277,7 +271,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )}
           </div>
 
-          {/* AVATAR SELECTOR DRAWER */}
+          {/* AVATAR DRAWER */}
           {isEditingProfile && showAvatarSelector && (
             <div className="absolute top-[340px] left-0 right-0 z-30 px-4 animate-in slide-in-from-bottom-4 fade-in duration-300">
               <div className="bg-[#1c1c1d] border border-white/10 rounded-3xl p-4 grid grid-cols-7 gap-3 shadow-2xl">
@@ -293,26 +287,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* 
-        2. CONTENT SCROLL VIEW
-        Padding Top matches the expanded header height (340px)
-      */}
+      {/* 2. CONTENT SCROLL VIEW */}
       <div 
         ref={scrollRef}
-        className="absolute inset-0 overflow-y-auto no-scrollbar pt-[340px] pb-32 px-4"
+        className="absolute inset-0 overflow-y-auto no-scrollbar pt-[340px] pb-32 px-4 z-10"
         onScroll={handleScroll}
       >
-        <div className="max-w-2xl mx-auto w-full space-y-6">
+        <div className="max-w-2xl mx-auto w-full space-y-3">
           
           {/* INTERFACE SETTINGS */}
-          <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-6 space-y-6 shadow-xl backdrop-blur-md">
-            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-              <SlidersHorizontal size={14}/> Interface
-            </h3>
-
+          <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-4 space-y-4 shadow-xl backdrop-blur-md">
+            
             {/* BUBBLE STYLES */}
-            <div className="space-y-3">
-              <label className="text-white text-sm font-medium flex items-center gap-2"><PaintBucket size={14}/> Chat Bubble Style</label>
+            <div className="space-y-2">
+              <label className="text-white text-sm font-medium flex items-center gap-2 px-1"><PaintBucket size={14}/> Chat Bubble Style</label>
               <div className="relative group/scroll">
                 <button onClick={() => scrollContainer(bubbleListRef, 'left')} className="absolute left-0 top-0 bottom-2 w-12 bg-gradient-to-r from-zinc-900 to-transparent z-20 flex items-center justify-start pl-2 cursor-pointer"><ChevronLeft size={20} className="text-white drop-shadow-md" /></button>
                 <div ref={bubbleListRef} className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
@@ -341,8 +329,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             {/* REPLY THEME */}
-            <div className="space-y-3 pt-4 border-t border-white/5">
-              <label className="text-white text-sm font-medium flex items-center gap-2"><MessageSquareDashed size={14}/> Reply Colors</label>
+            <div className="space-y-2 pt-3 border-t border-white/5">
+              <label className="text-white text-sm font-medium flex items-center gap-2 px-1"><MessageSquareDashed size={14}/> Reply Colors</label>
               <div className="relative group/scroll">
                 <button onClick={() => scrollContainer(replyListRef, 'left')} className="absolute left-0 top-0 bottom-2 w-12 bg-gradient-to-r from-zinc-900 to-transparent z-20 flex items-center justify-start pl-2 cursor-pointer"><ChevronLeft size={20} className="text-white drop-shadow-md" /></button>
                 <div ref={replyListRef} className="flex overflow-x-auto gap-3 pb-2 px-2 no-scrollbar snap-x snap-mandatory">
@@ -370,19 +358,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            {/* RED MODE */}
-            <div className="space-y-4 pt-4 border-t border-white/5">
-              <button onClick={onToggleRedMode} className={`w-full py-3 rounded-xl border flex items-center justify-between px-4 transition-all ${isAutoRedMode ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}><span className="font-medium flex items-center gap-2 text-sm"><Moon size={16} /> Auto Night Shift</span><div className={`w-10 h-6 rounded-full relative transition-colors ${isAutoRedMode ? 'bg-white' : 'bg-zinc-700'}`}><div className={`absolute top-1 left-1 bg-black w-4 h-4 rounded-full transition-transform ${isAutoRedMode ? 'translate-x-4' : 'translate-x-0'}`} /></div></button>
-              <p className="text-xs text-zinc-500 px-1">{isAutoRedMode ? "Automatically enables red filter after sunset (6 PM - 6 AM)." : "Night shift is disabled."}</p>
+            {/* RED MODE - REFACTORED */}
+            <div className="pt-3 border-t border-white/5">
+              <button onClick={onToggleRedMode} className={`w-full py-3 rounded-xl border flex items-center justify-between px-4 transition-all ${isAutoRedMode ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}>
+                <div className="flex flex-col items-start gap-1">
+                   <span className="font-medium flex items-center gap-2 text-sm"><Moon size={16} /> Auto Night Shift</span>
+                   <span className="text-[10px] text-zinc-500 font-normal text-left leading-tight">Enables red filter after sunset (6 PM - 6 AM).</span>
+                </div>
+                <div className={`w-10 h-6 rounded-full relative flex-shrink-0 transition-colors ${isAutoRedMode ? 'bg-white' : 'bg-zinc-700'}`}>
+                  <div className={`absolute top-1 left-1 bg-black w-4 h-4 rounded-full transition-transform ${isAutoRedMode ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+              </button>
             </div>
 
-            {/* WALLPAPER SLIDERS */}
-            <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Wallpaper Scale</label><span className="text-zinc-500 text-xs font-mono">{bgScale >= 100 ? 'COVER' : `${bgScale}%`}</span></div><input type="range" min="20" max="100" step="5" value={bgScale} onChange={(e) => setBgScale(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
-            <div className="space-y-3"><div className="flex justify-between"><label className="text-white text-sm font-medium">Opacity</label><span className="text-zinc-500 text-xs font-mono">{Math.round(bgOpacity * 100)}%</span></div><input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" /></div>
+            {/* WALLPAPER OPACITY (Scale removed) */}
+            <div className="space-y-2 pt-2 border-t border-white/5">
+                <div className="flex justify-between px-1">
+                    <label className="text-white text-sm font-medium">Wallpaper Opacity</label>
+                    <span className="text-zinc-500 text-xs font-mono">{Math.round(bgOpacity * 100)}%</span>
+                </div>
+                <input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" />
+            </div>
           </div>
 
-          {/* BACKGROUND GRID */}
-          <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-6 space-y-4 shadow-xl backdrop-blur-md relative">
+          {/* BACKGROUND GRID - LARGER PREVIEWS */}
+          <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-4 space-y-4 shadow-xl backdrop-blur-md relative">
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2"><ImageIcon size={14}/> Backgrounds</h3>
             <div className="relative group/scroll">
               <button onClick={() => scrollContainer(bgListRef, 'left')} className="absolute left-0 top-0 bottom-2 w-10 bg-gradient-to-r from-zinc-900 to-transparent z-20 flex items-center justify-start pl-1 cursor-pointer hover:bg-black/10 transition-colors"><ChevronLeft size={20} className="text-white drop-shadow-lg" /></button>
@@ -391,7 +391,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <button
                     key={num}
                     onClick={() => setBgIndex(num)}
-                    className={`flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-2 transition-all relative group snap-center ${bgIndex === num ? 'border-white scale-95 opacity-100 ring-2 ring-white/20' : 'border-transparent opacity-100 hover:opacity-90 hover:border-white/20'}`}
+                    // CHANGED: w-24 h-24 -> w-32 h-56 (Tall Phone aspect ratio)
+                    className={`flex-shrink-0 w-32 h-56 rounded-xl overflow-hidden border-2 transition-all relative group snap-center ${bgIndex === num ? 'border-white scale-95 opacity-100 ring-2 ring-white/20' : 'border-transparent opacity-100 hover:opacity-90 hover:border-white/20'}`}
                   >
                     <img src={`/bg${num}.jpg`} className="w-full h-full object-cover" alt={`bg${num}`} />
                   </button>
@@ -401,9 +402,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          {/* LOGOUT BUTTON */}
-          <button onClick={onLogout} className="w-full py-4 bg-red-500/10 border border-red-500/20 rounded-3xl text-red-500 font-bold text-center hover:bg-red-500/20 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2">
-            <LogOut size={18} />
+          {/* LOGOUT BUTTON - SMALLER */}
+          <button onClick={onLogout} className="w-full py-2.5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-sm font-bold text-center hover:bg-red-500/20 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2">
+            <LogOut size={16} />
             Log Out
           </button>
         </div>

@@ -1176,12 +1176,12 @@ return (
 <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-left-8 fade-in duration-500`}>
 <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
 <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
-{activeFilter === 'secret' ? (<Terminal className="text-zinc-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
+{activeFilter === 'secret' ? (<Terminal className="text-green-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
 </div>
 </div>
 <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
 <div className="flex justify-between items-baseline">
-<span className="font-bold text-gray-400 text-base tracking-tight">Notes</span>
+<span className="font-bold text-white text-base tracking-tight">My Notes</span>
 <span className="inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{notes.length > 0 ? getDateLabel(notes[0].date) : ''}</span>
 </div>
 <div className="text-gray-400 text-sm truncate pr-4 flex items-center gap-1">
@@ -1436,7 +1436,7 @@ Log Out
 <div className={`flex-none pointer-events-auto transition-all duration-1000 ease-in-out ${!isTopScrolled ? 'translate-x-0 opacity-100' : '-translate-x-[200%] opacity-0'}`}>
 <button
 onClick={() => { setCurrentView('list'); setActiveChatId(null); }}
-className="w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90"
+className="w-11 h-11 flex items-center justify-center rounded-full bg-[#09090b]/90 backdrop-blur-xl border border-white/10 text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90"
 >
 <ChevronLeft size={24} className="-ml-0.5" strokeWidth={3} />
 </button>
@@ -1444,7 +1444,7 @@ className="w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/
 
 {/* CENTER PILL: CONTEXT INFO (Slides Up on Scroll) */}
 <div className={`flex-1 min-w-0 pointer-events-auto flex justify-center z-10 transition-all duration-1000 ease-in-out ${!isTopScrolled ? 'translate-y-0 opacity-100' : '-translate-y-[200%] opacity-0'}`}>
-  <div className="bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.3)] h-11 flex items-center min-w-0 w-fit max-w-full px-1.5 transition-all duration-300">
+  <div className="bg-[#09090b]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.3)] h-11 flex items-center min-w-0 w-fit max-w-full px-1.5 transition-all duration-300">
     {activeChatId !== 'saved_messages' ? (
       // 1. CHAT HEADER (Restored fully so it doesn't break)
       <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 cursor-pointer group rounded-full hover:bg-white/5 transition-colors max-w-full pr-4 pl-0.5 py-0.5">
@@ -1504,10 +1504,10 @@ className="w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/
 {/* RIGHT PILL: SEARCH (Slides Right on Scroll) */}
 <div className={`flex-none pointer-events-auto relative transition-all duration-1000 ease-in-out ${!isTopScrolled ? 'translate-x-0 opacity-100' : 'translate-x-[200%] opacity-0'}`}>
 <div className="flex items-center h-11">
-<button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-11 h-11 flex items-center justify-center rounded-full bg-[#1c1c1d]/90 backdrop-blur-xl border border-white/10 text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={20} strokeWidth={3} /></button>
+<button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-11 h-11 flex items-center justify-center rounded-full bg-[#09090b]/90 backdrop-blur-xl border border-white/10 text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={20} strokeWidth={3} /></button>
 
 {/* FLOATING SEARCH INPUT */}
-<div className={`absolute right-0 bg-[#1c1c1d] border border-white/20 shadow-2xl rounded-full flex items-center px-3 h-11 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[260px] opacity-100 z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
+<div className={`absolute right-0 bg-[#09090b] border border-white/20 shadow-2xl rounded-full flex items-center px-3 h-11 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[260px] opacity-100 z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
 <input ref={searchInputRef} type="text" placeholder={TRANSLATIONS.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onBlur={() => { if(!searchQuery) setIsSearchExpanded(false); }} className="bg-transparent border-none outline-none text-white text-sm w-full h-full placeholder:text-zinc-600 min-w-0"/>
 <button onClick={() => { setSearchQuery(''); setIsSearchExpanded(false); }} className="p-1 text-zinc-500 hover:text-white flex-shrink-0"><X size={16} /></button>
 </div>
@@ -1544,7 +1544,7 @@ ${dateHeaderState === 'blinking'
 <div className="fixed bottom-24 left-0 w-full z-40 pointer-events-none">
 <div className="max-w-2xl mx-auto px-4 relative">
 <div className={`absolute right-4 bottom-0 transition-all duration-300 ${showScrollButton ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-<button onClick={() => scrollToBottom()} className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10 text-white shadow-[0_1px_1px_rgba(0,0,0,0.3)] flex items-center justify-center hover:bg-zinc-700 active:scale-95 transition-all backdrop-blur-md">
+<button onClick={() => scrollToBottom()} className="w-10 h-10 rounded-full bg-[#09090b]/90 border border-white/10 text-white shadow-[0_1px_1px_rgba(0,0,0,0.3)] flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all backdrop-blur-md">
 <ChevronDown size={24} strokeWidth={2} />
 </button>
 </div>
@@ -1640,7 +1640,7 @@ replyTheme={replyTheme}
 </div>
 </div>
 
-<div className="flex-none w-full px-2 py-1.5 bg-black/80 backdrop-blur-2xl z-50 border-t border-white/5">
+<div className="flex-none w-full px-2 py-1.5 bg-[#09090b]/90 backdrop-blur-2xl z-50 border-t border-white/5">
 {/* REPLY PREVIEW BAR */}
 {replyingTo && (() => {
 const senderName = replyingTo.displayName || (replyingTo.senderId === user?.uid ? 'You' : 'Unknown');

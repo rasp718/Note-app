@@ -79,7 +79,7 @@ return (
 </div>
 <div className="text-zinc-500 text-xs truncate">{userData?.handle || (userData?.isOnline ? 'Online' : 'Last seen recently')}</div>
 </div>
-{isAdmin && <span className="text-[#DA7756] text-[10px] font-bold uppercase tracking-wider">Admin</span>}
+{isAdmin && <span className="text-[#F97316] text-[10px] font-bold uppercase tracking-wider">Admin</span>}
 
 {/* Admin Actions */}
 {isViewerAdmin && !isAdmin && (
@@ -219,7 +219,7 @@ return (
 <div onClick={onClick} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 group ${active ? 'bg-white/10' : ''}`}>
 {isEditing && (
 <div className="flex items-center pr-2" onClick={(e) => { e.stopPropagation(); onSelect(); }}>
-<div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${active ? 'bg-[#DA7756] border-[#DA7756]' : 'border-zinc-600'}`}>
+<div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${active ? 'bg-[#F97316] border-[#F97316]' : 'border-zinc-600'}`}>
 {active && <Check size={12} className="text-white" strokeWidth={3} />}
 </div>
 </div>
@@ -560,7 +560,7 @@ const { messages: activeMessages, sendMessage, deleteMessage, updateMessage, mar
 
 const activeSecretConfig = HACKER_CONFIG;
 const isHackerMode = activeFilter === 'secret' || editingNote?.category === 'secret';
-const accentColor = isHackerMode ? HACKER_GREEN : CLAUDE_ORANGE;
+const accentColor = isHackerMode ? HACKER_GREEN : '#F97316';
 const navAccentColor = isHackerMode ? HACKER_GREEN : '#ffffff';
 
 const currentTheme = {
@@ -1342,7 +1342,7 @@ className="w-11 h-11 flex items-center justify-center rounded-full bg-[#09090b]/
           <span className="font-black text-white text-[13px] tracking-wide uppercase leading-none">
             MY NOTES
           </span>
-          <span className={`text-[11px] font-bold font-mono uppercase leading-none tracking-wider ${activeFilter === 'secret' ? 'text-green-500' : 'text-[#DA7756]'}`}>
+          <span className={`text-[11px] font-bold font-mono uppercase leading-none tracking-wider ${activeFilter === 'secret' ? 'text-green-500' : 'text-[#F97316]'}`}>
             {activeFilter === 'secret' ? 'ANONYMOUS' : (activeFilter === 'all' ? 'ALL' : activeFilter)}
           </span>
         </div>
@@ -1381,7 +1381,7 @@ ${dateHeaderState === 'hidden' || !visibleDate ? 'opacity-0 scale-90 translate-y
 px-3 py-1.5 rounded-full text-[10px] font-bold capitalize tracking-wide shadow-lg
 transition-colors duration-400
 ${dateHeaderState === 'blinking'
-? 'bg-[#DA7756] text-white shadow-[0_2px_15px_rgba(218,119,86,0.4)]' // Orange Flash (No Border, softer glow)
+? 'bg-[#F97316] text-white shadow-[0_2px_15px_rgba(249,115,22,0.4)]' // Orange Flash (No Border, softer glow)
 : 'bg-black text-zinc-300 backdrop-blur-md'} // Dark Mode (No Border)
 `}>
 {visibleDate}
@@ -1536,7 +1536,7 @@ return (
 <div className="flex-1 flex items-center justify-center gap-0.5 h-4 opacity-50 overflow-hidden"> {!isPaused && [...Array(12)].map((_, i) => ( <div key={i} className="w-1 rounded-full animate-pulse bg-white" style={{ height: `${Math.random() * 100}%`, animationDuration: '0.4s', animationDelay: `${i * 0.05}s` }} /> ))} </div>
 <button onClick={togglePause} className="z-20 w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-zinc-800 text-white hover:bg-zinc-700"> {isPaused ? <Play size={12} fill="white" /> : <Pause size={12} fill="white" />} </button>
 </div>
-<button onClick={finishRecording} className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full bg-[#DA7756] text-white shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"> <ArrowUp size={20} strokeWidth={3} /> </button>
+<button onClick={finishRecording} className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full bg-[#F97316] text-white shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"> <ArrowUp size={20} strokeWidth={3} /> </button>
 </div>
 ) : (
 <>
@@ -1590,8 +1590,8 @@ style={isHackerMode ? { color: HACKER_GREEN } : undefined}
 {(transcript.trim() || imageUrl || editingNote) ? (
 <button onClick={handleMainAction} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${
 isSendingAnim
-? 'scale-110 bg-white text-[#DA7756] shadow-[#DA7756]/50'
-: 'active:scale-95 bg-[#DA7756] text-white hover:bg-[#c46243]'
+? 'scale-110 bg-white text-[#F97316] shadow-[#F97316]/50'
+: 'active:scale-95 bg-[#F97316] text-white hover:bg-[#EA580C]'
 }`}>
 {editingNote ? <Check size={18} strokeWidth={3} /> : <ArrowUp size={22} strokeWidth={3} />}
 </button>
@@ -1677,7 +1677,7 @@ className="w-full h-full object-cover transition-transform duration-500 group-ho
 type="text"
 value={editGroupName}
 onChange={(e) => setEditGroupName(e.target.value)}
-className="bg-transparent border-b-2 border-white/50 py-1 text-white font-black text-3xl w-full focus:outline-none focus:border-[#DA7756] placeholder:text-white/30 drop-shadow-md"
+className="bg-transparent border-b-2 border-white/50 py-1 text-white font-black text-3xl w-full focus:outline-none focus:border-[#F97316] placeholder:text-white/30 drop-shadow-md"
 placeholder="Group Name"
 />
 </div>
@@ -1715,7 +1715,7 @@ rows={2}
 {isEditingGroupInfo && (
 <div className="flex gap-2 px-4 py-4 border-b border-white/5 animate-in slide-in-from-top-2 duration-200 sticky top-0 bg-[#1c1c1d] z-40">
 <button onClick={() => setIsEditingGroupInfo(false)} className="flex-1 py-3 rounded-xl bg-zinc-800 text-white font-bold text-sm hover:bg-zinc-700 transition-colors">Cancel</button>
-<button onClick={handleSaveGroupInfo} className="flex-1 py-3 rounded-xl bg-[#DA7756] text-white font-bold text-sm hover:bg-[#c46243] transition-colors shadow-lg shadow-orange-900/20">Save Changes</button>
+<button onClick={handleSaveGroupInfo} className="flex-1 py-3 rounded-xl bg-[#F97316] text-white font-bold text-sm hover:bg-[#EA580C] transition-colors shadow-lg shadow-orange-900/20">Save Changes</button>
 </div>
 )}
 
@@ -1746,11 +1746,11 @@ rows={2}
 onClick={(e) => { e.stopPropagation(); handleAddToContacts(); }}
 className="w-full flex items-center gap-4 p-3 hover:bg-white/5 rounded-xl transition-colors text-left group mb-2"
 >
-<div className="w-9 h-9 rounded-full bg-[#DA7756]/10 flex items-center justify-center text-[#DA7756] group-hover:bg-[#DA7756] group-hover:text-white transition-colors border border-[#DA7756]/20">
+<div className="w-9 h-9 rounded-full bg-[#F97316]/10 flex items-center justify-center text-[#F97316] group-hover:bg-[#F97316] group-hover:text-white transition-colors border border-[#F97316]/20">
 <UserPlus size={20} />
 </div>
 <div className="flex-1 min-w-0 border-b border-white/5 pb-2">
-<p className="text-[#DA7756] text-[15px] font-bold">Add to Contacts</p>
+<p className="text-[#F97316] text-[15px] font-bold">Add to Contacts</p>
 <p className="text-[12px] text-zinc-500 mt-0.5">Save this user to your list</p>
 </div>
 </button>
@@ -1773,7 +1773,7 @@ className="w-full flex items-center gap-4 p-3 hover:bg-white/5 rounded-xl transi
 <p className="text-white text-[14px]">Notifications</p>
 <p className="text-[12px] text-zinc-500 mt-0.5">{mutedChats.has(activeChatId) ? 'Disabled' : 'Enabled'}</p>
 </div>
-<div className={`w-9 h-5 rounded-full relative transition-colors ${!mutedChats.has(activeChatId) ? 'bg-[#DA7756]' : 'bg-zinc-700'}`}>
+<div className={`w-9 h-5 rounded-full relative transition-colors ${!mutedChats.has(activeChatId) ? 'bg-[#F97316]' : 'bg-zinc-700'}`}>
 <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${!mutedChats.has(activeChatId) ? 'translate-x-4' : 'translate-x-0'}`} />
 </div>
 </div>
@@ -1794,7 +1794,7 @@ className="w-full flex items-center gap-4 p-3 hover:bg-white/5 rounded-xl transi
 <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-white group-hover:bg-zinc-700 transition-colors">
 <UserPlus size={18} />
 </div>
-<span className="text-[#DA7756] text-[14px] font-bold">Add Members</span>
+<span className="text-[#F97316] text-[14px] font-bold">Add Members</span>
 </button>
 </div>
 )}
@@ -1854,7 +1854,7 @@ className="w-full flex items-center gap-4 p-3 hover:bg-red-500/10 rounded-xl tra
 ) : (
 savedContacts.map(contact => (
 <div key={contact.uid} onClick={() => toggleGroupMember(contact.uid)} className="flex items-center gap-4 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors">
-<div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${groupMembers.has(contact.uid) ? 'bg-[#DA7756] border-[#DA7756]' : 'border-zinc-600'}`}>
+<div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${groupMembers.has(contact.uid) ? 'bg-[#F97316] border-[#F97316]' : 'border-zinc-600'}`}>
 {groupMembers.has(contact.uid) && <Check size={14} className="text-white" strokeWidth={3} />}
 </div>
 <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden">
@@ -1886,7 +1886,7 @@ type="text"
 placeholder="Group Name"
 value={groupName}
 onChange={(e) => setGroupName(e.target.value)}
-className="w-full bg-black/50 border border-white/10 rounded-xl p-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#DA7756] transition-colors text-center font-bold text-lg"
+className="w-full bg-black/50 border border-white/10 rounded-xl p-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#F97316] transition-colors text-center font-bold text-lg"
 />
 <div className="text-center text-xs text-zinc-500">{groupMembers.size} members selected</div>
 </div>
@@ -1905,7 +1905,7 @@ Next ({groupMembers.size})
 <button
 onClick={handleCreateGroup}
 disabled={!groupName.trim()}
-className="w-full py-3 bg-[#DA7756] text-white font-bold rounded-xl disabled:opacity-50 transition-all active:scale-95"
+className="w-full py-3 bg-[#F97316] text-white font-bold rounded-xl disabled:opacity-50 transition-all active:scale-95"
 >
 Create Group
 </button>
@@ -1938,7 +1938,7 @@ savedContacts.filter(c => !currentChatObject?.participants.includes(c.uid)).map(
 <div className="font-bold text-white truncate">{contact.displayName}</div>
 <div className="text-xs text-zinc-500 truncate">{contact.handle}</div>
 </div>
-<div className="w-8 h-8 flex items-center justify-center text-[#DA7756]"><UserPlus size={20} /></div>
+<div className="w-8 h-8 flex items-center justify-center text-[#F97316]"><UserPlus size={20} /></div>
 </div>
 ))
 )}
@@ -2116,7 +2116,7 @@ Cancel
 {/* Send - ROUND BUTTON with Arrow */}
 <button
 onClick={handleMainAction}
-className="w-12 h-12 rounded-full bg-[#DA7756] text-white flex items-center justify-center hover:bg-[#c46243] transition-all active:scale-95 shadow-lg shadow-orange-900/20"
+className="w-12 h-12 rounded-full bg-[#F97316] text-white flex items-center justify-center hover:bg-[#EA580C] transition-all active:scale-95 shadow-lg shadow-orange-900/20"
 >
 <ArrowUp size={24} strokeWidth={3} />
 </button>

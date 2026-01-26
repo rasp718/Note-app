@@ -1115,135 +1115,14 @@ return (
 </div>
 )}
 
-{activeTab === 'settings' && (
-<div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
-<div className="max-w-2xl mx-auto w-full"><h1 className="text-3xl font-black text-white tracking-tighter">SYSTEM</h1></div>
-</div>
-)}
-
 {activeTab === 'contacts' && (
 <div key={activeTab} className="flex-none pt-14 pb-4 px-6 flex items-end justify-between bg-gradient-to-b from-black/80 to-transparent sticky top-0 z-20">
 <div className="max-w-2xl mx-auto w-full"><h1 className="text-3xl font-black text-white tracking-tighter">CONTACTS</h1></div>
 </div>
 )}
 
-<div key={activeTab + 'content'} className="flex-1 overflow-y-auto no-scrollbar pb-24">
-<div className="max-w-2xl mx-auto w-full">
-
-{/* -- CHATS TAB -- */}
-{activeTab === 'chats' && (
-<>
-<div className="px-4 mb-4">
-<div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-white/50 shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
-<Search size={16} className="text-zinc-500" />
-<input type="text" placeholder="Search frequency..." className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-medium"/>
-</div>
-</div>
-
-<div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-left-8 fade-in duration-500`}>
-<div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
-<div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
-{activeFilter === 'secret' ? (<Terminal className="text-green-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
-</div>
-</div>
-<div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-<div className="flex justify-between items-baseline">
-<span className="font-bold text-white text-base tracking-tight">My Notes</span>
-<span className="inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{notes.length > 0 ? getDateLabel(notes[0].date) : ''}</span>
-</div>
-<div className="text-gray-400 text-sm truncate pr-4 flex items-center gap-1">
-<span className="text-[10px] font-bold uppercase tracking-wider px-1 rounded bg-white/10" style={{ color: accentColor }}>You</span>
-<span className="truncate">{notes.length > 0 ? notes[0].text : 'No notes yet'}</span>
-</div>
-</div>
-</div>
-
-{realChats.reduce((acc: any[], chat) => {
-const existingIndex = chat.type === 'group' ? -1 : acc.findIndex(c => c.otherUserId === chat.otherUserId);
-if (existingIndex > -1) {
-if ((chat.lastMessageTimestamp || 0) > (acc[existingIndex].lastMessageTimestamp || 0)) {
-acc[existingIndex] = chat;
-}
-} else {
-acc.push(chat);
-}
-return acc;
-}, []).sort((a, b) => (b.lastMessageTimestamp || 0) - (a.lastMessageTimestamp || 0)).map((chat) => (
-<ChatRow
-key={chat.id}
-chat={chat}
-active={isEditing ? selectedChatIds.has(chat.id) : false}
-isEditing={isEditing}
-onSelect={() => toggleChatSelection(chat.id)}
-onClick={() => { setActiveChatId(chat.id); setCurrentView('room'); scrollToBottom('auto'); }}
-/>
-))}
-</>
-)}
-
-{/* -- CONTACTS TAB -- */}
-{activeTab === 'contacts' && (
-<div className="p-4 space-y-6">
-<form onSubmit={handleSearchContacts} className="relative">
-<div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-3 gap-3 focus-within:border-white/50 transition-colors">
-<AtSign size={18} className="text-zinc-500" />
-<input type="text" value={contactSearchQuery} onChange={(e) => setContactSearchQuery(e.target.value)} placeholder="Search by handle (e.g. @neo)" className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-mono"/>
-<button type="submit" disabled={isSearchingContacts} className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all disabled:opacity-50"><Search size={16} /></button>
-</div>
-</form>
-<div onClick={() => setShowQRCode(true)} className="bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-black/50 transition-all shadow-lg">
-<div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-black">
-<QrCode size={24} />
-</div>
-<div className="flex-1">
-<h3 className="font-bold text-white">My QR Code</h3>
-<p className="text-xs text-zinc-500">Tap to share your profile</p>
-</div>
-<ChevronLeft size={16} className="rotate-180 text-zinc-500" />
-</div>
-
-<div className="space-y-3 pt-4">
-<h3 className="text-xs font-bold text-white/80 drop-shadow-md shadow-black uppercase tracking-widest px-1 pl-2">
-{contactSearchQuery ? 'Search Results' : 'Saved Contacts'}
-</h3>
-
-{isSearchingContacts ? (
-<div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div></div>
-) : contactSearchQuery ? (
-contactSearchResults.length > 0 ? (
-contactSearchResults.map((u) => (
-<div key={u.uid} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-2 fade-in duration-300">
-<div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden">
-{u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}
-</div>
-<div className="flex-1"><h3 className="font-bold text-white">{u.displayName}</h3><p className="text-xs text-zinc-500 font-mono">{u.handle}</p></div>
-<button onClick={() => startNewChat(u.uid)} className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all"><MessageCircle size={20} /></button>
-</div>
-))
-) : (
-<div className="text-center py-10 opacity-30"><p className="text-zinc-500 text-sm">No users found.</p></div>
-)
-) : (
-savedContacts.length > 0 ? (
-savedContacts.map((u) => (
-<div key={u.uid} onClick={() => startNewChat(u.uid)} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors animate-in slide-in-from-bottom-2 fade-in duration-300">
-<div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden">
-{u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}
-</div>
-<div className="flex-1"><h3 className="font-bold text-white">{u.displayName}</h3><p className="text-xs text-zinc-500 font-mono">{u.handle}</p></div>
-<ChevronLeft size={16} className="rotate-180 text-zinc-500" />
-</div>
-))
-) : (
-<div className="text-center py-10 opacity-30"><UserPlus size={48} className="mx-auto mb-4 text-zinc-600" /><p className="text-zinc-500 text-sm">Your contact list is empty.</p></div>
-)
-)}
-</div>
-</div>
-)}
-
-{/* -- SETTINGS TAB -- */}
-{activeTab === 'settings' && (
+{/* -- SETTINGS TAB (Has its own scroller) -- */}
+{activeTab === 'settings' ? (
   <SettingsView 
     profileName={profileName}
     setProfileName={setProfileName}
@@ -1273,10 +1152,124 @@ savedContacts.map((u) => (
     bgIndex={bgIndex}
     setBgIndex={setBgIndex}
   />
-)}
+) : (
+  /* -- CHATS & CONTACTS TAB (Shared Scroller) -- */
+  <div key={activeTab + 'content'} className="flex-1 overflow-y-auto no-scrollbar pb-24">
+    <div className="max-w-2xl mx-auto w-full">
+      {/* -- CHATS TAB -- */}
+      {activeTab === 'chats' && (
+        <>
+          <div className="px-4 mb-4">
+            <div className="bg-white/5 border border-white/10 rounded-2xl flex items-center px-4 py-2.5 gap-3 transition-colors focus-within:bg-black/40 focus-within:border-white/50 shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
+              <Search size={16} className="text-zinc-500" />
+              <input type="text" placeholder="Search frequency..." className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-medium"/>
+            </div>
+          </div>
 
-</div>
-</div>
+          <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-left-8 fade-in duration-500`}>
+            <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
+              <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
+                {activeFilter === 'secret' ? (<Terminal className="text-green-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
+              </div>
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+              <div className="flex justify-between items-baseline">
+                <span className="font-bold text-white text-base tracking-tight">My Notes</span>
+                <span className="inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{notes.length > 0 ? getDateLabel(notes[0].date) : ''}</span>
+              </div>
+              <div className="text-gray-400 text-sm truncate pr-4 flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-1 rounded bg-white/10" style={{ color: accentColor }}>You</span>
+                <span className="truncate">{notes.length > 0 ? notes[0].text : 'No notes yet'}</span>
+              </div>
+            </div>
+          </div>
+
+          {realChats.reduce((acc: any[], chat) => {
+            const existingIndex = chat.type === 'group' ? -1 : acc.findIndex(c => c.otherUserId === chat.otherUserId);
+            if (existingIndex > -1) {
+              if ((chat.lastMessageTimestamp || 0) > (acc[existingIndex].lastMessageTimestamp || 0)) {
+                acc[existingIndex] = chat;
+              }
+            } else {
+              acc.push(chat);
+            }
+            return acc;
+          }, []).sort((a, b) => (b.lastMessageTimestamp || 0) - (a.lastMessageTimestamp || 0)).map((chat) => (
+            <ChatRow
+              key={chat.id}
+              chat={chat}
+              active={isEditing ? selectedChatIds.has(chat.id) : false}
+              isEditing={isEditing}
+              onSelect={() => toggleChatSelection(chat.id)}
+              onClick={() => { setActiveChatId(chat.id); setCurrentView('room'); scrollToBottom('auto'); }}
+            />
+          ))}
+        </>
+      )}
+
+      {/* -- CONTACTS TAB -- */}
+      {activeTab === 'contacts' && (
+        <div className="p-4 space-y-6">
+          <form onSubmit={handleSearchContacts} className="relative">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center px-4 py-3 gap-3 focus-within:border-white/50 transition-colors">
+              <AtSign size={18} className="text-zinc-500" />
+              <input type="text" value={contactSearchQuery} onChange={(e) => setContactSearchQuery(e.target.value)} placeholder="Search by handle (e.g. @neo)" className="bg-transparent border-none outline-none text-white text-base w-full placeholder:text-zinc-600 font-mono"/>
+              <button type="submit" disabled={isSearchingContacts} className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all disabled:opacity-50"><Search size={16} /></button>
+            </div>
+          </form>
+          <div onClick={() => setShowQRCode(true)} className="bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-black/50 transition-all shadow-lg">
+            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-black">
+              <QrCode size={24} />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-white">My QR Code</h3>
+              <p className="text-xs text-zinc-500">Tap to share your profile</p>
+            </div>
+            <ChevronLeft size={16} className="rotate-180 text-zinc-500" />
+          </div>
+
+          <div className="space-y-3 pt-4">
+            <h3 className="text-xs font-bold text-white/80 drop-shadow-md shadow-black uppercase tracking-widest px-1 pl-2">
+              {contactSearchQuery ? 'Search Results' : 'Saved Contacts'}
+            </h3>
+
+            {isSearchingContacts ? (
+              <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div></div>
+            ) : contactSearchQuery ? (
+              contactSearchResults.length > 0 ? (
+                contactSearchResults.map((u) => (
+                  <div key={u.uid} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                    <div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden">
+                      {u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}
+                    </div>
+                    <div className="flex-1"><h3 className="font-bold text-white">{u.displayName}</h3><p className="text-xs text-zinc-500 font-mono">{u.handle}</p></div>
+                    <button onClick={() => startNewChat(u.uid)} className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all"><MessageCircle size={20} /></button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-10 opacity-30"><p className="text-zinc-500 text-sm">No users found.</p></div>
+              )
+            ) : (
+              savedContacts.length > 0 ? (
+                savedContacts.map((u) => (
+                  <div key={u.uid} onClick={() => startNewChat(u.uid)} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors animate-in slide-in-from-bottom-2 fade-in duration-300">
+                    <div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden">
+                      {u.photoURL ? (<img src={u.photoURL} className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-xl">🤖</div>)}
+                    </div>
+                    <div className="flex-1"><h3 className="font-bold text-white">{u.displayName}</h3><p className="text-xs text-zinc-500 font-mono">{u.handle}</p></div>
+                    <ChevronLeft size={16} className="rotate-180 text-zinc-500" />
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-10 opacity-30"><UserPlus size={48} className="mx-auto mb-4 text-zinc-600" /><p className="text-zinc-500 text-sm">Your contact list is empty.</p></div>
+              )
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+)}
 <BottomTabBar />
 </div>
 )}

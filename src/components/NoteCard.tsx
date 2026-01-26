@@ -292,12 +292,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   return (
     <>
       <div 
-        className={`relative ${outerWidthClass} overflow-visible group select-none`} 
+        className={`relative ${outerWidthClass} overflow-visible group`} 
         onContextMenu={handleContextMenu} 
         onDoubleClick={handleDoubleTap}
       >
         <div 
-            className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${innerWidthClass} ${shadowClass} relative transition-all duration-300 ease-out select-none`} 
+            className={`${bgColor} ${chatBorderClasses} ${radiusClass} ${paddingClass} ${innerWidthClass} ${shadowClass} relative transition-all duration-300 ease-out`} 
             style={{ transform: `translateX(${swipeOffset}px)`, opacity: isExiting ? 0 : 1 }} 
             onTouchStart={handleTouchStart} 
             onTouchMove={handleTouchMove} 
@@ -390,7 +390,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               {/* Text Layout: Use block+float to wrap status icon naturally at bottom right */}
               <div className={`block w-full px-2 pb-1 pt-0.5 relative`}>
                   {safeText && (
-                      <span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor}`}>
+                      <span className={`text-[16px] leading-snug whitespace-pre-wrap break-words ${textColor} select-text cursor-text`}>
                           {safeText}
                       </span>
                   )}

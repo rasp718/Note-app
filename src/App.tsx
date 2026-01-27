@@ -255,6 +255,32 @@ return (
 );
 };
 
+// -----------------------------------------------------------------------
+// LOCAL AI BRIDGE (OLLAMA)
+// -----------------------------------------------------------------------
+const talkToLocalAI = async (text: string) => {
+  // We use 'localhost' because the server is running on THIS computer
+  const API_URL = "http://localhost:11434/api/chat"; 
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "llama3.1", // Make sure this matches what you downloaded (llama3.1 or llama3.2)
+        messages: [{ role: "user", content: text }],
+        stream: false 
+      })
+    });
+
+    const data = await response.json();
+    return data.message.content; // The AI's reply
+  } catch (error) {
+    console.error("AI Error:", error);
+    return "Error: My brain is offline. Check the PowerShell window.";
+  }
+};
+
 function App() {
 // ============================================================================
 // SECTION: STATE MANAGEMENT
@@ -776,6 +802,28 @@ finalImageUrl = await fileToBase64(originalFile) as string;
 }
 
 if (activeChatId === 'saved_messages' || activeChatId === null) {
+  
+  // --- START AI TRIGGER ---
+  if (activeFilter === 'secret' && !editingNote) {
+    // 1. Save YOUR message first
+    await addNote({ text: transcript.trim(), date: Date.now(), category: 'secret', isPinned: false, isExpanded: true, imageUrl: finalImageUrl || undefined });
+    
+    const userPrompt = transcript.trim();
+
+    // 2. Clear input immediately
+    setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
+
+    // 3. Talk to Ollama (Async)
+    talkToLocalAI(userPrompt).then(async (aiResponse) => {
+       // 4. Save AI Response
+       await addNote({ text: aiResponse, date: Date.now(), category: 'secret', isPinned: false, isExpanded: true });
+       scrollToBottom();
+    });
+
+    return; // STOP here so we don't run the normal save logic below
+  }
+  // --- END AI TRIGGER ---
+
 if (editingNote) {
 const updates: Partial<Note> = { text: transcript.trim(), editedAt: Date.now() };
 if (finalImageUrl !== editingNote.imageUrl) updates.imageUrl = finalImageUrl || undefined;
@@ -911,6 +959,13 @@ setIsUploadingImage(false);
 }
 };
 const handlePaste = async (e: React.ClipboardEvent) => {
+// 1. Allow plain text to paste naturally (Fix for iPhone/Browsers)
+const textData = e.clipboardData.getData('text');
+if (textData && !textData.startsWith('data:image')) {
+return; 
+}
+
+// 2. Handle Clipboard Items (Images)
 const items = e.clipboardData.items;
 for (let i = 0; i < items.length; i++) {
 if (items[i].type.indexOf('image') !== -1) {
@@ -921,8 +976,8 @@ return;
 }
 }
 
-const textData = e.clipboardData.getData('text');
-if (textData.startsWith('data:image')) {
+// 3. Handle Base64 Image Text
+if (textData && textData.startsWith('data:image')) {
 e.preventDefault();
 try {
 const res = await fetch(textData);
@@ -1394,7 +1449,7 @@ ${dateHeaderState === 'blinking'
 <div className="fixed bottom-24 left-0 w-full z-40 pointer-events-none">
 <div className="max-w-2xl mx-auto px-4 relative">
 <div className={`absolute right-4 bottom-0 transition-all duration-300 ${showScrollButton ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-<button onClick={() => scrollToBottom()} className="w-10 h-10 rounded-full bg-[#09090b]/90 border border-white/10 text-white shadow-[0_1px_1px_rgba(0,0,0,0.3)] flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all backdrop-blur-md">
+<button onClick={() => scrollToBottom()} className="w-11 h-11 rounded-full bg-[#09090b]/90 border border-white/10 text-white shadow-[0_1px_1px_rgba(0,0,0,0.3)] flex items-center justify-center hover:bg-white/10 active:scale-90 transition-all backdrop-blur-xl">
 <ChevronDown size={24} strokeWidth={2} />
 </button>
 </div>

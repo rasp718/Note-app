@@ -260,7 +260,7 @@ return (
 // -----------------------------------------------------------------------
 const talkToLocalAI = async (text: string) => {
   // We use 'localhost' because the server is running on THIS computer
-  const API_URL = "http://localhost:11434/api/chat"; 
+  const API_URL = "http://127.0.0.1:11434/api/chat"; 
 
   try {
     const response = await fetch(API_URL, {

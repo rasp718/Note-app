@@ -258,25 +258,32 @@ return (
 // -----------------------------------------------------------------------
 // LOCAL AI BRIDGE (OLLAMA)
 // -----------------------------------------------------------------------
-const talkToLocalAI = async (text: string) => {
-  // We use 'localhost' because the server is running on THIS computer
-  const API_URL = "http://127.0.0.1:11434/api/chat"; 
+const talkToLocalAI = async (text: string) => {  // <--- YOU WERE MISSING THIS LINE
+  const API_URL = "http://127.0.0.1:11434/api/chat";
+
+  console.log("Sending to Brain..."); 
 
   try {
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "llama3.1", // Make sure this matches what you downloaded (llama3.1 or llama3.2)
+        model: "llama3.1", 
         messages: [{ role: "user", content: text }],
-        stream: false 
+        stream: false
       })
     });
 
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("Brain Rejected:", err);
+      return "Error: Brain rejected the message. Check F12 console.";
+    }
+
     const data = await response.json();
-    return data.message.content; // The AI's reply
+    return data.message.content;
   } catch (error) {
-    console.error("AI Error:", error);
+    console.error("Network Error:", error);
     return "Error: My brain is offline. Check the PowerShell window.";
   }
 };

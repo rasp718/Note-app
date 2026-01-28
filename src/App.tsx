@@ -200,66 +200,79 @@ replyTheme={replyTheme}
 
 // Fixed Chat Row
 const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
-const otherUser = useUser(chat.otherUserId);
-const isGroup = chat.type === 'group';
-const displayName = isGroup ? chat.displayName : (otherUser?.displayName || 'Unknown');
-const photoURL = isGroup ? chat.photoURL : otherUser?.photoURL;
+  const otherUser = useUser(chat.otherUserId);
+  const isGroup = chat.type === 'group';
+  const displayName = isGroup ? chat.displayName : (otherUser?.displayName || 'Unknown');
+  const photoURL = isGroup ? chat.photoURL : otherUser?.photoURL;
 
-let lastMsg = chat.lastMessageText || '';
-if (lastMsg.includes("|||RPLY|||")) {
-lastMsg = lastMsg.split("|||RPLY|||")[1] || 'Reply';
-}
-if (lastMsg.includes("STREET_DICE_GAME")) {
-lastMsg = "🎲 Dice Game";
-}
+  let lastMsg = chat.lastMessageText || '';
+  if (lastMsg.includes("|||RPLY|||")) {
+    lastMsg = lastMsg.split("|||RPLY|||")[1] || 'Reply';
+  }
+  if (lastMsg.includes("STREET_DICE_GAME")) {
+    lastMsg = "🎲 Dice Game";
+  }
 
-const timestamp = chat.lastMessageTimestamp ? getDateLabel(chat.lastMessageTimestamp) : '';
+  const timestamp = chat.lastMessageTimestamp ? getDateLabel(chat.lastMessageTimestamp) : '';
 
-return (
-<div onClick={onClick} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 group ${active ? 'bg-white/10' : ''}`}>
-{isEditing && (
-<div className="flex items-center pr-2" onClick={(e) => { e.stopPropagation(); onSelect(); }}>
-<div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${active ? 'bg-[#F97316] border-[#F97316]' : 'border-zinc-600'}`}>
-{active && <Check size={12} className="text-white" strokeWidth={3} />}
-</div>
-</div>
-)}
-<div className="w-14 h-14 flex-shrink-0 relative group/icon">
-<div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center overflow-hidden shadow-[0_1px_1px_rgba(0,0,0,0.3)] relative">
-{photoURL ? (
-<img src={photoURL} className="w-full h-full object-cover transition-transform duration-500 group-hover/icon:scale-110" alt="avatar" />
-) : (
-<span className="text-zinc-500 font-bold text-xl">{isGroup ? <Users size={28} /> : displayName?.[0]}</span>
-)}
-</div>
-{!isGroup && otherUser?.isOnline && (
-<div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-black z-10"></div>
-)}
+  return (
+    <div onClick={onClick} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 group ${active ? 'bg-white/10' : ''}`}>
+      {isEditing && (
+        <div className="flex items-center pr-2" onClick={(e) => { e.stopPropagation(); onSelect(); }}>
+          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${active ? 'bg-[#F97316] border-[#F97316]' : 'border-zinc-600'}`}>
+            {active && <Check size={12} className="text-white" strokeWidth={3} />}
+          </div>
+        </div>
+      )}
+      <div className="w-14 h-14 flex-shrink-0 relative group/icon">
+        <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center overflow-hidden shadow-[0_1px_1px_rgba(0,0,0,0.3)] relative">
+          {photoURL ? (
+            <img src={photoURL} className="w-full h-full object-cover transition-transform duration-500 group-hover/icon:scale-110" alt="avatar" />
+          ) : (
+            <span className="text-zinc-500 font-bold text-xl">{isGroup ? <Users size={28} /> : displayName?.[0]}</span>
+          )}
+        </div>
+        {!isGroup && otherUser?.isOnline && (
+          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-black z-10"></div>
+        )}
 
-{(chat.unreadCount > 0 || (chat.id === 'saved_messages' && !active)) && (
-<div className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-[#ff3b30] rounded-full border-[2px] border-[#09090b] z-20 flex items-center justify-center shadow-sm animate-in zoom-in duration-300">
-<span className="text-[10px] font-bold text-white leading-none font-sans translate-y-[0.5px]">
-{chat.unreadCount || 1}
-</span>
-</div>
-)}
-</div>
-<div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-<div className="flex justify-between items-baseline">
-<h3 className="font-bold text-white text-base truncate tracking-tight">{displayName}</h3>
-<span className="inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{timestamp}</span>
-</div>
-<p className="text-gray-400 text-sm truncate">{lastMsg}</p>
-</div>
-</div>
-);
+        {/* Note: Kept the red badge on avatar if you still want it there, otherwise remove this block */}
+        {(chat.unreadCount > 0 || (chat.id === 'saved_messages' && !active)) && (
+          <div className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-[#ff3b30] rounded-full border-[2px] border-[#09090b] z-20 flex items-center justify-center shadow-sm animate-in zoom-in duration-300">
+            <span className="text-[10px] font-bold text-white leading-none font-sans translate-y-[0.5px]">
+              {chat.unreadCount || 1}
+            </span>
+          </div>
+        )}
+      </div>
+      
+      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+        {/* ROW 1: Name and Date */}
+        <div className="flex justify-between items-baseline">
+          <h3 className="font-bold text-white text-base truncate tracking-tight flex-1 pr-2">{displayName}</h3>
+          <span className="flex-shrink-0 inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{timestamp}</span>
+        </div>
+
+        {/* ROW 2: Message and Unread Pill (Grey/Black Style) */}
+        <div className="flex justify-between items-center">
+          <p className="text-gray-400 text-sm truncate flex-1 pr-2">{lastMsg}</p>
+          
+          {chat.unreadCount > 0 && (
+             <span className="flex-shrink-0 inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5 animate-in zoom-in duration-300">
+               {chat.unreadCount}
+             </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // -----------------------------------------------------------------------
 // LOCAL AI BRIDGE (OLLAMA)
 // -----------------------------------------------------------------------
 const talkToLocalAI = async (text: string) => {  // <--- YOU WERE MISSING THIS LINE
-  const API_URL = "http://127.0.0.1:11434/api/chat";
+  const API_URL = "http://127.0.0.1:11434/api/chat ";
 
   console.log("Sending to Brain..."); 
 
@@ -268,7 +281,7 @@ const talkToLocalAI = async (text: string) => {  // <--- YOU WERE MISSING THIS L
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "llama3.1", 
+        model: "llama3.1:latest", 
         messages: [{ role: "user", content: text }],
         stream: false
       })
@@ -1148,7 +1161,7 @@ return (
 <p className="text-zinc-500 font-mono">{profileHandle}</p>
 </div>
 <div className="bg-white p-2 rounded-xl border-2 border-black">
-<img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${window.location.origin}/invite/${profileHandle.replace('@','')}`} alt="QR Code" className="w-full h-full" />
+<img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data= ${window.location.origin}/invite/${profileHandle.replace('@','')}`} alt="QR Code" className="w-full h-full" />
 </div>
 <p className="text-xs text-center text-zinc-400">Scan to connect securely</p>
 <button onClick={() => setShowQRCode(false)} className="w-full py-3 bg-black text-white font-bold rounded-xl">Close</button>
@@ -1348,7 +1361,7 @@ return (
 <div className={`flex-none pointer-events-auto transition-all duration-1000 ease-in-out ${!isTopScrolled ? 'translate-x-0 opacity-100' : '-translate-x-[200%] opacity-0'}`}>
 <button
 onClick={() => { setCurrentView('list'); setActiveChatId(null); }}
-className="w-11 h-11 flex items-center justify-center rounded-full bg-[#09090b]/90 backdrop-blur-xl border border-white/10 text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90"
+className="w-11 h-11 flex items-center justify-center rounded-full bg-[#09090b]/90 backdrop-blur-xl border border-white/10 text-white hover:bg-zinc-800 hover:text-white transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90"
 >
 <ChevronLeft size={24} className="-ml-0.5" strokeWidth={3} />
 </button>
@@ -1358,7 +1371,7 @@ className="w-11 h-11 flex items-center justify-center rounded-full bg-[#09090b]/
 <div className={`flex-1 min-w-0 pointer-events-auto flex justify-center z-10 transition-all duration-1000 ease-in-out ${!isTopScrolled ? 'translate-y-0 opacity-100' : '-translate-y-[200%] opacity-0'}`}>
   <div className="bg-[#09090b]/90 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_1px_1px_rgba(0,0,0,0.3)] h-11 flex items-center min-w-0 w-fit max-w-full px-1.5 transition-all duration-300">
     {activeChatId !== 'saved_messages' ? (
-      // 1. CHAT HEADER (Restored fully so it doesn't break)
+      // 1. CHAT HEADER
       <div onClick={() => setCurrentView('profile')} className="flex items-center gap-3 cursor-pointer group rounded-full hover:bg-white/5 transition-colors max-w-full pr-4 pl-0.5 py-0.5">
         <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-white/10 relative flex-shrink-0 shadow-sm">
           {currentChatObject?.type === 'group' ? (
@@ -1385,7 +1398,7 @@ className="w-11 h-11 flex items-center justify-center rounded-full bg-[#09090b]/
         </div>
       </div>
     ) : (
-      // 2. MY NOTES HEADER (Updated with Green/Anonymous logic)
+      // 2. MY NOTES HEADER
       <div onClick={handleSecretTrigger} className="flex items-center gap-3 cursor-pointer select-none pr-5 pl-0.5 py-0.5 h-full">
         {/* LOGO CIRCLE PILL */}
         <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center border border-white/10 shadow-sm relative">
@@ -1416,7 +1429,9 @@ className="w-11 h-11 flex items-center justify-center rounded-full bg-[#09090b]/
 {/* RIGHT PILL: SEARCH (Slides Right on Scroll) */}
 <div className={`flex-none pointer-events-auto relative transition-all duration-1000 ease-in-out ${!isTopScrolled ? 'translate-x-0 opacity-100' : 'translate-x-[200%] opacity-0'}`}>
 <div className="flex items-center h-11">
-<button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-11 h-11 flex items-center justify-center rounded-full bg-[#09090b]/90 backdrop-blur-xl border border-white/10 text-white hover:bg-white/10 transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}><Search size={20} strokeWidth={3} /></button>
+<button onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} className={`w-11 h-11 flex items-center justify-center rounded-full bg-[#09090b]/90 backdrop-blur-xl border border-white/10 text-white hover:bg-zinc-800 hover:text-white transition-all shadow-[0_1px_1px_rgba(0,0,0,0.3)] active:scale-90 ${isSearchExpanded ? 'opacity-0 pointer-events-none scale-50' : 'opacity-100 scale-100'}`}>
+  <Search size={20} strokeWidth={3} />
+</button>
 
 {/* FLOATING SEARCH INPUT */}
 <div className={`absolute right-0 bg-[#09090b] border border-white/20 shadow-2xl rounded-full flex items-center px-3 h-11 transition-all duration-300 origin-right ${isSearchExpanded ? 'w-[260px] opacity-100 z-50' : 'w-0 opacity-0 pointer-events-none'}`}>
@@ -1429,7 +1444,7 @@ className="w-11 h-11 flex items-center justify-center rounded-full bg-[#09090b]/
 </div>
 
 {showSecretAnim && <canvas ref={canvasRef} className="fixed inset-0 z-20 pointer-events-none" />}
-{/* FLOATING DATE HEADER (No Border, Clean Flash) */}
+{/* FLOATING DATE HEADER */}
 <div
 ref={floatingBubbleRef}
 className={`
@@ -1443,8 +1458,8 @@ ${dateHeaderState === 'hidden' || !visibleDate ? 'opacity-0 scale-90 translate-y
 px-3 py-1.5 rounded-full text-[10px] font-bold capitalize tracking-wide shadow-lg
 transition-colors duration-400
 ${dateHeaderState === 'blinking'
-? 'bg-[#F97316] text-white shadow-[0_2px_15px_rgba(249,115,22,0.4)]' // Orange Flash (No Border, softer glow)
-: 'bg-black text-zinc-300 backdrop-blur-md'} // Dark Mode (No Border)
+? 'bg-[#F97316] text-white shadow-[0_2px_15px_rgba(249,115,22,0.4)]'
+: 'bg-black text-zinc-300 backdrop-blur-md'}
 `}>
 {visibleDate}
 </span>
@@ -1456,7 +1471,7 @@ ${dateHeaderState === 'blinking'
 <div className="fixed bottom-24 left-0 w-full z-40 pointer-events-none">
 <div className="max-w-2xl mx-auto px-4 relative">
 <div className={`absolute right-4 bottom-0 transition-all duration-300 ${showScrollButton ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-<button onClick={() => scrollToBottom()} className="w-11 h-11 rounded-full bg-[#09090b]/90 border border-white/10 text-white shadow-[0_1px_1px_rgba(0,0,0,0.3)] flex items-center justify-center hover:bg-white/10 active:scale-90 transition-all backdrop-blur-xl">
+<button onClick={() => scrollToBottom()} className="w-11 h-11 rounded-full bg-[#09090b]/90 border border-white/10 text-white shadow-[0_1px_1px_rgba(0,0,0,0.3)] flex items-center justify-center hover:bg-zinc-800 hover:text-white active:scale-90 transition-all backdrop-blur-xl">
 <ChevronDown size={24} strokeWidth={2} />
 </button>
 </div>

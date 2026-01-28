@@ -22,7 +22,7 @@ import Auth from './components/Auth';
 // FIREBASE DIRECT INIT FOR INVITES
 import { initializeApp } from "firebase/app";
 import { getAuth, signOut } from "firebase/auth";
-import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, doc, arrayRemove, arrayUnion, increment } from "firebase/firestore";
+import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, doc, arrayRemove, arrayUnion, increment, getDoc, setDoc } from "firebase/firestore";
 
 const firebaseConfig = {
 apiKey: "AIzaSyCiosArE3iOxF9iGp8wduA-TlSgy1p3WUo",
@@ -637,17 +637,19 @@ useEffect(() => {
   }
 }, [activeChatId, activeMessages.length, user]);
 
-// EFFECT: BIRTHDAY BOT (Daily Checker)
+// EFFECT: BIRTHDAY BOT (Cloud Sync Version)
 useEffect(() => {
+  if (!myProfile || !myProfile.birthdays) return; // Wait for cloud data
+
   const checkBirthdays = async () => {
     const today = new Date();
     const lastCheck = localStorage.getItem('vibenotes_bot_last_check');
     const todayStr = today.toDateString();
 
-    // Only check once per day
+    // Only check once per day locally so we don't spam you on refresh
     if (lastCheck === todayStr) return; 
 
-    const savedBd = JSON.parse(localStorage.getItem('vibenotes_bot_birthdays') || '[]');
+    const savedBd = myProfile.birthdays || [];
     if (savedBd.length === 0) return;
 
     const tomorrow = new Date(today);
@@ -683,10 +685,8 @@ useEffect(() => {
     localStorage.setItem('vibenotes_bot_last_check', todayStr);
   };
   
-  // Run logic after a short delay to ensure app is loaded
-  const t = setTimeout(checkBirthdays, 5000);
-  return () => clearTimeout(t);
-}, []);
+  checkBirthdays();
+}, [myProfile]); // Runs whenever your profile updates from the cloud
 
 useEffect(() => {
 if (myProfile) {
@@ -858,16 +858,16 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
   // --- 1. BIRTHDAY BOT COMMANDS ---
   const txt = transcript.trim();
   const lower = txt.toLowerCase();
+  const botCategory = activeFilter === 'secret' ? 'secret' : 'default';
 
   // COMMAND: HELP
   if (lower === 'bday' || lower === 'bday help') {
-     const helpMsg = `🎂 **BIRTHDAY BOT COMMANDS** 🤖\n\n` +
+     const helpMsg = `🎂 **BIRTHDAY BOT (CLOUD)** ☁️\n\n` +
      `• **Add:** bday add Name MM-DD\n` +
-     `  (e.g., "bday add Alice 01-28")\n` +
      `• **List:** bday list\n` +
      `• **Remove:** bday del Name\n` +
      `• **Test:** bday check (Runs check now)`;
-     await addNote({ text: helpMsg, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+     await addNote({ text: helpMsg, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
      return;
   }
@@ -876,17 +876,22 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
   if (lower.startsWith('bday add')) {
      const rawArgs = txt.slice(8).trim(); 
      const entries = rawArgs.split(',');
-     const currentList = JSON.parse(localStorage.getItem('vibenotes_bot_birthdays') || '[]');
+     
+     // 1. Fetch current list from Cloud
+     const userRef = doc(db, "users", user.uid);
+     const docSnap = await getDoc(userRef);
+     const currentData = docSnap.data() || {};
+     let currentList = currentData.birthdays || [];
+     
      let addedCount = 0;
 
      entries.forEach(entry => {
          const parts = entry.trim().split(/\s+/);
          if (parts.length >= 2) {
-             const datePart = parts.pop(); // Last part is date
-             const namePart = parts.join(' '); // Rest is name
-             // Match MM-DD or M-D
+             const datePart = parts.pop(); 
+             const namePart = parts.join(' '); 
+             
              if (/^\d{1,2}-\d{1,2}$/.test(datePart || '')) {
-                 // Remove existing if name matches exactly to avoid duplicates
                  const existsIdx = currentList.findIndex((b:any) => b.name.toLowerCase() === namePart.toLowerCase());
                  if (existsIdx > -1) currentList.splice(existsIdx, 1);
                  
@@ -897,39 +902,48 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
      });
 
      if (addedCount > 0) {
-         localStorage.setItem('vibenotes_bot_birthdays', JSON.stringify(currentList));
-         localStorage.removeItem('vibenotes_bot_last_check'); // Reset check so it runs again
-         await addNote({ text: `🤖 Bot: Saved ${addedCount} birthday(s)!\nDaily check has been reset.`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+         // 2. Save back to Cloud
+         await setDoc(userRef, { birthdays: currentList }, { merge: true });
+         
+         // Reset daily check so you can test immediately
+         localStorage.removeItem('vibenotes_bot_last_check'); 
+         await addNote({ text: `☁️ Bot: Synced ${addedCount} birthday(s) to the Cloud!`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      } else {
-         await addNote({ text: `🤖 Bot: Format error.\nTry: bday add Name MM-DD`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+         await addNote({ text: `🤖 Bot: Format error. Try: bday add Name MM-DD`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      }
      setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
      return;
   }
 
-  // COMMAND: REMOVE (e.g. "bday del Alice")
+  // COMMAND: REMOVE
   if (lower.startsWith('bday del') || lower.startsWith('bday remove')) {
      const nameToRemove = txt.split(' ').slice(2).join(' ').trim().toLowerCase();
-     let currentList = JSON.parse(localStorage.getItem('vibenotes_bot_birthdays') || '[]');
+     
+     const userRef = doc(db, "users", user.uid);
+     const docSnap = await getDoc(userRef);
+     let currentList = docSnap.data()?.birthdays || [];
      const initialLen = currentList.length;
      
      const newList = currentList.filter((b:any) => b.name.toLowerCase() !== nameToRemove);
      
      if (newList.length < initialLen) {
-        localStorage.setItem('vibenotes_bot_birthdays', JSON.stringify(newList));
-        await addNote({ text: `🤖 Bot: Deleted birthday for "${nameToRemove}"`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+        await setDoc(userRef, { birthdays: newList }, { merge: true });
+        await addNote({ text: `☁️ Bot: Deleted "${nameToRemove}" from Cloud.`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      } else {
-        await addNote({ text: `🤖 Bot: Could not find "${nameToRemove}".\nType "bday list" to see names.`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+        await addNote({ text: `🤖 Bot: Could not find "${nameToRemove}".`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      }
      setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
      return;
   }
 
-  // COMMAND: CHECK (Forces the bot to run logic NOW)
+  // COMMAND: CHECK
   if (lower === 'bday check' || lower === 'bday run') {
+     const userRef = doc(db, "users", user.uid);
+     const docSnap = await getDoc(userRef);
+     const savedBd = docSnap.data()?.birthdays || [];
+
      const today = new Date();
      const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-     const savedBd = JSON.parse(localStorage.getItem('vibenotes_bot_birthdays') || '[]');
      let msg = '';
 
      savedBd.forEach((b: any) => {
@@ -939,9 +953,9 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
      });
 
      if (msg) {
-        await addNote({ text: `[BIRTHDAY BOT] 🤖\n${msg}`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+        await addNote({ text: `[BIRTHDAY BOT] 🤖\n${msg}`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      } else {
-        await addNote({ text: `🤖 Bot: No birthdays found for today or tomorrow.`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+        await addNote({ text: `☁️ Bot: Checked ${savedBd.length} birthdays in the Cloud.\nNo birthdays today or tomorrow.`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      }
      setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
      return;
@@ -949,20 +963,22 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
 
   // COMMAND: LIST
   if (lower.includes('whose birthday') || lower === 'bday list') {
-     const currentList = JSON.parse(localStorage.getItem('vibenotes_bot_birthdays') || '[]');
+     // Fetch directly from Cloud to be sure
+     const userRef = doc(db, "users", user.uid);
+     const docSnap = await getDoc(userRef);
+     const currentList = docSnap.data()?.birthdays || [];
+
      if(currentList.length === 0) {
-         await addNote({ text: `🤖 Bot: No birthdays saved yet.\nType: bday add Name MM-DD`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+         await addNote({ text: `☁️ Bot: Cloud list is empty.`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      } else {
          const listTxt = currentList.map((b:any) => `• ${b.name} (${b.date})`).join('\n');
-         await addNote({ text: `🤖 Upcoming Birthdays:\n${listTxt}`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+         await addNote({ text: `☁️ Cloud Birthdays (${currentList.length}):\n${listTxt}`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      }
      setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
      return;
   }
+  
   // --- END BOT COMMANDS ---
-
-
-  // --- START AI TRIGGER ---
   if (activeFilter === 'secret' && !editingNote) {
     // 1. Save YOUR message first
     await addNote({ text: transcript.trim(), date: Date.now(), category: 'secret', isPinned: false, isExpanded: true, imageUrl: finalImageUrl || undefined });

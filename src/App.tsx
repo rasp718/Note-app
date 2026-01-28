@@ -862,7 +862,7 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
 
   // COMMAND: HELP
   if (lower === 'bday' || lower === 'bday help') {
-     const helpMsg = `🎂 **BIRTHDAY BOT (CLOUD)** ☁️\n\n` +
+     const helpMsg = `🎂 **BIRTHDAY BOT** 🤖\n\n` +
      `• **Add:** bday add Name MM-DD\n` +
      `• **List:** bday list\n` +
      `• **Remove:** bday del Name\n` +
@@ -877,7 +877,7 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
      const rawArgs = txt.slice(8).trim(); 
      const entries = rawArgs.split(',');
      
-     // 1. Fetch current list from Cloud
+     // 1. Fetch current list from Database
      const userRef = doc(db, "users", user.uid);
      const docSnap = await getDoc(userRef);
      const currentData = docSnap.data() || {};
@@ -902,14 +902,14 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
      });
 
      if (addedCount > 0) {
-         // 2. Save back to Cloud
+         // 2. Save back to Database
          await setDoc(userRef, { birthdays: currentList }, { merge: true });
          
          // Reset daily check so you can test immediately
          localStorage.removeItem('vibenotes_bot_last_check'); 
-         await addNote({ text: `☁️ Bot: Synced ${addedCount} birthday(s) to the Cloud!`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
+         await addNote({ text: `🤖 Bot: Saved ${addedCount} birthday(s)! 💾\nDaily check has been reset.`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      } else {
-         await addNote({ text: `🤖 Bot: Format error. Try: bday add Name MM-DD`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
+         await addNote({ text: `🤖 Bot: Format error.\nTry: bday add Name MM-DD`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      }
      setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
      return;
@@ -928,7 +928,7 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
      
      if (newList.length < initialLen) {
         await setDoc(userRef, { birthdays: newList }, { merge: true });
-        await addNote({ text: `☁️ Bot: Deleted "${nameToRemove}" from Cloud.`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
+        await addNote({ text: `🤖 Bot: Deleted birthday for "${nameToRemove}" 🗑️`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      } else {
         await addNote({ text: `🤖 Bot: Could not find "${nameToRemove}".`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      }
@@ -955,7 +955,7 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
      if (msg) {
         await addNote({ text: `[BIRTHDAY BOT] 🤖\n${msg}`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      } else {
-        await addNote({ text: `☁️ Bot: Checked ${savedBd.length} birthdays in the Cloud.\nNo birthdays today or tomorrow.`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
+        await addNote({ text: `🤖 Bot: Checked ${savedBd.length} birthdays. ✅\nNo birthdays found for today or tomorrow.`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      }
      setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
      return;
@@ -963,21 +963,20 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
 
   // COMMAND: LIST
   if (lower.includes('whose birthday') || lower === 'bday list') {
-     // Fetch directly from Cloud to be sure
+     // Fetch directly from Database to be sure
      const userRef = doc(db, "users", user.uid);
      const docSnap = await getDoc(userRef);
      const currentList = docSnap.data()?.birthdays || [];
 
      if(currentList.length === 0) {
-         await addNote({ text: `☁️ Bot: Cloud list is empty.`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
+         await addNote({ text: `🤖 Bot: No birthdays saved yet.`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      } else {
          const listTxt = currentList.map((b:any) => `• ${b.name} (${b.date})`).join('\n');
-         await addNote({ text: `☁️ Cloud Birthdays (${currentList.length}):\n${listTxt}`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
+         await addNote({ text: `🎂 Upcoming Birthdays (${currentList.length}):\n${listTxt}`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
      }
      setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
      return;
   }
-  
   // --- END BOT COMMANDS ---
   if (activeFilter === 'secret' && !editingNote) {
     // 1. Save YOUR message first

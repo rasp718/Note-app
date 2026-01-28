@@ -22,7 +22,7 @@ import Auth from './components/Auth';
 // FIREBASE DIRECT INIT FOR INVITES
 import { initializeApp } from "firebase/app";
 import { getAuth, signOut } from "firebase/auth";
-import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, doc, arrayRemove, arrayUnion } from "firebase/firestore";
+import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, doc, arrayRemove, arrayUnion, increment } from "firebase/firestore";
 
 const firebaseConfig = {
 apiKey: "AIzaSyCiosArE3iOxF9iGp8wduA-TlSgy1p3WUo",
@@ -886,7 +886,30 @@ imageUrl: replyingTo.imageUrl || null
 });
 finalMessage = `${replyMetadata}|||RPLY|||${finalMessage}`;
 }
+
+// 1. Send the message
 await sendMessage(finalMessage, finalImageUrl, null, user.uid);
+
+// 2. Increment Unread Count for the OTHER person(s)
+if (currentChatObject) {
+  const chatRef = doc(db, "chats", activeChatId);
+  const updates: any = {};
+  
+  if (currentChatObject.type === 'group') {
+    currentChatObject.participants.forEach((uid: string) => {
+      if (uid !== user.uid) {
+        updates[`unreadCounts.${uid}`] = increment(1);
+      }
+    });
+  } else if (currentChatObject.otherUserId) {
+    updates[`unreadCounts.${currentChatObject.otherUserId}`] = increment(1);
+  }
+
+  if (Object.keys(updates).length > 0) {
+    updateDoc(chatRef, updates).catch(e => console.error("Could not update unread count", e));
+  }
+}
+
 setReplyingTo(null);
 }
 }

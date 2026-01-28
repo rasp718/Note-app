@@ -637,6 +637,57 @@ useEffect(() => {
   }
 }, [activeChatId, activeMessages.length, user]);
 
+// EFFECT: BIRTHDAY BOT (Daily Checker)
+useEffect(() => {
+  const checkBirthdays = async () => {
+    const today = new Date();
+    const lastCheck = localStorage.getItem('vibenotes_bot_last_check');
+    const todayStr = today.toDateString();
+
+    // Only check once per day
+    if (lastCheck === todayStr) return; 
+
+    const savedBd = JSON.parse(localStorage.getItem('vibenotes_bot_birthdays') || '[]');
+    if (savedBd.length === 0) return;
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    let msg = '';
+    
+    savedBd.forEach((b: any) => {
+        const [m, d] = b.date.split('-').map(Number);
+        // Check Today
+        if (today.getMonth() + 1 === m && today.getDate() === d) {
+            msg += `🎂 HAPPY BIRTHDAY TO ${b.name.toUpperCase()}! 🎉\nHope they have a great one!\n`;
+        }
+        // Check Tomorrow
+        if (tomorrow.getMonth() + 1 === m && tomorrow.getDate() === d) {
+            msg += `⚠️ REMINDER: ${b.name}'s birthday is tomorrow! 🎁\n`;
+        }
+    });
+
+    if (msg) {
+        // Send alert to My Notes
+        await addNote({
+            text: `[BIRTHDAY BOT] 🤖\n${msg}`,
+            date: Date.now(),
+            category: 'default',
+            isPinned: false,
+            isExpanded: true
+        });
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    }
+    
+    // Mark checked for today
+    localStorage.setItem('vibenotes_bot_last_check', todayStr);
+  };
+  
+  // Run logic after a short delay to ensure app is loaded
+  const t = setTimeout(checkBirthdays, 5000);
+  return () => clearTimeout(t);
+}, []);
+
 useEffect(() => {
 if (myProfile) {
 if (myProfile.displayName) setProfileName(myProfile.displayName);
@@ -665,38 +716,6 @@ if(y > canvas.height && Math.random() > 0.975) drops[i] = 0; drops[i]++;
 const interval = setInterval(draw, MASTER_SPEED); const handleResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }; window.addEventListener('resize', handleResize);
 return () => { clearInterval(interval); window.removeEventListener('resize', handleResize); };
 }, [showSecretAnim, currentView]);
-
-useEffect(() => {
-if (currentView === 'room') {
-scrollToBottom();
-// Force a scroll check after render to set correct date header immediately
-setTimeout(handleScroll, 100);
-}
-}, [activeMessages, notes, currentView]);
-useEffect(() => { return () => { if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); } }; }, []);
-
-useEffect(() => {
-try {
-const savedAlignment = localStorage.getItem('vibenotes_alignment');
-if(savedAlignment) setAlignment(savedAlignment);
-const savedBg = localStorage.getItem('vibenotes_bg');
-if (savedBg) setBgIndex(parseInt(savedBg));
-const savedOpacity = localStorage.getItem('vibenotes_bg_opacity');
-if (savedOpacity) setBgOpacity(parseFloat(savedOpacity));
-const savedScale = localStorage.getItem('vibenotes_bg_scale');
-if (savedScale) setBgScale(parseInt(savedScale));
-const savedBubble = localStorage.getItem('vibenotes_bubble_style');
-if (savedBubble) setBubbleStyle(savedBubble);
-} catch (e) {}
-}, []);
-
-useEffect(() => { localStorage.setItem('vibenotes_alignment', alignment); }, [alignment]);
-useEffect(() => { localStorage.setItem('vibenotes_bg', bgIndex.toString()); }, [bgIndex]);
-useEffect(() => { localStorage.setItem('vibenotes_bg_opacity', bgOpacity.toString()); }, [bgOpacity]);
-useEffect(() => { localStorage.setItem('vibenotes_bg_scale', bgScale.toString()); }, [bgScale]);
-useEffect(() => { localStorage.setItem('vibenotes_bubble_style', bubbleStyle); }, [bubbleStyle]);
-
-useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; } }, [transcript]);
 
 // ============================================================================
 // SECTION: ACTIONS & HANDLERS
@@ -836,23 +855,64 @@ finalImageUrl = await fileToBase64(originalFile) as string;
 
 if (activeChatId === 'saved_messages' || activeChatId === null) {
   
+  // --- 1. BIRTHDAY BOT COMMANDS ---
+  const txt = transcript.trim();
+  const lower = txt.toLowerCase();
+
+  // Command: Add (supports list: "bday add Name 01-01, Name2 02-02")
+  if (lower.startsWith('bday add ')) {
+     const rawArgs = txt.substring(9); // Remove "bday add "
+     const entries = rawArgs.split(',');
+     const currentList = JSON.parse(localStorage.getItem('vibenotes_bot_birthdays') || '[]');
+     let addedCount = 0;
+
+     entries.forEach(entry => {
+         const parts = entry.trim().split(' ');
+         if (parts.length >= 2) {
+             const datePart = parts.pop(); // Last part is date
+             const namePart = parts.join(' '); // Rest is name
+             // Simple regex for MM-DD
+             if (/^\d{1,2}-\d{1,2}$/.test(datePart || '')) {
+                 currentList.push({ name: namePart, date: datePart });
+                 addedCount++;
+             }
+         }
+     });
+
+     if (addedCount > 0) {
+         localStorage.setItem('vibenotes_bot_birthdays', JSON.stringify(currentList));
+         await addNote({ text: `🤖 Bot: Saved ${addedCount} birthday(s).\nI'll remind you the day before and day of.`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+         setTranscript(''); setImageUrl(''); return;
+     }
+  }
+
+  // Command: Check / List
+  if (lower.includes('whose birthday') || lower === 'bday list') {
+     const currentList = JSON.parse(localStorage.getItem('vibenotes_bot_birthdays') || '[]');
+     if(currentList.length === 0) {
+         await addNote({ text: `🤖 Bot: No birthdays saved yet.\nType: bday add Name MM-DD`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+     } else {
+         const listTxt = currentList.map((b:any) => `• ${b.name} (${b.date})`).join('\n');
+         await addNote({ text: `🤖 Upcoming Birthdays:\n${listTxt}`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+     }
+     setTranscript(''); setImageUrl(''); return;
+  }
+  // --- END BOT COMMANDS ---
+
+
   // --- START AI TRIGGER ---
   if (activeFilter === 'secret' && !editingNote) {
     // 1. Save YOUR message first
     await addNote({ text: transcript.trim(), date: Date.now(), category: 'secret', isPinned: false, isExpanded: true, imageUrl: finalImageUrl || undefined });
-    
     const userPrompt = transcript.trim();
-
     // 2. Clear input immediately
     setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
-
     // 3. Talk to Ollama (Async)
     talkToLocalAI(userPrompt).then(async (aiResponse) => {
        // 4. Save AI Response
        await addNote({ text: aiResponse, date: Date.now(), category: 'secret', isPinned: false, isExpanded: true });
        scrollToBottom();
     });
-
     return; // STOP here so we don't run the normal save logic below
   }
   // --- END AI TRIGGER ---

@@ -627,10 +627,14 @@ const currentConfig = activeFilter === 'all' ? null : (activeFilter === 'secret'
 // ============================================================================
 // SECTION: EFFECTS
 // ============================================================================
+// EFFECT: Reset unread count to 0 when entering chat or receiving new messages
 useEffect(() => {
-if (activeChatId && activeChatId !== 'saved_messages' && user && activeMessages.length > 0) {
-markChatAsRead(user.uid);
-}
+  if (activeChatId && activeChatId !== 'saved_messages' && user) {
+    const chatRef = doc(db, "chats", activeChatId);
+    updateDoc(chatRef, {
+      [`unreadCounts.${user.uid}`]: 0
+    }).catch(e => console.error("Error marking chat as read:", e));
+  }
 }, [activeChatId, activeMessages.length, user]);
 
 useEffect(() => {
@@ -1273,7 +1277,7 @@ return (
             </div>
           </div>
 
-          <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-left-8 fade-in duration-500`}>
+          <div onClick={() => { setActiveChatId('saved_messages'); setCurrentView('room'); scrollToBottom('auto'); }} className={`mx-3 px-3 py-3 flex gap-3 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 animate-in slide-in-from-left-8 fade-in duration-500`}>
             <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 group/logo">
               <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center relative overflow-hidden shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
                 {activeFilter === 'secret' ? (<Terminal className="text-green-500 transition-colors" size={24} />) : (<div className="w-3 h-3 rounded-sm relative z-10" style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}80` }} />)}
@@ -1281,10 +1285,11 @@ return (
             </div>
             <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
               <div className="flex justify-between items-baseline">
-                <span className="font-bold text-white text-base tracking-tight">My Notes</span>
-                <span className="inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{notes.length > 0 ? getDateLabel(notes[0].date) : ''}</span>
+                <span className="font-bold text-white text-[16px] tracking-tight">My Notes</span>
+                {/* UPDATED: Telegram Date Style (Gray text, no pill) */}
+                <span className="text-[12px] text-zinc-400 font-normal">{notes.length > 0 ? getTelegramDate(notes[0].date) : ''}</span>
               </div>
-              <div className="text-gray-400 text-sm truncate pr-4 flex items-center gap-1">
+              <div className="text-zinc-400 text-[14px] truncate pr-4 flex items-center gap-1 leading-normal">
                 <span className="text-[10px] font-bold uppercase tracking-wider px-1 rounded bg-white/10" style={{ color: accentColor }}>You</span>
                 <span className="truncate">{notes.length > 0 ? notes[0].text : 'No notes yet'}</span>
               </div>

@@ -236,7 +236,7 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-black z-10"></div>
         )}
 
-        {/* Note: Kept the red badge on avatar if you still want it there, otherwise remove this block */}
+        {/* Avatar Notification Badge (Red) */}
         {(chat.unreadCount > 0 || (chat.id === 'saved_messages' && !active)) && (
           <div className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-[#ff3b30] rounded-full border-[2px] border-[#09090b] z-20 flex items-center justify-center shadow-sm animate-in zoom-in duration-300">
             <span className="text-[10px] font-bold text-white leading-none font-sans translate-y-[0.5px]">
@@ -247,16 +247,17 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
       </div>
       
       <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-        {/* ROW 1: Name and Date */}
+        {/* ROW 1: Name and Timestamp */}
         <div className="flex justify-between items-baseline">
           <h3 className="font-bold text-white text-base truncate tracking-tight flex-1 pr-2">{displayName}</h3>
           <span className="flex-shrink-0 inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{timestamp}</span>
         </div>
 
-        {/* ROW 2: Message and Unread Pill (Grey/Black Style) */}
+        {/* ROW 2: Message and Unread Pill (Under Timestamp) */}
         <div className="flex justify-between items-center">
           <p className="text-gray-400 text-sm truncate flex-1 pr-2">{lastMsg}</p>
           
+          {/* Grey Pill - Exact same style as Timestamp */}
           {chat.unreadCount > 0 && (
              <span className="flex-shrink-0 inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5 animate-in zoom-in duration-300">
                {chat.unreadCount}

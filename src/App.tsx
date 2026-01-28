@@ -214,6 +214,9 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
   }
 
   const timestamp = chat.lastMessageTimestamp ? getDateLabel(chat.lastMessageTimestamp) : '';
+  
+  // Safely handle unread count to ensure it's a number
+  const unreadCount = Number(chat.unreadCount || 0);
 
   return (
     <div onClick={onClick} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 group ${active ? 'bg-white/10' : ''}`}>
@@ -236,31 +239,30 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-black z-10"></div>
         )}
 
-        {/* Avatar Notification Badge (Red) */}
-        {(chat.unreadCount > 0 || (chat.id === 'saved_messages' && !active)) && (
+        {/* Avatar Red Badge - Only shows if unreadCount > 0 */}
+        {(unreadCount > 0 || (chat.id === 'saved_messages' && !active)) && (
           <div className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-[#ff3b30] rounded-full border-[2px] border-[#09090b] z-20 flex items-center justify-center shadow-sm animate-in zoom-in duration-300">
             <span className="text-[10px] font-bold text-white leading-none font-sans translate-y-[0.5px]">
-              {chat.unreadCount || 1}
+              {unreadCount || 1}
             </span>
           </div>
         )}
       </div>
       
       <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-        {/* ROW 1: Name and Timestamp */}
+        {/* ROW 1: Name and Timestamp (Grey Pill / Black Text) */}
         <div className="flex justify-between items-baseline">
           <h3 className="font-bold text-white text-base truncate tracking-tight flex-1 pr-2">{displayName}</h3>
           <span className="flex-shrink-0 inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{timestamp}</span>
         </div>
 
-        {/* ROW 2: Message and Unread Pill (Under Timestamp) */}
+        {/* ROW 2: Message and Unread Count (Matching Grey Pill / Black Text) */}
         <div className="flex justify-between items-center">
           <p className="text-gray-400 text-sm truncate flex-1 pr-2">{lastMsg}</p>
           
-          {/* Grey Pill - Exact same style as Timestamp */}
-          {chat.unreadCount > 0 && (
-             <span className="flex-shrink-0 inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5 animate-in zoom-in duration-300">
-               {chat.unreadCount}
+          {unreadCount > 0 && (
+             <span className="flex-shrink-0 inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5 animate-in zoom-in duration-300 shadow-sm">
+               {unreadCount}
              </span>
           )}
         </div>

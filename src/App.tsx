@@ -198,8 +198,25 @@ replyTheme={replyTheme}
 );
 };
 
-// Fixed Chat Row
-// Updated ChatRow accepts currentUserId
+// Helper for Telegram-style Date Formatting
+const getTelegramDate = (timestamp: any) => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp.seconds ? timestamp.seconds * 1000 : (timestamp.toMillis ? timestamp.toMillis() : timestamp));
+  const now = new Date();
+  const isSameDay = (d1: Date, d2: Date) => d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+
+  if (isSameDay(date, now)) return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (isSameDay(date, yesterday)) return 'Yesterday';
+  
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  if (diffDays < 7) return date.toLocaleDateString([], { weekday: 'short' }); // Mon
+  if (date.getFullYear() === now.getFullYear()) return date.toLocaleDateString([], { month: '2-digit', day: '2-digit' }); // 01/16
+  return date.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' }); // 1/11/25
+};
+
+// Fixed Chat Row (Telegram Style)
 const ChatRow = ({ chat, active, isEditing, onSelect, onClick, currentUserId }: any) => {
   const otherUser = useUser(chat.otherUserId);
   const isGroup = chat.type === 'group';
@@ -207,20 +224,17 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick, currentUserId }: 
   const photoURL = isGroup ? chat.photoURL : otherUser?.photoURL;
 
   let lastMsg = chat.lastMessageText || '';
-  if (lastMsg.includes("|||RPLY|||")) {
-    lastMsg = lastMsg.split("|||RPLY|||")[1] || 'Reply';
-  }
-  if (lastMsg.includes("STREET_DICE_GAME")) {
-    lastMsg = "🎲 Dice Game";
-  }
+  if (lastMsg.includes("|||RPLY|||")) { lastMsg = lastMsg.split("|||RPLY|||")[1] || 'Reply'; }
+  if (lastMsg.includes("STREET_DICE_GAME")) { lastMsg = "🎲 Dice Game"; }
 
-  const timestamp = chat.lastMessageTimestamp ? getDateLabel(chat.lastMessageTimestamp) : '';
+  // Use Telegram Date Helper
+  const timestamp = chat.lastMessageTimestamp ? getTelegramDate(chat.lastMessageTimestamp) : '';
   
-  // FIXED: Read from the map using your specific ID
+  // Read Unread Count from Map using currentUserId
   const unreadCount = (currentUserId && chat.unreadCounts) ? (chat.unreadCounts[currentUserId] || 0) : 0;
 
   return (
-    <div onClick={onClick} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 group ${active ? 'bg-white/10' : ''}`}>
+    <div onClick={onClick} className={`mx-3 px-3 py-3 flex gap-3 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 group ${active ? 'bg-white/10' : ''}`}>
       {isEditing && (
         <div className="flex items-center pr-2" onClick={(e) => { e.stopPropagation(); onSelect(); }}>
           <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${active ? 'bg-[#F97316] border-[#F97316]' : 'border-zinc-600'}`}>
@@ -239,30 +253,21 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick, currentUserId }: 
         {!isGroup && otherUser?.isOnline && (
           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-black z-10"></div>
         )}
-
-        {/* Avatar Red Badge - Only shows if unreadCount > 0 */}
-        {(unreadCount > 0 || (chat.id === 'saved_messages' && !active)) && (
-          <div className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-[#ff3b30] rounded-full border-[2px] border-[#09090b] z-20 flex items-center justify-center shadow-sm animate-in zoom-in duration-300">
-            <span className="text-[10px] font-bold text-white leading-none font-sans translate-y-[0.5px]">
-              {unreadCount || 1}
-            </span>
-          </div>
-        )}
+        {/* RED DOT REMOVED HERE */}
       </div>
       
-      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-        {/* ROW 1: Name and Timestamp (Grey Pill / Black Text) */}
+      <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
         <div className="flex justify-between items-baseline">
-          <h3 className="font-bold text-white text-base truncate tracking-tight flex-1 pr-2">{displayName}</h3>
-          <span className="flex-shrink-0 inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5">{timestamp}</span>
+          <h3 className="font-bold text-white text-[16px] truncate tracking-tight flex-1 pr-2">{displayName}</h3>
+          {/* TIMESTAMP: Gray text only, no pill */}
+          <span className="flex-shrink-0 text-[12px] text-zinc-400 font-normal">{timestamp}</span>
         </div>
 
-        {/* ROW 2: Message and Unread Count (Matching Grey Pill / Black Text) */}
         <div className="flex justify-between items-center">
-          <p className="text-gray-400 text-sm truncate flex-1 pr-2">{lastMsg}</p>
-          
+          <p className="text-zinc-400 text-[14px] truncate flex-1 pr-4 leading-normal">{lastMsg}</p>
+          {/* UNREAD: Grey Pill with Black Text */}
           {unreadCount > 0 && (
-             <span className="flex-shrink-0 inline-block text-[10px] font-mono text-black bg-gray-400 rounded-full px-2 py-0.5 animate-in zoom-in duration-300 shadow-sm">
+             <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[20px] h-[20px] text-[10px] font-bold text-black bg-gray-400 rounded-full px-1.5 animate-in zoom-in duration-300">
                {unreadCount}
              </span>
           )}
@@ -1300,7 +1305,7 @@ return (
             <ChatRow
               key={chat.id}
               chat={chat}
-              currentUserId={user?.uid} // <--- Added this line
+              currentUserId={user?.uid}
               active={isEditing ? selectedChatIds.has(chat.id) : false}
               isEditing={isEditing}
               onSelect={() => toggleChatSelection(chat.id)}

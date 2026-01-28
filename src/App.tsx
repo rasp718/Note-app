@@ -859,20 +859,37 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
   const txt = transcript.trim();
   const lower = txt.toLowerCase();
 
-  // Command: Add (supports list: "bday add Name 01-01, Name2 02-02")
-  if (lower.startsWith('bday add ')) {
-     const rawArgs = txt.substring(9); // Remove "bday add "
+  // COMMAND: HELP
+  if (lower === 'bday' || lower === 'bday help') {
+     const helpMsg = `🎂 **BIRTHDAY BOT COMMANDS** 🤖\n\n` +
+     `• **Add:** bday add Name MM-DD\n` +
+     `  (e.g., "bday add Alice 01-28")\n` +
+     `• **List:** bday list\n` +
+     `• **Remove:** bday del Name\n` +
+     `• **Test:** bday check (Runs check now)`;
+     await addNote({ text: helpMsg, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+     setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
+     return;
+  }
+
+  // COMMAND: ADD (e.g. "bday add Alice 01-28")
+  if (lower.startsWith('bday add')) {
+     const rawArgs = txt.slice(8).trim(); 
      const entries = rawArgs.split(',');
      const currentList = JSON.parse(localStorage.getItem('vibenotes_bot_birthdays') || '[]');
      let addedCount = 0;
 
      entries.forEach(entry => {
-         const parts = entry.trim().split(' ');
+         const parts = entry.trim().split(/\s+/);
          if (parts.length >= 2) {
              const datePart = parts.pop(); // Last part is date
              const namePart = parts.join(' '); // Rest is name
-             // Simple regex for MM-DD
+             // Match MM-DD or M-D
              if (/^\d{1,2}-\d{1,2}$/.test(datePart || '')) {
+                 // Remove existing if name matches exactly to avoid duplicates
+                 const existsIdx = currentList.findIndex((b:any) => b.name.toLowerCase() === namePart.toLowerCase());
+                 if (existsIdx > -1) currentList.splice(existsIdx, 1);
+                 
                  currentList.push({ name: namePart, date: datePart });
                  addedCount++;
              }
@@ -881,12 +898,56 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
 
      if (addedCount > 0) {
          localStorage.setItem('vibenotes_bot_birthdays', JSON.stringify(currentList));
-         await addNote({ text: `🤖 Bot: Saved ${addedCount} birthday(s).\nI'll remind you the day before and day of.`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
-         setTranscript(''); setImageUrl(''); return;
+         localStorage.removeItem('vibenotes_bot_last_check'); // Reset check so it runs again
+         await addNote({ text: `🤖 Bot: Saved ${addedCount} birthday(s)!\nDaily check has been reset.`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+     } else {
+         await addNote({ text: `🤖 Bot: Format error.\nTry: bday add Name MM-DD`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
      }
+     setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
+     return;
   }
 
-  // Command: Check / List
+  // COMMAND: REMOVE (e.g. "bday del Alice")
+  if (lower.startsWith('bday del') || lower.startsWith('bday remove')) {
+     const nameToRemove = txt.split(' ').slice(2).join(' ').trim().toLowerCase();
+     let currentList = JSON.parse(localStorage.getItem('vibenotes_bot_birthdays') || '[]');
+     const initialLen = currentList.length;
+     
+     const newList = currentList.filter((b:any) => b.name.toLowerCase() !== nameToRemove);
+     
+     if (newList.length < initialLen) {
+        localStorage.setItem('vibenotes_bot_birthdays', JSON.stringify(newList));
+        await addNote({ text: `🤖 Bot: Deleted birthday for "${nameToRemove}"`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+     } else {
+        await addNote({ text: `🤖 Bot: Could not find "${nameToRemove}".\nType "bday list" to see names.`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+     }
+     setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
+     return;
+  }
+
+  // COMMAND: CHECK (Forces the bot to run logic NOW)
+  if (lower === 'bday check' || lower === 'bday run') {
+     const today = new Date();
+     const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+     const savedBd = JSON.parse(localStorage.getItem('vibenotes_bot_birthdays') || '[]');
+     let msg = '';
+
+     savedBd.forEach((b: any) => {
+        const [m, d] = b.date.split('-').map(Number);
+        if (today.getMonth() + 1 === m && today.getDate() === d) msg += `🎂 HAPPY BIRTHDAY TO ${b.name.toUpperCase()}! 🎉\n`;
+        if (tomorrow.getMonth() + 1 === m && tomorrow.getDate() === d) msg += `⚠️ Reminder: ${b.name}'s birthday is tomorrow! 🎁\n`;
+     });
+
+     if (msg) {
+        await addNote({ text: `[BIRTHDAY BOT] 🤖\n${msg}`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+     } else {
+        await addNote({ text: `🤖 Bot: No birthdays found for today or tomorrow.`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
+     }
+     setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
+     return;
+  }
+
+  // COMMAND: LIST
   if (lower.includes('whose birthday') || lower === 'bday list') {
      const currentList = JSON.parse(localStorage.getItem('vibenotes_bot_birthdays') || '[]');
      if(currentList.length === 0) {
@@ -895,7 +956,8 @@ if (activeChatId === 'saved_messages' || activeChatId === null) {
          const listTxt = currentList.map((b:any) => `• ${b.name} (${b.date})`).join('\n');
          await addNote({ text: `🤖 Upcoming Birthdays:\n${listTxt}`, date: Date.now(), category: 'default', isPinned: false, isExpanded: true });
      }
-     setTranscript(''); setImageUrl(''); return;
+     setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
+     return;
   }
   // --- END BOT COMMANDS ---
 

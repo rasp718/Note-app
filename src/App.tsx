@@ -19,6 +19,7 @@ import { NoteCard } from './components/NoteCard';
 import { SettingsView } from './SettingsView';
 import { useFirebaseSync, useNotes, useChats, useMessages, syncUserProfile, searchUsers, useUser, usePresence } from './useFirebaseSync';
 import Auth from './components/Auth';
+import { runDailyBotChecks, handleBotCommand } from './Bots';
 // FIREBASE DIRECT INIT FOR INVITES
 import { initializeApp } from "firebase/app";
 import { getAuth, signOut } from "firebase/auth";
@@ -310,59 +311,7 @@ const talkToLocalAI = async (text: string) => {  // <--- YOU WERE MISSING THIS L
   }
 };
 
-// --- STOIC QUOTES LIBRARY ---
-const STOIC_QUOTES = [
-  "The obstacle is the way. — Marcus Aurelius",
-  "We suffer more in imagination than in reality. — Seneca",
-  "Waste no more time arguing what a good man should be. Be one. — Marcus Aurelius",
-  "It is not what happens to you, but how you react to it that matters. — Epictetus",
-  "You have power over your mind - not outside events. Realize this, and you will find strength. — Marcus Aurelius",
-  "If a man knows not to which port he sails, no wind is favorable. — Seneca",
-  "He who fears death will never do anything worthy of a man who is alive. — Seneca",
-  "The best revenge is to be unlike him who performed the injury. — Marcus Aurelius",
-  "Man is not worried by real problems so much as by his imagined anxieties about real problems. — Epictetus",
-  "First say to yourself what you would be; and then do what you have to do. — Epictetus",
-  "It is not death that a man should fear, but he should fear never beginning to live. — Marcus Aurelius",
-  "Difficulties strengthen the mind, as labor does the body. — Seneca",
-  "Wealth consists not in having great possessions, but in having few wants. — Epictetus",
-  "Receive without conceit, release without struggle. — Marcus Aurelius",
-  "To be everywhere is to be nowhere. — Seneca",
-  "If it is not right do not do it; if it is not true do not say it. — Marcus Aurelius",
-  "Curb your desire—don’t set your heart on so many things and you will get what you need. — Epictetus",
-  "Sometimes even to live is an act of courage. — Seneca",
-  "The soul becomes dyed with the color of its thoughts. — Marcus Aurelius",
-  "Luck is what happens when preparation meets opportunity. — Seneca",
-  "Dwell on the beauty of life. Watch the stars, and see yourself running with them. — Marcus Aurelius",
-  "No person has the power to have everything they want, but it is in their power not to want what they don't have. — Seneca",
-  "Happiness and freedom begin with a clear understanding of one principle: Some things are within our control, and some things are not. — Epictetus",
-  "Accept the things to which fate binds you, and love the people with whom fate brings you together, but do so with all your heart. — Marcus Aurelius",
-  "Associate with people who are likely to improve you. — Seneca",
-  "It is the quality of our thoughts that determines the quality of our life. — Marcus Aurelius",
-  "Don't explain your philosophy. Embodiy it. — Epictetus",
-  "Ignorance is the cause of fear. — Seneca",
-  "Everything we hear is an opinion, not a fact. Everything we see is a perspective, not the truth. — Marcus Aurelius",
-  "Only the educated are free. — Epictetus",
-  "Life is very short and anxious for those who forget the past, neglect the present, and fear the future. — Seneca",
-  "Very little is needed to make a happy life; it is all within yourself in your way of thinking. — Marcus Aurelius",
-  "Whatever happens to you has been waiting to happen since the beginning of time. — Marcus Aurelius",
-  "Make the best use of what is in your power, and take the rest as it happens. — Epictetus",
-  "Time heals what reason cannot. — Seneca",
-  "Confine yourself to the present. — Marcus Aurelius",
-  "If you want to improve, be content to be thought foolish and stupid. — Epictetus",
-  "Look back over the past, with its changing empires that rose and fell, and you can foresee the future too. — Marcus Aurelius",
-  "Think of the life you have lived until now as over and, as a dead man, see what’s left as a bonus and live it according to Nature. — Marcus Aurelius",
-  "A gem cannot be polished without friction, nor a man perfected without trials. — Seneca",
-  "How long are you going to wait before you demand the best for yourself? — Epictetus",
-  "Loss is nothing else but change, and change is Nature's delight. — Marcus Aurelius",
-  "While we wait for life, life passes. — Seneca",
-  "Reject your sense of injury and the injury itself disappears. — Marcus Aurelius",
-  "Don't hope that events will turn out the way you want, welcome events in whichever way they happen: this is the path to peace. — Epictetus",
-  "True happiness is to enjoy the present, without anxious dependence upon the future. — Seneca",
-  "When you arise in the morning think of what a privilege it is to be alive, to think, to enjoy, to love. — Marcus Aurelius",
-  "We have two ears and one mouth so that we can listen twice as much as we speak. — Epictetus",
-  "It is impossible for a man to learn what he thinks he already knows. — Epictetus",
-  "As long as you live, keep learning how to live. — Seneca"
-];
+// (Stoic Quotes moved to Bots.ts)
 
 function App() {
 // ============================================================================
@@ -691,85 +640,12 @@ useEffect(() => {
   }
 }, [activeChatId, activeMessages.length, user]);
 
-// EFFECT: STOIC BOT (Daily Wisdom)
+// EFFECT: BOT INIT (Birthday & Stoic)
 useEffect(() => {
-  const checkStoic = async () => {
-    const todayStr = new Date().toDateString();
-    const lastCheck = localStorage.getItem('vibenotes_stoic_last_check');
-
-    // If we already sent a quote today, do nothing
-    if (lastCheck === todayStr) return;
-
-    // Pick a random quote
-    const randomQuote = STOIC_QUOTES[Math.floor(Math.random() * STOIC_QUOTES.length)];
-
-    await addNote({
-        text: `🏛️ **Daily Stoic**\n"${randomQuote}"`,
-        date: Date.now(),
-        category: 'default',
-        isPinned: false,
-        isExpanded: true
-    });
-
-    // Mark today as done
-    localStorage.setItem('vibenotes_stoic_last_check', todayStr);
-  };
-
-  // Run 3 seconds after load so it doesn't pop up at exact same time as Birthday Bot
-  const t = setTimeout(checkStoic, 3000);
-  return () => clearTimeout(t);
-}, []);
-
-// EFFECT: BIRTHDAY BOT (Cloud Sync Version)
-useEffect(() => {
-  if (!myProfile || !myProfile.birthdays) return; // Wait for cloud data
-
-  const checkBirthdays = async () => {
-    const today = new Date();
-    const lastCheck = localStorage.getItem('vibenotes_bot_last_check');
-    const todayStr = today.toDateString();
-
-    // Only check once per day locally so we don't spam you on refresh
-    if (lastCheck === todayStr) return; 
-
-    const savedBd = myProfile.birthdays || [];
-    if (savedBd.length === 0) return;
-
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-
-    let msg = '';
-    
-    savedBd.forEach((b: any) => {
-        const [m, d] = b.date.split('-').map(Number);
-        // Check Today
-        if (today.getMonth() + 1 === m && today.getDate() === d) {
-            msg += `🎂 HAPPY BIRTHDAY TO ${b.name.toUpperCase()}! 🎉\nHope they have a great one!\n`;
-        }
-        // Check Tomorrow
-        if (tomorrow.getMonth() + 1 === m && tomorrow.getDate() === d) {
-            msg += `⚠️ REMINDER: ${b.name}'s birthday is tomorrow! 🎁\n`;
-        }
-    });
-
-    if (msg) {
-        // Send alert to My Notes
-        await addNote({
-            text: `[BIRTHDAY BOT] 🤖\n${msg}`,
-            date: Date.now(),
-            category: 'default',
-            isPinned: false,
-            isExpanded: true
-        });
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    }
-    
-    // Mark checked for today
-    localStorage.setItem('vibenotes_bot_last_check', todayStr);
-  };
-  
-  checkBirthdays();
-}, [myProfile]); // Runs whenever your profile updates from the cloud
+  if (myProfile) {
+    runDailyBotChecks(myProfile, addNote);
+  }
+}, [myProfile]);
 
 useEffect(() => {
 if (myProfile) {
@@ -938,144 +814,18 @@ finalImageUrl = await fileToBase64(originalFile) as string;
 
 if (activeChatId === 'saved_messages' || activeChatId === null) {
 
-  // --- STOIC BOT COMMAND ---
-  if (transcript.trim().toLowerCase() === 'stoic') {
-     const randomQuote = STOIC_QUOTES[Math.floor(Math.random() * STOIC_QUOTES.length)];
-     const botCategory = activeFilter === 'secret' ? 'secret' : 'default';
-     await addNote({ 
-        text: `🏛️ **Stoic Wisdom**\n"${randomQuote}"`, 
-        date: Date.now(), 
-        category: botCategory, 
-        isPinned: false, 
-        isExpanded: true 
-     });
-     setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
-     return;
-  }
+  // 1. CHECK BOTS (Delegated to Bots.ts)
+  const isBot = await handleBotCommand(transcript, activeFilter, user, db, addNote, {
+    reset: () => { 
+        setTranscript(''); 
+        setImageUrl(''); 
+        setOriginalFile(null); 
+        scrollToBottom(); 
+    }
+  });
   
-  // --- 1. BIRTHDAY BOT COMMANDS ---
-  const txt = transcript.trim();
-  const lower = txt.toLowerCase();
-  const botCategory = activeFilter === 'secret' ? 'secret' : 'default';
-
-  // COMMAND: HELP
-  if (lower === 'bday' || lower === 'bday help') {
-     const helpMsg = `🎂 **BIRTHDAY BOT** 🤖\n\n` +
-     `• **Add:** bday add Name MM-DD\n` +
-     `• **List:** bday list\n` +
-     `• **Remove:** bday del Name\n` +
-     `• **Test:** bday check (Runs check now)`;
-     await addNote({ text: helpMsg, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
-     setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
-     return;
-  }
-
-  // COMMAND: ADD (e.g. "bday add Alice 01-28")
-  if (lower.startsWith('bday add')) {
-     const rawArgs = txt.slice(8).trim(); 
-     const entries = rawArgs.split(',');
-     
-     // 1. Fetch current list from Database
-     const userRef = doc(db, "users", user.uid);
-     const docSnap = await getDoc(userRef);
-     const currentData = docSnap.data() || {};
-     let currentList = currentData.birthdays || [];
-     
-     let addedCount = 0;
-
-     entries.forEach(entry => {
-         const parts = entry.trim().split(/\s+/);
-         if (parts.length >= 2) {
-             const datePart = parts.pop(); 
-             const namePart = parts.join(' '); 
-             
-             if (/^\d{1,2}-\d{1,2}$/.test(datePart || '')) {
-                 const existsIdx = currentList.findIndex((b:any) => b.name.toLowerCase() === namePart.toLowerCase());
-                 if (existsIdx > -1) currentList.splice(existsIdx, 1);
-                 
-                 currentList.push({ name: namePart, date: datePart });
-                 addedCount++;
-             }
-         }
-     });
-
-     if (addedCount > 0) {
-         // 2. Save back to Database
-         await setDoc(userRef, { birthdays: currentList }, { merge: true });
-         
-         // Reset daily check so you can test immediately
-         localStorage.removeItem('vibenotes_bot_last_check'); 
-         await addNote({ text: `🤖 Bot: Saved ${addedCount} birthday(s)! 💾\nDaily check has been reset.`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
-     } else {
-         await addNote({ text: `🤖 Bot: Format error.\nTry: bday add Name MM-DD`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
-     }
-     setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
-     return;
-  }
-
-  // COMMAND: REMOVE
-  if (lower.startsWith('bday del') || lower.startsWith('bday remove')) {
-     const nameToRemove = txt.split(' ').slice(2).join(' ').trim().toLowerCase();
-     
-     const userRef = doc(db, "users", user.uid);
-     const docSnap = await getDoc(userRef);
-     let currentList = docSnap.data()?.birthdays || [];
-     const initialLen = currentList.length;
-     
-     const newList = currentList.filter((b:any) => b.name.toLowerCase() !== nameToRemove);
-     
-     if (newList.length < initialLen) {
-        await setDoc(userRef, { birthdays: newList }, { merge: true });
-        await addNote({ text: `🤖 Bot: Deleted birthday for "${nameToRemove}" 🗑️`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
-     } else {
-        await addNote({ text: `🤖 Bot: Could not find "${nameToRemove}".`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
-     }
-     setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
-     return;
-  }
-
-  // COMMAND: CHECK
-  if (lower === 'bday check' || lower === 'bday run') {
-     const userRef = doc(db, "users", user.uid);
-     const docSnap = await getDoc(userRef);
-     const savedBd = docSnap.data()?.birthdays || [];
-
-     const today = new Date();
-     const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-     let msg = '';
-
-     savedBd.forEach((b: any) => {
-        const [m, d] = b.date.split('-').map(Number);
-        if (today.getMonth() + 1 === m && today.getDate() === d) msg += `🎂 HAPPY BIRTHDAY TO ${b.name.toUpperCase()}! 🎉\n`;
-        if (tomorrow.getMonth() + 1 === m && tomorrow.getDate() === d) msg += `⚠️ Reminder: ${b.name}'s birthday is tomorrow! 🎁\n`;
-     });
-
-     if (msg) {
-        await addNote({ text: `[BIRTHDAY BOT] 🤖\n${msg}`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
-     } else {
-        await addNote({ text: `🤖 Bot: Checked ${savedBd.length} birthdays. ✅\nNo birthdays found for today or tomorrow.`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
-     }
-     setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
-     return;
-  }
-
-  // COMMAND: LIST
-  if (lower.includes('whose birthday') || lower === 'bday list') {
-     // Fetch directly from Database to be sure
-     const userRef = doc(db, "users", user.uid);
-     const docSnap = await getDoc(userRef);
-     const currentList = docSnap.data()?.birthdays || [];
-
-     if(currentList.length === 0) {
-         await addNote({ text: `🤖 Bot: No birthdays saved yet.`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
-     } else {
-         const listTxt = currentList.map((b:any) => `• ${b.name} (${b.date})`).join('\n');
-         await addNote({ text: `🎂 Upcoming Birthdays (${currentList.length}):\n${listTxt}`, date: Date.now(), category: botCategory, isPinned: false, isExpanded: true });
-     }
-     setTranscript(''); setImageUrl(''); setOriginalFile(null); scrollToBottom();
-     return;
-  }
-  // --- END BOT COMMANDS ---
+  // If a bot handled the command, stop here.
+  if (isBot) return;
   if (activeFilter === 'secret' && !editingNote) {
     // 1. Save YOUR message first
     await addNote({ text: transcript.trim(), date: Date.now(), category: 'secret', isPinned: false, isExpanded: true, imageUrl: finalImageUrl || undefined });

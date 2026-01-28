@@ -199,7 +199,8 @@ replyTheme={replyTheme}
 };
 
 // Fixed Chat Row
-const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
+// Updated ChatRow accepts currentUserId
+const ChatRow = ({ chat, active, isEditing, onSelect, onClick, currentUserId }: any) => {
   const otherUser = useUser(chat.otherUserId);
   const isGroup = chat.type === 'group';
   const displayName = isGroup ? chat.displayName : (otherUser?.displayName || 'Unknown');
@@ -215,8 +216,8 @@ const ChatRow = ({ chat, active, isEditing, onSelect, onClick }: any) => {
 
   const timestamp = chat.lastMessageTimestamp ? getDateLabel(chat.lastMessageTimestamp) : '';
   
-  // Safely handle unread count to ensure it's a number
-  const unreadCount = Number(chat.unreadCount || 0);
+  // FIXED: Read from the map using your specific ID
+  const unreadCount = (currentUserId && chat.unreadCounts) ? (chat.unreadCounts[currentUserId] || 0) : 0;
 
   return (
     <div onClick={onClick} className={`mx-3 px-3 py-4 flex gap-4 rounded-2xl transition-all duration-200 cursor-pointer hover:bg-white/5 group ${active ? 'bg-white/10' : ''}`}>
@@ -1299,6 +1300,7 @@ return (
             <ChatRow
               key={chat.id}
               chat={chat}
+              currentUserId={user?.uid} // <--- Added this line
               active={isEditing ? selectedChatIds.has(chat.id) : false}
               isEditing={isEditing}
               onSelect={() => toggleChatSelection(chat.id)}
